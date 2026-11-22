@@ -1,9 +1,10 @@
 // ============================================================================
-// VGC TACTICS STUDIO — POKÉMON CHAMPIONS REGULATION M-C ENGINE
+// VGC TACTICS STUDIO — CORE ENGINE (CHAMPIONS REGULATION M-C)
 // ============================================================================
 
-const STORAGE_KEY = "vgc_champions_mc_teams_v1";
-const GEMINI_KEY_STORAGE = "vgc_champions_gemini_api_key";
+const STORAGE_KEY_TEAMS = "vgc_mc_teams_v2";
+const STORAGE_KEY_ACTIVE_TEAM = "vgc_mc_active_team_v2";
+const STORAGE_KEY_GEMINI_KEY = "vgc_mc_gemini_key";
 
 const STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"];
 const STAT_LABELS = {
@@ -15,271 +16,490 @@ const STAT_LABELS = {
   spe: "Spe"
 };
 
-let appState = {
-  lang: "vi",
-  teams: [],
-  currentTeamId: null,
-  activeSlotIndex: 0,
-  modalMode: "ranked", // 'ranked' | 'ots' | 'import'
-  aiImageBase64: null,
-  aiImageMime: "image/png",
-  calc: {
-    attacker: {
-      species: "Garchomp",
-      isMega: true,
-      item: "Garchompite Z",
-      ability: "Levitate",
-      nature: "Timid",
-      sp: { hp: 2, atk: 0, def: 0, spa: 32, spd: 0, spe: 32 },
-      boosts: { atk: 0, spa: 0 }
-    },
-    defender: {
-      species: "Incineroar",
-      isMega: false,
-      item: "Safety Goggles",
-      ability: "Intimidate",
-      nature: "Careful",
-      sp: { hp: 32, atk: 0, def: 14, spa: 0, spd: 20, spe: 0 },
-      boosts: { def: 0, spd: 0 }
-    },
-    moveName: "Earth Power",
+let currentLang = "vi";
+let teams = [];
+let activeTeamId = null;
+let activeSlotIndex = 0;
+let modalMode = "ranked"; // 'ranked' | 'ots' | 'import'
+let aiSelectedImageBase64 = null;
+let aiSelectedImageMime = "image/png";
+
+// Damage Calculator State
+let calcState = {
+  activeSide: "p1", // 'p1' or 'p2' determines which side's selected move shows in main headline
+  field: {
+    isDoubles: true,
     weather: "None",
     terrain: "None"
+  },
+  p1: {
+    species: "Garchomp",
+    isMega: true,
+    item: "Garchompite Z",
+    ability: "Rough Skin",
+    nature: "Timid",
+    status: "Healthy",
+    sp: { hp: 2, atk: 0, def: 0, spa: 32, spd: 0, spe: 32 },
+    stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+    moves: [
+      { name: "Draco Meteor", crit: false },
+      { name: "Earth Power", crit: false },
+      { name: "Flamethrower", crit: false },
+      { name: "Protect", crit: false }
+    ],
+    selectedMoveIdx: 1
+  },
+  p2: {
+    species: "Incineroar",
+    isMega: false,
+    item: "Safety Goggles",
+    ability: "Intimidate",
+    nature: "Careful",
+    status: "Healthy",
+    sp: { hp: 32, atk: 0, def: 14, spa: 0, spd: 20, spe: 0 },
+    stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+    moves: [
+      { name: "Fake Out", crit: false },
+      { name: "Flare Blitz", crit: false },
+      { name: "Knock Off", crit: false },
+      { name: "Parting Shot", crit: false }
+    ],
+    selectedMoveIdx: 2
   }
 };
 
 // ============================================================================
-// 1. INITIALIZATION & STORAGE
+// INITIALIZATION
 // ============================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  loadSavedState();
-  populateGlobalDropdowns();
-  renderAllBuilderUI();
-  initCalculatorUI();
-  initAiScannerPasteListener();
+  loadTeamsFromStorage();
+  populateStaticDropdowns();
+  renderTeamSelector();
+  renderTeamRibbon();
+  renderActiveSlotEditor();
 
-  const savedApiKey = localStorage.getItem(GEMINI_KEY_STORAGE);
-  if (savedApiKey) {
-    document.getElementById("ai-api-key").value = savedApiKey;
+  // Initialize Damage Calc UI
+  initCalcWorkspace();
+
+  // Initialize Speed Checker UI
+  initSpeedWorkspace();
+
+  // Load saved Gemini API Key
+  const savedKey = localStorage.getItem(STORAGE_KEY_GEMINI_KEY);
+  if (savedKey) {
+    const keyInput = document.getElementById("ai-api-key");
+    if (keyInput) keyInput.value = savedKey;
   }
+
+  // Support Ctrl+V image paste on AI Scanner tab
+  document.addEventListener("paste", (e) => {
+    const scannerView = document.getElementById("view-scanner");
+    if (!scannerView || scannerView.classList.contains("hidden")) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) processAiImageFile(file);
+        break;
+      }
+    }
+  });
 });
 
-function loadSavedState() {
+// ============================================================================
+// HELPERS: STATS, SPRITES & FORM RESOLUTION
+// ============================================================================
+
+function getSpriteUrl(spriteSlug) {
+  return `https://play.pokemonshowdown.com/sprites/dex/${spriteSlug}.png`;
+}
+
+function getEffectiveForm(species, isMega, item) {
+  const baseData = POKEDEX_MC[species] || POKEDEX_MC["Garchomp"];
+  if (isMega && baseData.megas) {
+    const megaObj =
+      (item && baseData.megas[item]) ||
+      baseData.megas[baseData.defaultMegaStone] ||
+      Object.values(baseData.megas)[0];
+    if (megaObj) {
+      return {
+        displayName: megaObj.name,
+        sprite: megaObj.sprite,
+        types: megaObj.types,
+        base: megaObj.base,
+        ability: megaObj.ability,
+        isMegaActive: true
+      };
+    }
+  }
+  return {
+    displayName: species,
+    sprite: baseData.sprite,
+    types: baseData.types,
+    base: baseData.base,
+    ability: null,
+    isMegaActive: false
+  };
+}
+
+function getNatureMultiplier(natureName, statKey) {
+  const nat = NATURES[natureName];
+  if (!nat || statKey === "hp") return 1.0;
+  if (nat.plus === statKey) return 1.1;
+  if (nat.minus === statKey) return 0.9;
+  return 1.0;
+}
+
+// Level 50 Stat Calculation with Fixed 31 IVs and Stat Points (0-32 SP)
+function calculateLv50Stat(statKey, baseVal, spVal, natureName) {
+  const sp = Math.max(0, Math.min(32, parseInt(spVal, 10) || 0));
+  if (statKey === "hp") {
+    if (baseVal === 1) return 1; // Shedinja edge case
+    return baseVal + 75 + sp;
+  }
+  const mult = getNatureMultiplier(natureName, statKey);
+  return Math.floor((baseVal + 20 + sp) * mult);
+}
+
+function spToEvEquivalent(spVal) {
+  const sp = Math.max(0, Math.min(32, parseInt(spVal, 10) || 0));
+  return sp === 0 ? 0 : 4 + (sp - 1) * 8;
+}
+
+function evToSpEquivalent(evVal) {
+  const ev = Math.max(0, Math.min(252, parseInt(evVal, 10) || 0));
+  if (ev <= 0) return 0;
+  return Math.min(32, Math.max(1, Math.round((ev + 4) / 8)));
+}
+
+function getStageMultiplier(stage) {
+  const s = Math.max(-6, Math.min(6, parseInt(stage, 10) || 0));
+  if (s >= 0) return (2 + s) / 2;
+  return 2 / (2 - s);
+}
+
+function renderTypeBadgesHtml(types) {
+  return (types || [])
+    .map((t) => `<span class="type-badge type-${t}">${t}</span>`)
+    .join("");
+}
+
+function showToast(message, type = "info") {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+  const colors = {
+    info: "bg-slate-900/95 border-sky-500/50 text-sky-200",
+    success: "bg-slate-900/95 border-emerald-500/50 text-emerald-300",
+    warn: "bg-slate-900/95 border-amber-500/50 text-amber-300",
+    error: "bg-slate-900/95 border-rose-500/50 text-rose-300"
+  };
+  const el = document.createElement("div");
+  el.className = `toast-enter px-4 py-2.5 rounded-xl border text-xs font-semibold shadow-xl backdrop-blur-md ${colors[type] || colors.info}`;
+  el.textContent = message;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = "0";
+    el.style.transition = "opacity 0.25s ease";
+    setTimeout(() => el.remove(), 260);
+  }, 2600);
+}
+
+// ============================================================================
+// NAVIGATION & LANGUAGE
+// ============================================================================
+
+function switchMainTab(tabName) {
+  const tabs = ["builder", "calc", "speed", "scanner"];
+  tabs.forEach((t) => {
+    const view = document.getElementById(`view-${t}`);
+    const btn = document.getElementById(`nav-${t}`);
+    if (!view || !btn) return;
+    if (t === tabName) {
+      view.classList.remove("hidden");
+      btn.classList.add("bg-sky-500", "text-slate-950", "shadow");
+      btn.classList.remove("text-slate-300", "hover:text-white");
+    } else {
+      view.classList.add("hidden");
+      btn.classList.remove("bg-sky-500", "text-slate-950", "shadow");
+      btn.classList.add("text-slate-300", "hover:text-white");
+    }
+  });
+
+  if (tabName === "calc") {
+    refreshCalcTeamDropdowns();
+    runDamageCalculation();
+  } else if (tabName === "speed") {
+    refreshSpeedTeamDropdowns();
+    updateSpeedWorkspace();
+  }
+}
+
+const I18N_DICT = {
+  vi: {
+    tabBuilder: "Team Builder",
+    tabCalc: "Damage Calc",
+    tabSpeed: "Đo Speed",
+    tabScanner: "AI Quét Ảnh",
+    currentTeam: "Đội hình:",
+    btnNewTeam: "Tạo mới",
+    btnClone: "Nhân bản",
+    btnImport: "Nhập Showdown",
+    btnExportRank: "Xuất Rank (Full SP/EVs)",
+    btnExportOTS: "Xuất Giải OTS (Giấu EVs)",
+    lblItem: "Vật phẩm (Item)",
+    lblAbility: "Đặc tính (Ability)",
+    lblPreset: "Preset SP nhanh (Max 66)",
+    lblMoves: "Bộ chiêu thức (4 Moves)",
+    moveHint: "Chọn bộ 4 chiêu thi đấu chuẩn Reg M-C",
+    btnSendAtk: "Sang Damage Calc",
+    btnSendSpeed: "Sang Đo Speed",
+    btnClearSlot: "Đặt lại Slot",
+    lblStatsTitle: "Chỉ số & Phân bổ Stat Points (SP)",
+    lblStatsSub: "Tối đa 32 SP/chỉ số • Cố định 31 IVs (Lv.50)",
+    lblNature: "Tính cách (Nature)"
+  },
+  en: {
+    tabBuilder: "Team Builder",
+    tabCalc: "Damage Calc",
+    tabSpeed: "Speed Tiers",
+    tabScanner: "AI Team Scan",
+    currentTeam: "Team:",
+    btnNewTeam: "New",
+    btnClone: "Clone",
+    btnImport: "Import Paste",
+    btnExportRank: "Export Ranked (Full)",
+    btnExportOTS: "Export OTS (No EVs)",
+    lblItem: "Held Item",
+    lblAbility: "Ability",
+    lblPreset: "Quick SP Preset (Max 66)",
+    lblMoves: "Moveset (4 Moves)",
+    moveHint: "Select 4 Reg M-C legal moves",
+    btnSendAtk: "To Damage Calc",
+    btnSendSpeed: "To Speed Check",
+    btnClearSlot: "Reset Slot",
+    lblStatsTitle: "Stats & Stat Points (SP)",
+    lblStatsSub: "Max 32 SP/stat • Fixed 31 IVs (Lv.50)",
+    lblNature: "Nature"
+  }
+};
+
+function toggleLanguage() {
+  currentLang = currentLang === "vi" ? "en" : "vi";
+  const dict = I18N_DICT[currentLang];
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    if (dict[key]) el.textContent = dict[key];
+  });
+  showToast(currentLang === "vi" ? "Đã chuyển sang Tiếng Việt" : "Switched to English");
+}
+
+// ============================================================================
+// TEAM STORAGE & CRUD
+// ============================================================================
+
+function cloneDeep(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+function createEmptySlot() {
+  return {
+    species: "Incineroar",
+    nickname: "",
+    gender: "M",
+    item: "Sitrus Berry",
+    ability: "Intimidate",
+    nature: "Careful",
+    isMega: false,
+    sp: { hp: 32, atk: 0, def: 14, spa: 0, spd: 20, spe: 0 },
+    moves: ["Fake Out", "Flare Blitz", "Knock Off", "Parting Shot"]
+  };
+}
+
+function loadTeamsFromStorage() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY_TEAMS);
+    const savedActive = localStorage.getItem(STORAGE_KEY_ACTIVE_TEAM);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.teams) && parsed.teams.length > 0) {
-        appState.teams = parsed.teams;
-        appState.currentTeamId = parsed.currentTeamId || parsed.teams[0].id;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        teams = parsed;
+        activeTeamId = teams.some((t) => t.id === savedActive) ? savedActive : teams[0].id;
         return;
       }
     }
-  } catch (e) {
-    console.warn("Failed to parse saved teams:", e);
+  } catch (err) {
+    console.warn("Storage load failed:", err);
   }
 
-  const defaultTeam = {
-    id: "team_" + Date.now(),
-    name: "Reg M-C Meta Sample #1",
-    slots: JSON.parse(JSON.stringify(DEFAULT_SAMPLE_TEAM))
-  };
-  appState.teams = [defaultTeam];
-  appState.currentTeamId = defaultTeam.id;
+  // Default initial team
+  const defaultId = "team_" + Date.now();
+  teams = [
+    {
+      id: defaultId,
+      name: "Reg M-C Mega Garchomp-Z Balance",
+      slots: cloneDeep(DEFAULT_SAMPLE_TEAM)
+    }
+  ];
+  activeTeamId = defaultId;
   saveTeamsToStorage();
 }
 
 function saveTeamsToStorage() {
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        teams: appState.teams,
-        currentTeamId: appState.currentTeamId
-      })
-    );
-  } catch (e) {
-    console.error("Storage save error:", e);
+    localStorage.setItem(STORAGE_KEY_TEAMS, JSON.stringify(teams));
+    localStorage.setItem(STORAGE_KEY_ACTIVE_TEAM, activeTeamId);
+  } catch (err) {
+    console.warn("Storage save failed:", err);
   }
 }
 
 function getCurrentTeam() {
-  return appState.teams.find((t) => t.id === appState.currentTeamId) || appState.teams[0];
+  return teams.find((t) => t.id === activeTeamId) || teams[0];
 }
 
-function getActivePokemon() {
+function getCurrentPokemon() {
   const team = getCurrentTeam();
-  return team.slots[appState.activeSlotIndex];
+  return team.slots[activeSlotIndex];
 }
 
-// ============================================================================
-// 2. CHAMPIONS STAT POINTS (SP 0-32 / MAX 66) & MEGA FORM HELPERS
-// ============================================================================
-
-function getEffectiveForm(speciesName, item, isMega) {
-  const baseData = POKEDEX_MC[speciesName] || Object.values(POKEDEX_MC)[0];
-  if (isMega && baseData.megas) {
-    if (item && baseData.megas[item]) {
-      return {
-        isMegaActive: true,
-        displayName: baseData.megas[item].name,
-        sprite: baseData.megas[item].sprite,
-        types: baseData.megas[item].types,
-        base: baseData.megas[item].base,
-        ability: baseData.megas[item].ability
-      };
-    }
-    const fallbackStone = baseData.defaultMegaStone || Object.keys(baseData.megas)[0];
-    if (fallbackStone && baseData.megas[fallbackStone]) {
-      return {
-        isMegaActive: true,
-        displayName: baseData.megas[fallbackStone].name,
-        sprite: baseData.megas[fallbackStone].sprite,
-        types: baseData.megas[fallbackStone].types,
-        base: baseData.megas[fallbackStone].base,
-        ability: baseData.megas[fallbackStone].ability
-      };
-    }
-  }
-  return {
-    isMegaActive: false,
-    displayName: speciesName,
-    sprite: baseData.sprite,
-    types: baseData.types,
-    base: baseData.base,
-    ability: null
-  };
-}
-
-function getSpriteUrl(spriteSlug) {
-  return `https://play.pokemonshowdown.com/sprites/gen5/${spriteSlug}.png`;
-}
-
-// Pokémon Champions Lv.50 Stat Formula
-function calcChampionsStat(statKey, baseVal, spVal, natureName) {
-  const sp = Math.max(0, Math.min(32, parseInt(spVal, 10) || 0));
-  if (statKey === "hp") {
-    return baseVal === 1 ? 1 : baseVal + sp + 75;
-  }
-  const nat = NATURES[natureName] || NATURES.Serious;
-  let mult = 1.0;
-  if (nat.plus === statKey) mult = 1.1;
-  if (nat.minus === statKey) mult = 0.9;
-  return Math.floor((baseVal + sp + 20) * mult);
-}
-
-function spToShowdownEv(sp) {
-  const s = Math.max(0, Math.min(32, parseInt(sp, 10) || 0));
-  return s === 0 ? 0 : 8 * s - 4;
-}
-
-function showdownEvToSp(ev) {
-  const e = Math.max(0, Math.min(252, parseInt(ev, 10) || 0));
-  if (e <= 0) return 0;
-  return Math.min(32, Math.floor((e + 4) / 8));
-}
-
-function getTotalSpUsed(spObj) {
-  return STAT_KEYS.reduce((sum, k) => sum + (parseInt(spObj[k], 10) || 0), 0);
-}
-
-// ============================================================================
-// 3. UI RENDERING — TEAM BUILDER
-// ============================================================================
-
-function populateGlobalDropdowns() {
-  const speciesNames = Object.keys(POKEDEX_MC).sort();
-  const moveNames = Object.keys(MOVES_DB).sort();
-  const natureNames = Object.keys(NATURES);
-
-  const speciesOptions = speciesNames
-    .map((s) => `<option value="${s}">${s}</option>`)
-    .join("");
-  document.getElementById("sel-species").innerHTML = speciesOptions;
-  document.getElementById("calc-atk-species").innerHTML = speciesOptions;
-  document.getElementById("calc-def-species").innerHTML = speciesOptions;
-
-  const itemOptions = ITEMS_MC.map((it) => `<option value="${it}">${it}</option>`).join("");
-  document.getElementById("sel-item").innerHTML = itemOptions;
-  document.getElementById("calc-atk-item").innerHTML = itemOptions;
-  document.getElementById("calc-def-item").innerHTML = itemOptions;
-
-  const natureOptions = natureNames
-    .map((n) => `<option value="${n}">${NATURES[n].label}</option>`)
-    .join("");
-  document.getElementById("sel-nature").innerHTML = natureOptions;
-  document.getElementById("calc-atk-nature").innerHTML = natureOptions;
-  document.getElementById("calc-def-nature").innerHTML = natureOptions;
-
-  const moveOptions = `<option value="">-- Không chọn --</option>` +
-    moveNames.map((m) => `<option value="${m}">${m} (${MOVES_DB[m].type} · ${MOVES_DB[m].bp || "-"})</option>`).join("");
-
-  const movesContainer = document.getElementById("moves-inputs-container");
-  movesContainer.innerHTML = [0, 1, 2, 3]
-    .map(
-      (idx) => `
-      <select id="sel-move-${idx}" onchange="updateActiveMove(${idx}, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-white focus:outline-none focus:border-sky-500">
-        ${moveOptions}
-      </select>
-    `
-    )
+function populateStaticDropdowns() {
+  const speciesList = Object.keys(POKEDEX_MC).sort();
+  const speciesHtml = speciesList
+    .map((sp) => `<option value="${sp}">${sp}</option>`)
     .join("");
 
-  const calcMoveOptions = moveNames
-    .filter((m) => MOVES_DB[m].bp > 0)
-    .map((m) => `<option value="${m}">${m} (${MOVES_DB[m].type} · ${MOVES_DB[m].bp} BP)</option>`)
+  ["sel-species", "calc-p1-species", "calc-p2-species", "speed-p1-species", "speed-p2-species"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = speciesHtml;
+  });
+
+  const itemsHtml = ITEMS_MC.map((it) => `<option value="${it}">${it}</option>`).join("");
+  ["sel-item", "calc-p1-item", "calc-p2-item"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = itemsHtml;
+  });
+
+  const naturesHtml = Object.entries(NATURES)
+    .map(([key, obj]) => `<option value="${key}">${obj.label}</option>`)
     .join("");
-  document.getElementById("calc-move-name").innerHTML = calcMoveOptions;
-
-  const typeOptions = ALL_TYPES.map((t) => `<option value="${t}">${t}</option>`).join("");
-  document.getElementById("calc-move-type").innerHTML = typeOptions;
-}
-
-function renderAllBuilderUI() {
-  renderTeamSelector();
-  renderTeamRibbon();
-  renderActivePokemonEditor();
-  updateCalcTeamSlotDropdowns();
+  ["sel-nature", "calc-p1-nature", "calc-p2-nature"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = naturesHtml;
+  });
 }
 
 function renderTeamSelector() {
-  const team = getCurrentTeam();
   const sel = document.getElementById("team-selector");
-  sel.innerHTML = appState.teams
-    .map((t) => `<option value="${t.id}" ${t.id === team.id ? "selected" : ""}>${t.name}</option>`)
+  const nameInput = document.getElementById("team-name-input");
+  const team = getCurrentTeam();
+  if (!sel || !team) return;
+
+  sel.innerHTML = teams
+    .map((t) => `<option value="${t.id}" ${t.id === team.id ? "selected" : ""}>${escapeHtml(t.name)}</option>`)
     .join("");
-  document.getElementById("team-name-input").value = team.name;
+
+  if (nameInput) nameInput.value = team.name;
 }
 
-function renderTeamRibbon() {
+function selectTeam(id) {
+  activeTeamId = id;
+  activeSlotIndex = 0;
+  saveTeamsToStorage();
+  renderTeamSelector();
+  renderTeamRibbon();
+  renderActiveSlotEditor();
+}
+
+function renameCurrentTeam(newName) {
   const team = getCurrentTeam();
+  if (!team) return;
+  team.name = newName.trim() || "Untitled Reg M-C Team";
+  saveTeamsToStorage();
+  renderTeamSelector();
+}
+
+function createNewTeam() {
+  const newId = "team_" + Date.now();
+  const newSlots = Array.from({ length: 6 }, (_, i) =>
+    cloneDeep(DEFAULT_SAMPLE_TEAM[i] || createEmptySlot())
+  );
+  teams.push({
+    id: newId,
+    name: `Team Reg M-C #${teams.length + 1}`,
+    slots: newSlots
+  });
+  activeTeamId = newId;
+  activeSlotIndex = 0;
+  saveTeamsToStorage();
+  renderTeamSelector();
+  renderTeamRibbon();
+  renderActiveSlotEditor();
+  showToast("Đã tạo đội hình mới!", "success");
+}
+
+function duplicateCurrentTeam() {
+  const current = getCurrentTeam();
+  if (!current) return;
+  const copyId = "team_" + Date.now();
+  teams.push({
+    id: copyId,
+    name: `${current.name} (Copy)`,
+    slots: cloneDeep(current.slots)
+  });
+  activeTeamId = copyId;
+  saveTeamsToStorage();
+  renderTeamSelector();
+  renderTeamRibbon();
+  renderActiveSlotEditor();
+  showToast("Đã nhân bản đội hình!", "success");
+}
+
+function deleteCurrentTeam() {
+  if (teams.length <= 1) {
+    showToast("Phải giữ lại ít nhất 1 đội hình!", "warn");
+    return;
+  }
+  teams = teams.filter((t) => t.id !== activeTeamId);
+  activeTeamId = teams[0].id;
+  activeSlotIndex = 0;
+  saveTeamsToStorage();
+  renderTeamSelector();
+  renderTeamRibbon();
+  renderActiveSlotEditor();
+  showToast("Đã xóa đội hình.", "info");
+}
+
+// ============================================================================
+// TEAM BUILDER UI & SP ALLOCATION
+// ============================================================================
+
+function renderTeamRibbon() {
   const container = document.getElementById("team-slots-ribbon");
+  const team = getCurrentTeam();
+  if (!container || !team) return;
+
   container.innerHTML = team.slots
     .map((mon, idx) => {
-      const form = getEffectiveForm(mon.species, mon.item, mon.isMega);
-      const isActive = idx === appState.activeSlotIndex;
-      const totalSp = getTotalSpUsed(mon.sp);
+      const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
+      const isSelected = idx === activeSlotIndex;
+      const usedSp = STAT_KEYS.reduce((acc, k) => acc + (mon.sp[k] || 0), 0);
       return `
-        <button type="button" onclick="selectSlot(${idx})" class="slot-card text-left p-2.5 rounded-2xl bg-slate-900/80 border ${
-          isActive ? "active-slot" : "border-slate-800 hover:border-slate-700"
-        } flex flex-col justify-between gap-1.5 relative">
-          <div class="flex items-center justify-between w-full">
-            <span class="text-[10px] font-bold uppercase tracking-wider ${
-              isActive ? "text-sky-400" : "text-slate-500"
-            }">Slot ${idx + 1}</span>
-            ${
-              form.isMegaActive
-                ? `<span class="px-1.5 py-0.2 rounded bg-pink-500/20 text-pink-300 text-[9px] font-extrabold">MEGA</span>`
-                : `<span class="text-[10px] font-mono text-slate-400">${totalSp}/66 SP</span>`
-            }
+        <button type="button" onclick="selectSlot(${idx})"
+          class="slot-card text-left p-2.5 rounded-2xl border ${isSelected ? "active-slot" : "border-slate-800 bg-slate-900/70 hover:border-slate-700"} flex items-center gap-2.5">
+          <div class="w-12 h-12 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-center shrink-0 relative">
+            <img src="${getSpriteUrl(form.sprite)}" alt="${form.displayName}" class="w-10 h-10 object-contain"
+              onerror="this.src='https://placehold.co/64x64/0f172a/38bdf8?text=PKMN'" />
+            ${form.isMegaActive ? `<span class="absolute -top-1 -right-1 text-[9px] px-1 rounded bg-pink-500 text-white font-extrabold">M</span>` : ""}
           </div>
-          <div class="flex items-center gap-2">
-            <img src="${getSpriteUrl(form.sprite)}" alt="${form.displayName}" class="w-11 h-11 object-contain shrink-0" onerror="this.src='https://placehold.co/48x48/0f172a/38bdf8?text=PK'" />
-            <div class="min-w-0 flex-1">
-              <div class="text-xs font-extrabold text-white truncate">${mon.nickname || form.displayName}</div>
-              <div class="text-[10px] text-slate-400 truncate">${mon.item !== "None" ? mon.item : "No Item"}</div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-[10px] font-bold text-slate-500">#${idx + 1}</span>
+              <span class="text-[10px] font-mono ${usedSp === 66 ? "text-emerald-400" : "text-amber-400"}">${usedSp}/66 SP</span>
             </div>
+            <div class="text-xs font-extrabold text-white truncate">${escapeHtml(form.displayName)}</div>
+            <div class="text-[11px] text-slate-400 truncate">${escapeHtml(mon.item || "No Item")}</div>
           </div>
         </button>
       `;
@@ -287,252 +507,202 @@ function renderTeamRibbon() {
     .join("");
 }
 
-function renderActivePokemonEditor() {
-  const mon = getActivePokemon();
-  const baseData = POKEDEX_MC[mon.species] || POKEDEX_MC["Garchomp"];
-  const form = getEffectiveForm(mon.species, mon.item, mon.isMega);
+function selectSlot(idx) {
+  activeSlotIndex = idx;
+  renderTeamRibbon();
+  renderActiveSlotEditor();
+}
 
-  document.getElementById("editor-slot-num").textContent = appState.activeSlotIndex + 1;
+function renderActiveSlotEditor() {
+  const mon = getCurrentPokemon();
+  if (!mon) return;
+  const dexData = POKEDEX_MC[mon.species] || POKEDEX_MC["Garchomp"];
+  const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
+
+  document.getElementById("editor-slot-num").textContent = activeSlotIndex + 1;
   document.getElementById("editor-sprite").src = getSpriteUrl(form.sprite);
-  document.getElementById("editor-types").innerHTML = form.types
-    .map((t) => `<span class="type-badge type-${t}">${t}</span>`)
-    .join("");
+  document.getElementById("editor-types").innerHTML = renderTypeBadgesHtml(form.types);
 
   document.getElementById("sel-species").value = mon.species;
   document.getElementById("input-nickname").value = mon.nickname || "";
   document.getElementById("input-gender").value = mon.gender || "";
-  document.getElementById("sel-item").value = ITEMS_MC.includes(mon.item) ? mon.item : "None";
+  document.getElementById("sel-item").value = mon.item || "None";
   document.getElementById("sel-nature").value = mon.nature || "Serious";
 
-  // Mega Button state
-  const megaBtn = document.getElementById("btn-mega");
-  if (!baseData.megas) {
-    megaBtn.disabled = true;
-    megaBtn.className = "px-3 py-1.5 rounded-xl border text-xs font-extrabold transition flex items-center gap-1 mega-btn-disabled";
-  } else {
-    megaBtn.disabled = false;
-    megaBtn.className = `px-3 py-1.5 rounded-xl border text-xs font-extrabold transition flex items-center gap-1 ${
+  // Ability options (if Mega active, show Mega ability clearly while keeping base ability stored for OTS/Battle start)
+  const selAbility = document.getElementById("sel-ability");
+  const baseAbilities = dexData.abilities || ["Pressure"];
+  if (!baseAbilities.includes(mon.ability)) {
+    mon.ability = baseAbilities[0];
+  }
+  selAbility.innerHTML = baseAbilities
+    .map((ab) => {
+      const label = form.isMegaActive && form.ability
+        ? `${ab} → [Mega: ${form.ability}]`
+        : ab;
+      return `<option value="${ab}" ${mon.ability === ab ? "selected" : ""}>${label}</option>`;
+    })
+    .join("");
+
+  // Mega button state
+  const btnMega = document.getElementById("btn-mega");
+  if (dexData.megas) {
+    btnMega.disabled = false;
+    btnMega.className = `px-3 py-1.5 rounded-xl border text-xs font-extrabold transition flex items-center gap-1 ${
       form.isMegaActive ? "mega-btn-active" : "mega-btn-ready"
+    }`;
+  } else {
+    btnMega.disabled = true;
+    btnMega.className = "px-3 py-1.5 rounded-xl border text-xs font-extrabold transition flex items-center gap-1 mega-btn-disabled";
+  }
+
+  // 4 Moves dropdowns
+  const movesContainer = document.getElementById("moves-inputs-container");
+  const allMoveNames = Object.keys(MOVES_DB).sort();
+  movesContainer.innerHTML = [0, 1, 2, 3]
+    .map((mIdx) => {
+      const currentMove = mon.moves[mIdx] || "Protect";
+      const moveMeta = MOVES_DB[currentMove] || { type: "Normal", bp: 0, cat: "Status" };
+      const optionsHtml = allMoveNames
+        .map((mv) => `<option value="${mv}" ${mv === currentMove ? "selected" : ""}>${mv} (${MOVES_DB[mv].type} · ${MOVES_DB[mv].bp || "-"})</option>`)
+        .join("");
+      return `
+        <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 rounded-xl p-1.5">
+          <span class="type-badge type-${moveMeta.type} shrink-0 w-16 text-center">${moveMeta.type}</span>
+          <select onchange="updateActiveMove(${mIdx}, this.value)" class="w-full bg-transparent text-xs sm:text-sm font-semibold text-white focus:outline-none">
+            ${optionsHtml}
+          </select>
+        </div>
+      `;
+    })
+    .join("");
+
+  renderBuilderStatsTable();
+}
+
+function renderBuilderStatsTable() {
+  const mon = getCurrentPokemon();
+  if (!mon) return;
+  const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
+  const nat = NATURES[mon.nature] || NATURES.Serious;
+
+  const totalUsed = STAT_KEYS.reduce((sum, k) => sum + (mon.sp[k] || 0), 0);
+  const remaining = 66 - totalUsed;
+  const badge = document.getElementById("sp-remaining-badge");
+  if (badge) {
+    badge.textContent = `${remaining} / 66`;
+    badge.className = `font-mono text-sm font-bold ${
+      remaining === 0 ? "text-emerald-400" : remaining > 0 ? "text-amber-400" : "text-rose-400"
     }`;
   }
 
-  // Abilities dropdown
-  const abilitySel = document.getElementById("sel-ability");
-  if (form.isMegaActive && form.ability) {
-    abilitySel.innerHTML = `<option value="${form.ability}" selected>${form.ability} (Mega)</option>`;
-    mon.ability = form.ability;
-  } else {
-    abilitySel.innerHTML = baseData.abilities
-      .map((ab) => `<option value="${ab}" ${ab === mon.ability ? "selected" : ""}>${ab}</option>`)
-      .join("");
-    if (!baseData.abilities.includes(mon.ability)) {
-      mon.ability = baseData.abilities[0];
-    }
-  }
-
-  // Moves dropdowns
-  for (let i = 0; i < 4; i++) {
-    const moveSel = document.getElementById(`sel-move-${i}`);
-    if (moveSel) moveSel.value = mon.moves[i] || "";
-  }
-
-  // Stats & SP Rows
-  renderStatAllocationRows(mon, form);
-}
-
-function renderStatAllocationRows(mon, form) {
-  const totalSp = getTotalSpUsed(mon.sp);
-  const rem = 66 - totalSp;
-  const badge = document.getElementById("sp-remaining-badge");
-  badge.textContent = `${rem} / 66`;
-  badge.className = `font-mono text-sm font-bold ${
-    rem === 0 ? "text-amber-400" : rem < 0 ? "text-rose-400" : "text-emerald-400"
-  }`;
-
-  const nat = NATURES[mon.nature] || NATURES.Serious;
   const container = document.getElementById("stats-rows-container");
-
-  container.innerHTML = STAT_KEYS.map((key) => {
-    const baseVal = form.base[key];
-    const spVal = mon.sp[key] || 0;
-    const evEq = spToShowdownEv(spVal);
-    const finalStat = calcChampionsStat(key, baseVal, spVal, mon.nature);
-
-    let natTag = "";
-    let statColor = "text-white";
-    if (nat.plus === key) {
-      natTag = `<span class="text-rose-400 font-bold">+</span>`;
-      statColor = "text-rose-300";
-    } else if (nat.minus === key) {
-      natTag = `<span class="text-sky-400 font-bold">-</span>`;
-      statColor = "text-sky-300";
-    }
+  container.innerHTML = STAT_KEYS.map((k) => {
+    const baseVal = form.base[k];
+    const spVal = mon.sp[k] || 0;
+    const evEq = spToEvEquivalent(spVal);
+    const finalStat = calculateLv50Stat(k, baseVal, spVal, mon.nature);
+    const natMark = nat.plus === k ? `<span class="text-rose-400 font-bold">+</span>` : nat.minus === k ? `<span class="text-sky-400 font-bold">-</span>` : "";
 
     return `
       <div class="grid grid-cols-12 gap-1.5 items-center bg-slate-900/60 px-2.5 py-1.5 rounded-xl border border-slate-800/80">
-        <div class="col-span-2 text-xs font-bold text-slate-300">${STAT_LABELS[key]}${natTag}</div>
+        <div class="col-span-2 text-xs font-bold text-slate-200">${STAT_LABELS[k]}${natMark}</div>
         <div class="col-span-1 text-center font-mono text-xs text-slate-400">${baseVal}</div>
-        <div class="col-span-5 flex items-center gap-2">
-          <input type="range" min="0" max="32" value="${spVal}" oninput="updateStatSp('${key}', this.value)" class="sp-slider w-full" />
-          <input type="number" min="0" max="32" value="${spVal}" onchange="updateStatSp('${key}', this.value)" class="w-11 bg-slate-950 border border-slate-700 rounded-lg px-1 py-0.5 text-center font-mono text-xs text-sky-300 font-bold" />
+        <div class="col-span-5 flex items-center gap-1.5">
+          <input type="range" min="0" max="32" value="${spVal}" oninput="updateStatSP('${k}', this.value)" class="sp-slider w-full" />
+          <input type="number" min="0" max="32" value="${spVal}" onchange="updateStatSP('${k}', this.value)" class="w-11 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center font-mono text-xs font-bold text-sky-300" />
         </div>
-        <div class="col-span-2 text-center font-mono text-[11px] text-slate-400">${evEq} EV</div>
-        <div class="col-span-2 text-right font-mono text-sm font-extrabold ${statColor}">${finalStat}</div>
+        <div class="col-span-2 text-center font-mono text-[11px] text-slate-400">${evEq}</div>
+        <div class="col-span-2 text-right font-mono text-sm font-extrabold text-white">${finalStat}</div>
       </div>
     `;
   }).join("");
 }
 
-// ============================================================================
-// 4. TEAM BUILDER ACTIONS
-// ============================================================================
-
-function selectSlot(idx) {
-  appState.activeSlotIndex = idx;
-  renderTeamRibbon();
-  renderActivePokemonEditor();
-}
-
-function selectTeam(teamId) {
-  appState.currentTeamId = teamId;
-  appState.activeSlotIndex = 0;
-  saveTeamsToStorage();
-  renderAllBuilderUI();
-}
-
-function renameCurrentTeam(newName) {
-  const trimmed = newName.trim();
-  if (!trimmed) return;
-  const team = getCurrentTeam();
-  team.name = trimmed;
-  saveTeamsToStorage();
-  renderTeamSelector();
-}
-
-function createNewTeam() {
-  const newTeam = {
-    id: "team_" + Date.now(),
-    name: `Team Reg M-C #${appState.teams.length + 1}`,
-    slots: JSON.parse(JSON.stringify(DEFAULT_SAMPLE_TEAM))
-  };
-  appState.teams.push(newTeam);
-  appState.currentTeamId = newTeam.id;
-  appState.activeSlotIndex = 0;
-  saveTeamsToStorage();
-  renderAllBuilderUI();
-  showToast("Đã tạo đội hình mới!");
-}
-
-function duplicateCurrentTeam() {
-  const current = getCurrentTeam();
-  const copy = {
-    id: "team_" + Date.now(),
-    name: `${current.name} (Copy)`,
-    slots: JSON.parse(JSON.stringify(current.slots))
-  };
-  appState.teams.push(copy);
-  appState.currentTeamId = copy.id;
-  saveTeamsToStorage();
-  renderAllBuilderUI();
-  showToast("Đã nhân bản đội hình!");
-}
-
-function deleteCurrentTeam() {
-  if (appState.teams.length <= 1) {
-    showToast("Cần giữ lại ít nhất 1 đội hình!", "error");
-    return;
-  }
-  appState.teams = appState.teams.filter((t) => t.id !== appState.currentTeamId);
-  appState.currentTeamId = appState.teams[0].id;
-  appState.activeSlotIndex = 0;
-  saveTeamsToStorage();
-  renderAllBuilderUI();
-  showToast("Đã xóa đội hình.");
-}
-
 function changeActiveSpecies(newSpecies) {
-  const mon = getActivePokemon();
-  const data = POKEDEX_MC[newSpecies];
-  if (!data) return;
+  const mon = getCurrentPokemon();
+  const dexData = POKEDEX_MC[newSpecies];
+  if (!mon || !dexData) return;
 
   mon.species = newSpecies;
-  mon.nickname = "";
-  mon.isMega = false;
-  mon.item = data.defaultMegaStone || "Focus Sash";
-  mon.ability = data.abilities[0];
-  mon.moves = [...data.defaultMoves];
-
+  mon.ability = dexData.abilities[0];
+  mon.moves = [...dexData.defaultMoves];
+  if (dexData.megas) {
+    mon.isMega = true;
+    mon.item = dexData.defaultMegaStone;
+  } else {
+    mon.isMega = false;
+    if (mon.item && mon.item.endsWith("ite") || (mon.item && mon.item.includes("ite "))) {
+      mon.item = "Focus Sash";
+    }
+  }
   saveTeamsToStorage();
   renderTeamRibbon();
-  renderActivePokemonEditor();
-  updateCalcTeamSlotDropdowns();
+  renderActiveSlotEditor();
 }
 
-function updateActivePokemon(field, value) {
-  const mon = getActivePokemon();
-  mon[field] = value;
+function updateActivePokemon(key, value) {
+  const mon = getCurrentPokemon();
+  if (!mon) return;
+  mon[key] = value;
 
-  if (field === "item") {
-    const baseData = POKEDEX_MC[mon.species];
-    if (baseData && baseData.megas && baseData.megas[value]) {
+  // Auto-sync Mega toggle if user equips or unequips the matching Mega Stone
+  if (key === "item") {
+    const dexData = POKEDEX_MC[mon.species];
+    if (dexData && dexData.megas && dexData.megas[value]) {
       mon.isMega = true;
-    } else if (baseData && (!baseData.megas || !baseData.megas[value])) {
+    } else {
       mon.isMega = false;
     }
   }
 
   saveTeamsToStorage();
   renderTeamRibbon();
-  renderActivePokemonEditor();
-  updateCalcTeamSlotDropdowns();
-}
-
-function toggleMegaForm() {
-  const mon = getActivePokemon();
-  const baseData = POKEDEX_MC[mon.species];
-  if (!baseData || !baseData.megas) return;
-
-  mon.isMega = !mon.isMega;
-  if (mon.isMega) {
-    if (!baseData.megas[mon.item]) {
-      mon.item = baseData.defaultMegaStone || Object.keys(baseData.megas)[0];
-    }
-  } else {
-    mon.ability = baseData.abilities[0];
-  }
-
-  saveTeamsToStorage();
-  renderTeamRibbon();
-  renderActivePokemonEditor();
+  renderActiveSlotEditor();
 }
 
 function updateActiveMove(moveIdx, moveName) {
-  const mon = getActivePokemon();
+  const mon = getCurrentPokemon();
+  if (!mon) return;
   mon.moves[moveIdx] = moveName;
   saveTeamsToStorage();
+  renderActiveSlotEditor();
 }
 
-function updateStatSp(statKey, rawValue) {
-  const mon = getActivePokemon();
+function toggleMegaForm() {
+  const mon = getCurrentPokemon();
+  const dexData = POKEDEX_MC[mon.species];
+  if (!mon || !dexData || !dexData.megas) return;
+
+  mon.isMega = !mon.isMega;
+  if (mon.isMega && (!mon.item || !dexData.megas[mon.item])) {
+    mon.item = dexData.defaultMegaStone;
+  }
+  saveTeamsToStorage();
+  renderTeamRibbon();
+  renderActiveSlotEditor();
+}
+
+function updateStatSP(statKey, rawValue) {
+  const mon = getCurrentPokemon();
+  if (!mon) return;
   let val = Math.max(0, Math.min(32, parseInt(rawValue, 10) || 0));
 
-  const otherUsed = STAT_KEYS.reduce(
-    (sum, k) => (k === statKey ? sum : sum + (mon.sp[k] || 0)),
-    0
-  );
-  if (otherUsed + val > 66) {
-    val = Math.max(0, 66 - otherUsed);
+  const otherSum = STAT_KEYS.reduce((acc, k) => (k === statKey ? acc : acc + (mon.sp[k] || 0)), 0);
+  const maxAllowed = Math.max(0, 66 - otherSum);
+  if (val > maxAllowed) {
+    val = maxAllowed;
   }
-
   mon.sp[statKey] = val;
   saveTeamsToStorage();
   renderTeamRibbon();
-  renderActivePokemonEditor();
+  renderBuilderStatsTable();
 }
 
 function applySpPreset(presetKey) {
-  if (!presetKey) return;
-  const mon = getActivePokemon();
+  const mon = getCurrentPokemon();
+  if (!mon || !presetKey) return;
+
   const presets = {
     phys_sweeper: { hp: 2, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 },
     spec_sweeper: { hp: 2, atk: 0, def: 0, spa: 32, spd: 0, spe: 32 },
@@ -547,78 +717,74 @@ function applySpPreset(presetKey) {
     mon.sp = { ...presets[presetKey] };
     saveTeamsToStorage();
     renderTeamRibbon();
-    renderActivePokemonEditor();
+    renderBuilderStatsTable();
+    showToast("Đã áp dụng phân bổ SP!", "success");
   }
 }
 
 function clearCurrentSlot() {
   const team = getCurrentTeam();
-  team.slots[appState.activeSlotIndex] = {
-    species: "Incineroar",
-    nickname: "",
-    gender: "M",
-    item: "Sitrus Berry",
-    ability: "Intimidate",
-    nature: "Careful",
-    isMega: false,
-    sp: { hp: 32, atk: 0, def: 14, spa: 0, spd: 20, spe: 0 },
-    moves: ["Fake Out", "Flare Blitz", "Knock Off", "Parting Shot"]
-  };
+  team.slots[activeSlotIndex] = createEmptySlot();
   saveTeamsToStorage();
-  renderAllBuilderUI();
-  showToast("Đã đặt lại Slot về mặc định.");
+  renderTeamRibbon();
+  renderActiveSlotEditor();
+  showToast("Đã đặt lại Slot #" + (activeSlotIndex + 1));
+}
+
+function sendCurrentToCalc(side = "p1") {
+  const mon = getCurrentPokemon();
+  if (!mon) return;
+  applyPokemonObjectToCalcSide(side, mon);
+  switchMainTab("calc");
+  showToast(`Đã nạp ${mon.species} sang Damage Calc!`, "success");
+}
+
+function sendCurrentToSpeed() {
+  const mon = getCurrentPokemon();
+  if (!mon) return;
+  applyPokemonObjectToSpeedSide("p1", mon);
+  switchMainTab("speed");
+  showToast(`Đã nạp ${mon.species} sang Đo Speed!`, "success");
 }
 
 // ============================================================================
-// 5. SHOWDOWN EXPORT (RANKED FULL VS TOURNAMENT OTS) & IMPORT PARSER
+// SHOWDOWN EXPORT & IMPORT (OTS KEEPS NATURE, HIDES EVs/SP)
 // ============================================================================
 
 function formatTeamToShowdown(team, mode = "ranked") {
+  // mode: 'ranked' -> Full EVs/SP + Nature
+  // mode: 'ots'    -> Open Team Sheet: KEEPS Nature, HIDES EVs/SP!
   return team.slots
     .map((mon) => {
-      const form = getEffectiveForm(mon.species, mon.item, mon.isMega);
-      const speciesOutput = mode === "ots" && form.isMegaActive ? form.displayName : mon.species;
+      const lines = [];
+      const genderStr = mon.gender ? ` (${mon.gender})` : "";
+      const nameStr = mon.nickname && mon.nickname.trim()
+        ? `${mon.nickname.trim()} (${mon.species})${genderStr}`
+        : `${mon.species}${genderStr}`;
+      const itemStr = mon.item && mon.item !== "None" ? ` @ ${mon.item}` : "";
+      lines.push(`${nameStr}${itemStr}`);
 
-      // Line 1: Name @ Item
-      let header = "";
-      if (mode === "ranked" && mon.nickname && mon.nickname.trim()) {
-        header += `${mon.nickname.trim()} (${speciesOutput})`;
-      } else {
-        header += speciesOutput;
+      if (mon.ability) {
+        lines.push(`Ability: ${mon.ability}`);
       }
-      if (mode === "ranked" && mon.gender) {
-        header += ` (${mon.gender})`;
-      }
-      if (mon.item && mon.item !== "None") {
-        header += ` @ ${mon.item}`;
-      }
-
-      const lines = [header];
-      lines.push(`Ability: ${mon.ability}`);
       lines.push(`Level: 50`);
 
-      // Ranked mode includes full EVs (converted from SP 0-32) + SP comment + Nature
       if (mode === "ranked") {
-        const evParts = [];
-        const spParts = [];
-        STAT_KEYS.forEach((k) => {
-          const spVal = mon.sp[k] || 0;
-          if (spVal > 0) {
-            evParts.push(`${spToShowdownEv(spVal)} ${STAT_LABELS[k]}`);
-            spParts.push(`${spVal} ${STAT_LABELS[k]}`);
-          }
-        });
+        const evParts = STAT_KEYS.filter((k) => (mon.sp[k] || 0) > 0).map(
+          (k) => `${spToEvEquivalent(mon.sp[k])} ${STAT_LABELS[k]}`
+        );
         if (evParts.length > 0) {
           lines.push(`EVs: ${evParts.join(" / ")}`);
         }
-        lines.push(`${mon.nature || "Serious"} Nature`);
       }
 
-      // Moves
+      // Both Ranked and OTS tournament sheets KEEP Nature!
+      if (mon.nature) {
+        lines.push(`${mon.nature} Nature`);
+      }
+
       (mon.moves || []).forEach((mv) => {
-        if (mv && mv.trim()) {
-          lines.push(`- ${mv.trim()}`);
-        }
+        if (mv) lines.push(`- ${mv}`);
       });
 
       return lines.join("\n");
@@ -635,172 +801,172 @@ function parseShowdownPasteToSlots(pasteText) {
 
   if (blocks.length === 0) return null;
 
+  const knownSpecies = Object.keys(POKEDEX_MC);
+
   const parsedSlots = blocks.map((block) => {
-    const lines = block
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
+    const slot = createEmptySlot();
+    slot.sp = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+    slot.moves = [];
 
-    let firstLine = lines[0];
-    let item = "None";
-    if (firstLine.includes("@")) {
-      const parts = firstLine.split("@");
-      firstLine = parts[0].trim();
-      item = parts[1].trim();
+    const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length === 0) return slot;
+
+    // Line 1: Nickname (Species) (M/F) @ Item
+    let header = lines[0];
+    if (header.includes("@")) {
+      const parts = header.split("@");
+      header = parts[0].trim();
+      const rawItem = parts.slice(1).join("@").trim();
+      const matchedItem = ITEMS_MC.find((i) => i.toLowerCase() === rawItem.toLowerCase());
+      slot.item = matchedItem || rawItem;
+    } else {
+      slot.item = "None";
     }
 
-    let gender = "";
-    if (firstLine.endsWith("(M)")) {
-      gender = "M";
-      firstLine = firstLine.slice(0, -3).trim();
-    } else if (firstLine.endsWith("(F)")) {
-      gender = "F";
-      firstLine = firstLine.slice(0, -3).trim();
+    // Gender check
+    if (header.endsWith("(M)")) {
+      slot.gender = "M";
+      header = header.slice(0, -3).trim();
+    } else if (header.endsWith("(F)")) {
+      slot.gender = "F";
+      header = header.slice(0, -3).trim();
+    } else {
+      slot.gender = "";
     }
 
-    let nickname = "";
-    let rawSpecies = firstLine;
-    const parenMatch = firstLine.match(/^(.+?)\s*\(([^)]+)\)$/);
+    // Nickname (Species) check
+    const parenMatch = header.match(/^(.*?)\(([^)]+)\)$/);
+    let rawSpecies = header;
     if (parenMatch) {
-      nickname = parenMatch[1].trim();
+      slot.nickname = parenMatch[1].trim();
       rawSpecies = parenMatch[2].trim();
     }
 
-    // Normalize Mega species name back to base species + isMega flag
-    let species = "Garchomp";
-    let isMega = false;
-    const cleanTarget = rawSpecies.replace(/-Mega(-[XYZ])?$/i, "");
-    const matchedKey = Object.keys(POKEDEX_MC).find(
-      (k) => k.toLowerCase() === cleanTarget.toLowerCase() || k.toLowerCase() === rawSpecies.toLowerCase()
+    // Match species (handle -Mega / -Mega-Z / -Mega-X / -Mega-Y suffixes)
+    let matchedSpecies = knownSpecies.find(
+      (s) => s.toLowerCase() === rawSpecies.toLowerCase()
     );
-    if (matchedKey) {
-      species = matchedKey;
+    if (!matchedSpecies) {
+      matchedSpecies = knownSpecies.find((s) =>
+        rawSpecies.toLowerCase().startsWith(s.toLowerCase())
+      );
     }
-    if (/-Mega/i.test(rawSpecies) || (POKEDEX_MC[species]?.megas && POKEDEX_MC[species].megas[item])) {
-      isMega = true;
-    }
+    slot.species = matchedSpecies || "Garchomp";
+    const dexData = POKEDEX_MC[slot.species];
 
-    const baseData = POKEDEX_MC[species];
-    let ability = baseData.abilities[0];
-    let nature = "Serious";
-    const sp = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
-    const moves = [];
+    // Auto-enable Mega if item is a Mega Stone or species string had -Mega
+    if (dexData && dexData.megas && (dexData.megas[slot.item] || rawSpecies.toLowerCase().includes("mega"))) {
+      slot.isMega = true;
+      if (!dexData.megas[slot.item]) {
+        slot.item = dexData.defaultMegaStone;
+      }
+    } else {
+      slot.isMega = false;
+    }
 
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
       if (line.startsWith("Ability:")) {
-        ability = line.replace("Ability:", "").trim();
-      } else if (line.startsWith("EVs:")) {
-        const evStr = line.replace("EVs:", "").trim();
-        evStr.split("/").forEach((seg) => {
-          const m = seg.trim().match(/^(\d+)\s+(HP|Atk|Def|SpA|SpD|Spe)$/i);
-          if (m) {
-            const key = m[2].toLowerCase();
-            sp[key] = showdownEvToSp(parseInt(m[1], 10));
-          }
-        });
-      } else if (line.startsWith("SPs:")) {
-        const spStr = line.replace("SPs:", "").trim();
-        spStr.split("/").forEach((seg) => {
-          const m = seg.trim().match(/^(\d+)\s+(HP|Atk|Def|SpA|SpD|Spe)$/i);
-          if (m) {
-            const key = m[2].toLowerCase();
-            sp[key] = Math.min(32, parseInt(m[1], 10));
-          }
-        });
+        const ab = line.replace("Ability:", "").trim();
+        slot.ability = dexData.abilities.includes(ab) ? ab : dexData.abilities[0];
       } else if (line.endsWith("Nature")) {
         const natName = line.replace("Nature", "").trim();
-        if (NATURES[natName]) nature = natName;
+        if (NATURES[natName]) slot.nature = natName;
+      } else if (line.startsWith("EVs:")) {
+        const evStr = line.replace("EVs:", "").trim();
+        let budget = 66;
+        evStr.split("/").forEach((part) => {
+          const m = part.trim().match(/^(\d+)\s+(HP|Atk|Def|SpA|SpD|Spe)$/i);
+          if (m) {
+            const evNum = parseInt(m[1], 10);
+            const key = m[2].toLowerCase();
+            let sp = evToSpEquivalent(evNum);
+            if (sp > budget) sp = budget;
+            slot.sp[key] = sp;
+            budget -= sp;
+          }
+        });
       } else if (line.startsWith("-")) {
-        const mv = line.replace(/^-+\s*/, "").trim();
-        if (mv && moves.length < 4) moves.push(mv);
+        const mvRaw = line.replace(/^-+/, "").trim();
+        const foundMove = Object.keys(MOVES_DB).find(
+          (m) => m.toLowerCase() === mvRaw.toLowerCase()
+        );
+        if (foundMove && slot.moves.length < 4) {
+          slot.moves.push(foundMove);
+        }
       }
     }
 
-    // Clamp total SP to 66 if imported EVs exceeded budget
-    let runningTotal = 0;
-    STAT_KEYS.forEach((k) => {
-      if (runningTotal + sp[k] > 66) {
-        sp[k] = Math.max(0, 66 - runningTotal);
-      }
-      runningTotal += sp[k];
-    });
-
-    while (moves.length < 4) {
-      moves.push(baseData.defaultMoves[moves.length] || "Protect");
+    while (slot.moves.length < 4) {
+      slot.moves.push(dexData.defaultMoves[slot.moves.length] || "Protect");
     }
 
-    return {
-      species,
-      nickname,
-      gender,
-      item: ITEMS_MC.includes(item) ? item : "None",
-      ability,
-      nature,
-      isMega,
-      sp,
-      moves
-    };
+    return slot;
   });
 
-  // Pad to 6 slots if user pasted fewer than 6
   while (parsedSlots.length < 6) {
-    parsedSlots.push(JSON.parse(JSON.stringify(DEFAULT_SAMPLE_TEAM[parsedSlots.length])));
+    parsedSlots.push(createEmptySlot());
   }
 
   return parsedSlots;
 }
 
-function openExportModal(mode) {
-  appState.modalMode = mode;
+function openExportModal(mode = "ranked") {
+  modalMode = mode;
   const modal = document.getElementById("paste-modal");
+  const title = document.getElementById("modal-title");
+  const subtitle = document.getElementById("modal-subtitle");
   const tabs = document.getElementById("modal-export-tabs");
-  const textarea = document.getElementById("modal-paste-textarea");
-  const actionBtn = document.getElementById("modal-action-btn");
+  const btn = document.getElementById("modal-action-btn");
 
   tabs.classList.remove("hidden");
-  textarea.readOnly = true;
-  actionBtn.textContent = "Sao chép vào Clipboard";
+  title.textContent = mode === "ots"
+    ? "Xuất Open Team Sheet (Đánh Giải OTS)"
+    : "Xuất Team Showdown (Đấu Rank)";
+  subtitle.textContent = mode === "ots"
+    ? "Giữ nguyên Nature, Ability, Item, Moves — chỉ ẩn chỉ số EVs / SP"
+    : "Đầy đủ toàn bộ thông tin SP / EVs và Nature để luyện tập";
+  btn.textContent = "Sao chép vào Clipboard";
 
-  switchExportModalMode(mode);
+  updateExportModalTabStyles(mode);
+  document.getElementById("modal-paste-textarea").value = formatTeamToShowdown(getCurrentTeam(), mode);
   modal.classList.remove("hidden");
 }
 
 function switchExportModalMode(mode) {
-  appState.modalMode = mode;
-  const team = getCurrentTeam();
-  const textarea = document.getElementById("modal-paste-textarea");
-  const tabRanked = document.getElementById("modal-tab-ranked");
-  const tabOts = document.getElementById("modal-tab-ots");
+  modalMode = mode;
+  updateExportModalTabStyles(mode);
+  const title = document.getElementById("modal-title");
+  const subtitle = document.getElementById("modal-subtitle");
+  title.textContent = mode === "ots"
+    ? "Xuất Open Team Sheet (Đánh Giải OTS)"
+    : "Xuất Team Showdown (Đấu Rank)";
+  subtitle.textContent = mode === "ots"
+    ? "Giữ nguyên Nature, Ability, Item, Moves — chỉ ẩn chỉ số EVs / SP"
+    : "Đầy đủ toàn bộ thông tin SP / EVs và Nature để luyện tập";
+  document.getElementById("modal-paste-textarea").value = formatTeamToShowdown(getCurrentTeam(), mode);
+}
 
+function updateExportModalTabStyles(mode) {
+  const tabRank = document.getElementById("modal-tab-ranked");
+  const tabOts = document.getElementById("modal-tab-ots");
   if (mode === "ranked") {
-    document.getElementById("modal-title").textContent = "Xuất Team Đấu Rank (Đầy đủ SP / EVs)";
-    document.getElementById("modal-subtitle").textContent = "Bao gồm Nature và chỉ số SP quy đổi chuẩn Showdown";
-    tabRanked.className = "flex-1 py-1.5 rounded-lg text-xs font-bold transition bg-sky-500 text-slate-950";
+    tabRank.className = "flex-1 py-1.5 rounded-lg text-xs font-bold transition bg-sky-500 text-slate-950";
     tabOts.className = "flex-1 py-1.5 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white";
   } else {
-    document.getElementById("modal-title").textContent = "Xuất Team Đánh Giải OTS (Giấu SP / EVs)";
-    document.getElementById("modal-subtitle").textContent = "Chuẩn Open Team Sheet VGC: Chỉ hiện Species, Item, Ability & 4 Moves";
     tabOts.className = "flex-1 py-1.5 rounded-lg text-xs font-bold transition bg-amber-500 text-slate-950";
-    tabRanked.className = "flex-1 py-1.5 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white";
+    tabRank.className = "flex-1 py-1.5 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white";
   }
-
-  textarea.value = formatTeamToShowdown(team, mode);
 }
 
 function openImportModal() {
-  appState.modalMode = "import";
+  modalMode = "import";
   const modal = document.getElementById("paste-modal");
+  document.getElementById("modal-title").textContent = "Nhập Đội Hình Từ Showdown Paste";
+  document.getElementById("modal-subtitle").textContent = "Dán văn bản Showdown 6 Pokémon vào bên dưới để nạp tự động";
   document.getElementById("modal-export-tabs").classList.add("hidden");
-  document.getElementById("modal-title").textContent = "Nhập Team từ Pokémon Showdown";
-  document.getElementById("modal-subtitle").textContent = "Dán văn bản đội hình Showdown vào bên dưới (tự động quy đổi EVs sang SP 0–32)";
-
-  const textarea = document.getElementById("modal-paste-textarea");
-  textarea.readOnly = false;
-  textarea.value = "";
-  textarea.placeholder = "Dán Showdown Paste tại đây...";
-
-  document.getElementById("modal-action-btn").textContent = "Nhập vào Đội hình hiện tại";
+  document.getElementById("modal-action-btn").textContent = "Nạp vào Đội Hình";
+  document.getElementById("modal-paste-textarea").value = "";
   modal.classList.remove("hidden");
 }
 
@@ -810,333 +976,476 @@ function closePasteModal() {
 
 function handleModalPrimaryAction() {
   const textarea = document.getElementById("modal-paste-textarea");
-  if (appState.modalMode === "import") {
+  if (modalMode === "import") {
     const slots = parseShowdownPasteToSlots(textarea.value);
     if (!slots) {
-      showToast("Không nhận diện được dữ liệu Showdown hợp lệ!", "error");
+      showToast("Không nhận diện được dữ liệu Pokémon!", "error");
       return;
     }
     const team = getCurrentTeam();
     team.slots = slots;
-    appState.activeSlotIndex = 0;
+    activeSlotIndex = 0;
     saveTeamsToStorage();
-    renderAllBuilderUI();
+    renderTeamRibbon();
+    renderActiveSlotEditor();
     closePasteModal();
-    showToast("Đã nhập đội hình thành công!");
+    showToast("Đã nhập đội hình thành công!", "success");
   } else {
     copyTextToClipboard(textarea.value);
   }
 }
 
-// ============================================================================
-// 6. VGC DAMAGE CALCULATOR (CHAMPIONS LV.50 — 16 DAMAGE ROLLS)
-// ============================================================================
-
-function initCalculatorUI() {
-  updateCalcTeamSlotDropdowns();
-  syncCalcSideUI("attacker");
-  syncCalcSideUI("defender");
-  selectCalcMove(appState.calc.moveName);
+function copyTextToClipboard(text) {
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast("Đã sao chép vào Clipboard!", "success");
+  });
 }
 
-function updateCalcTeamSlotDropdowns() {
+// ============================================================================
+// SHOWDOWN-STYLE DAMAGE CALCULATOR ENGINE
+// ============================================================================
+
+function initCalcWorkspace() {
+  refreshCalcTeamDropdowns();
+  renderCalcSideUI("p1");
+  renderCalcSideUI("p2");
+  runDamageCalculation();
+}
+
+function refreshCalcTeamDropdowns() {
   const team = getCurrentTeam();
-  const options =
-    `<option value="">Nạp từ Team...</option>` +
+  if (!team) return;
+  const opts = `<option value="">Nạp từ Team...</option>` +
     team.slots
-      .map((s, idx) => {
-        const form = getEffectiveForm(s.species, s.item, s.isMega);
+      .map((mon, idx) => {
+        const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
         return `<option value="${idx}">Slot ${idx + 1}: ${form.displayName}</option>`;
       })
       .join("");
-
-  document.getElementById("calc-atk-team-slot").innerHTML = options;
-  document.getElementById("calc-def-team-slot").innerHTML = options;
+  ["calc-p1-team-slot", "calc-p2-team-slot"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
 }
 
-function sendCurrentToCalc(side) {
-  loadTeamSlotToCalc(side, appState.activeSlotIndex);
-  switchMainTab("calc");
-}
-
-function loadTeamSlotToCalc(side, slotIndex) {
-  if (slotIndex === "" || slotIndex === null || slotIndex === undefined) return;
-  const team = getCurrentTeam();
-  const mon = team.slots[parseInt(slotIndex, 10)];
-  if (!mon) return;
-
-  const form = getEffectiveForm(mon.species, mon.item, mon.isMega);
-  appState.calc[side] = {
+function applyPokemonObjectToCalcSide(side, mon) {
+  calcState[side] = {
     species: mon.species,
-    isMega: mon.isMega,
-    item: mon.item,
-    ability: form.isMegaActive && form.ability ? form.ability : mon.ability,
-    nature: mon.nature,
+    isMega: !!mon.isMega,
+    item: mon.item || "None",
+    ability: mon.ability || POKEDEX_MC[mon.species].abilities[0],
+    nature: mon.nature || "Serious",
+    status: "Healthy",
     sp: { ...mon.sp },
-    boosts: { atk: 0, spa: 0, def: 0, spd: 0 }
+    stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+    moves: (mon.moves || ["Protect", "Protect", "Protect", "Protect"]).map((m) => ({
+      name: m,
+      crit: false
+    })),
+    selectedMoveIdx: 0
   };
+  // Pick first damaging move if available
+  const dmgIdx = calcState[side].moves.findIndex((m) => (MOVES_DB[m.name]?.bp || 0) > 0);
+  if (dmgIdx !== -1) calcState[side].selectedMoveIdx = dmgIdx;
 
-  syncCalcSideUI(side);
+  renderCalcSideUI(side);
+  runDamageCalculation();
+}
 
-  if (side === "attacker") {
-    const firstDamagingMove = (mon.moves || []).find((m) => MOVES_DB[m] && MOVES_DB[m].bp > 0);
-    if (firstDamagingMove) {
-      selectCalcMove(firstDamagingMove);
+function loadTeamSlotToCalc(side, slotIdxStr) {
+  if (slotIdxStr === "") return;
+  const idx = parseInt(slotIdxStr, 10);
+  const team = getCurrentTeam();
+  if (!team || !team.slots[idx]) return;
+  applyPokemonObjectToCalcSide(side, team.slots[idx]);
+}
+
+function updateCalcSide(side, key, value) {
+  const st = calcState[side];
+  if (!st) return;
+
+  if (key === "species") {
+    const dexData = POKEDEX_MC[value];
+    st.species = value;
+    st.ability = dexData.abilities[0];
+    st.moves = dexData.defaultMoves.map((m) => ({ name: m, crit: false }));
+    st.selectedMoveIdx = 0;
+    if (dexData.megas) {
+      st.isMega = true;
+      st.item = dexData.defaultMegaStone;
+    } else {
+      st.isMega = false;
     }
-  }
-  runDamageCalculation();
-}
-
-function syncCalcSideUI(side) {
-  const prefix = side === "attacker" ? "calc-atk" : "calc-def";
-  const cfg = appState.calc[side];
-  const baseData = POKEDEX_MC[cfg.species] || POKEDEX_MC["Garchomp"];
-  const form = getEffectiveForm(cfg.species, cfg.item, cfg.isMega);
-
-  document.getElementById(`${prefix}-species`).value = cfg.species;
-  document.getElementById(`${prefix}-mega`).checked = !!cfg.isMega;
-  document.getElementById(`${prefix}-item`).value = ITEMS_MC.includes(cfg.item) ? cfg.item : "None";
-  document.getElementById(`${prefix}-nature`).value = cfg.nature;
-
-  const abSel = document.getElementById(`${prefix}-ability`);
-  const abilitiesList = form.isMegaActive && form.ability
-    ? [form.ability, ...baseData.abilities]
-    : baseData.abilities;
-  const uniqueAbs = [...new Set(abilitiesList)];
-  abSel.innerHTML = uniqueAbs.map((a) => `<option value="${a}">${a}</option>`).join("");
-  if (uniqueAbs.includes(cfg.ability)) {
-    abSel.value = cfg.ability;
-  } else {
-    cfg.ability = uniqueAbs[0];
-    abSel.value = cfg.ability;
-  }
-
-  if (side === "attacker") {
-    document.getElementById("calc-atk-sp-atk").value = cfg.sp.atk || 0;
-    document.getElementById("calc-atk-sp-spa").value = cfg.sp.spa || 0;
-    document.getElementById("calc-atk-boost-atk").value = cfg.boosts.atk || 0;
-    document.getElementById("calc-atk-boost-spa").value = cfg.boosts.spa || 0;
-  } else {
-    document.getElementById("calc-def-sp-hp").value = cfg.sp.hp || 0;
-    document.getElementById("calc-def-sp-def").value = cfg.sp.def || 0;
-    document.getElementById("calc-def-sp-spd").value = cfg.sp.spd || 0;
-    document.getElementById("calc-def-boost-def").value = cfg.boosts.def || 0;
-    document.getElementById("calc-def-boost-spd").value = cfg.boosts.spd || 0;
-  }
-}
-
-function updateCalcSide(side, field, value) {
-  const cfg = appState.calc[side];
-  cfg[field] = value;
-  if (field === "species") {
-    const data = POKEDEX_MC[value];
-    cfg.isMega = false;
-    cfg.item = "None";
-    cfg.ability = data.abilities[0];
-  }
-  if (field === "isMega" && value) {
-    const data = POKEDEX_MC[cfg.species];
-    if (data.megas && !data.megas[cfg.item]) {
-      cfg.item = data.defaultMegaStone || Object.keys(data.megas)[0];
+  } else if (key === "isMega") {
+    const dexData = POKEDEX_MC[st.species];
+    st.isMega = Boolean(value && dexData.megas);
+    if (st.isMega && (!st.item || !dexData.megas[st.item])) {
+      st.item = dexData.defaultMegaStone;
     }
-    const form = getEffectiveForm(cfg.species, cfg.item, true);
-    if (form.ability) cfg.ability = form.ability;
+  } else if (key === "item") {
+    st.item = value;
+    const dexData = POKEDEX_MC[st.species];
+    if (dexData && dexData.megas && dexData.megas[value]) {
+      st.isMega = true;
+    } else {
+      st.isMega = false;
+    }
+  } else {
+    st[key] = value;
   }
-  syncCalcSideUI(side);
+
+  renderCalcSideUI(side);
   runDamageCalculation();
 }
 
-function updateCalcSp(side, statKey, val) {
-  appState.calc[side].sp[statKey] = Math.max(0, Math.min(32, parseInt(val, 10) || 0));
+function updateCalcStatSP(side, statKey, rawVal) {
+  const val = Math.max(0, Math.min(32, parseInt(rawVal, 10) || 0));
+  calcState[side].sp[statKey] = val;
+  renderCalcSideUI(side);
   runDamageCalculation();
 }
 
-function updateCalcBoost(side, statKey, val) {
-  appState.calc[side].boosts[statKey] = parseInt(val, 10) || 0;
+function updateCalcStage(side, statKey, rawStage) {
+  calcState[side].stages[statKey] = Math.max(-6, Math.min(6, parseInt(rawStage, 10) || 0));
   runDamageCalculation();
 }
 
-function setDefBulkPreset(hp, def, spd, nature) {
-  appState.calc.defender.sp.hp = hp;
-  appState.calc.defender.sp.def = def;
-  appState.calc.defender.sp.spd = spd;
-  appState.calc.defender.nature = nature;
-  syncCalcSideUI("defender");
+function updateCalcMove(side, mIdx, moveName) {
+  calcState[side].moves[mIdx].name = moveName;
+  calcState.activeSide = side;
+  calcState[side].selectedMoveIdx = mIdx;
+  renderCalcSideUI(side);
   runDamageCalculation();
 }
 
-function setFieldOption(category, value) {
-  appState.calc[category] = value;
-  const attr = category === "weather" ? "data-field-weather" : "data-field-terrain";
+function toggleCalcMoveCrit(side, mIdx, isCrit) {
+  calcState[side].moves[mIdx].crit = isCrit;
+  calcState.activeSide = side;
+  calcState[side].selectedMoveIdx = mIdx;
+  runDamageCalculation();
+}
+
+function selectCalcActiveMove(side, mIdx) {
+  calcState.activeSide = side;
+  calcState[side].selectedMoveIdx = mIdx;
+  runDamageCalculation();
+}
+
+function renderCalcSideUI(side) {
+  const st = calcState[side];
+  const dexData = POKEDEX_MC[st.species] || POKEDEX_MC["Garchomp"];
+  const form = getEffectiveForm(st.species, st.isMega, st.item);
+
+  document.getElementById(`calc-${side}-sprite`).src = getSpriteUrl(form.sprite);
+  document.getElementById(`calc-${side}-species`).value = st.species;
+
+  const megaChk = document.getElementById(`calc-${side}-mega`);
+  megaChk.checked = form.isMegaActive;
+  megaChk.disabled = !dexData.megas;
+
+  document.getElementById(`calc-${side}-types`).innerHTML = renderTypeBadgesHtml(form.types);
+  document.getElementById(`calc-${side}-item`).value = st.item;
+  document.getElementById(`calc-${side}-nature`).value = st.nature;
+  document.getElementById(`calc-${side}-status`).value = st.status;
+
+  // Ability selector (includes Mega ability if active)
+  const abSel = document.getElementById(`calc-${side}-ability`);
+  const abilitiesPool = [...dexData.abilities];
+  if (form.isMegaActive && form.ability && !abilitiesPool.includes(form.ability)) {
+    abilitiesPool.unshift(form.ability);
+    st.ability = form.ability;
+  }
+  abSel.innerHTML = abilitiesPool
+    .map((ab) => `<option value="${ab}" ${st.ability === ab ? "selected" : ""}>${ab}</option>`)
+    .join("");
+
+  // 6-Stat SP & Stage table
+  const nat = NATURES[st.nature] || NATURES.Serious;
+  const statsContainer = document.getElementById(`calc-${side}-stats-table`);
+  statsContainer.innerHTML = STAT_KEYS.map((k) => {
+    const baseVal = form.base[k];
+    const spVal = st.sp[k] || 0;
+    const finalStat = calculateLv50Stat(k, baseVal, spVal, st.nature);
+    const natMark = nat.plus === k ? "+" : nat.minus === k ? "-" : "";
+    const stageOptions = [6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6]
+      .map((s) => `<option value="${s}" ${(st.stages[k] || 0) === s ? "selected" : ""}>${s > 0 ? "+" + s : s}</option>`)
+      .join("");
+
+    return `
+      <div class="grid grid-cols-12 gap-1 items-center text-xs py-0.5">
+        <div class="col-span-3 font-semibold text-slate-300">${STAT_LABELS[k]}${natMark}</div>
+        <div class="col-span-2 text-center font-mono text-[11px] text-slate-400">${baseVal}</div>
+        <div class="col-span-3 text-center">
+          <input type="number" min="0" max="32" value="${spVal}" onchange="updateCalcStatSP('${side}', '${k}', this.value)"
+            class="w-12 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-center font-mono text-[11px] text-sky-300 font-bold" />
+        </div>
+        <div class="col-span-2 text-center font-mono font-bold text-white">${finalStat}</div>
+        <div class="col-span-2 text-center">
+          ${
+            k === "hp"
+              ? `<span class="text-[10px] text-slate-600">-</span>`
+              : `<select onchange="updateCalcStage('${side}', '${k}', this.value)" class="bg-slate-900 border border-slate-700 rounded px-1 py-0.5 font-mono text-[10px] text-slate-200">${stageOptions}</select>`
+          }
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // 4 Moves Editor
+  const allMoves = Object.keys(MOVES_DB).sort();
+  const movesContainer = document.getElementById(`calc-${side}-moves-editor`);
+  movesContainer.innerHTML = [0, 1, 2, 3]
+    .map((mIdx) => {
+      const mObj = st.moves[mIdx];
+      const meta = MOVES_DB[mObj.name] || { bp: 0, type: "Normal", cat: "Status" };
+      const opts = allMoves
+        .map((mv) => `<option value="${mv}" ${mv === mObj.name ? "selected" : ""}>${mv}</option>`)
+        .join("");
+      return `
+        <div class="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs">
+          <select onchange="updateCalcMove('${side}', ${mIdx}, this.value)" class="flex-1 bg-transparent font-semibold text-white focus:outline-none min-w-0">
+            ${opts}
+          </select>
+          <span class="font-mono text-[11px] text-slate-400 w-7 text-right">${meta.bp || "-"}</span>
+          <span class="type-badge type-${meta.type} w-14 text-center">${meta.type}</span>
+          <label class="flex items-center gap-0.5 text-[10px] text-amber-300 cursor-pointer shrink-0" title="Critical Hit">
+            <input type="checkbox" ${mObj.crit ? "checked" : ""} onchange="toggleCalcMoveCrit('${side}', ${mIdx}, this.checked)" /> Crit
+          </label>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function swapCalcSides() {
+  const temp = cloneDeep(calcState.p1);
+  calcState.p1 = cloneDeep(calcState.p2);
+  calcState.p2 = temp;
+  calcState.activeSide = calcState.activeSide === "p1" ? "p2" : "p1";
+  renderCalcSideUI("p1");
+  renderCalcSideUI("p2");
+  runDamageCalculation();
+  showToast("Đã đổi vị trí Pokémon 1 và Pokémon 2!");
+}
+
+function setCalcFormat(isDoubles) {
+  calcState.field.isDoubles = isDoubles;
+  const btnSingles = document.getElementById("field-fmt-singles");
+  const btnDoubles = document.getElementById("field-fmt-doubles");
+  if (isDoubles) {
+    btnDoubles.className = "py-1 rounded-lg text-[11px] font-bold bg-sky-500 text-slate-950";
+    btnSingles.className = "py-1 rounded-lg text-[11px] font-bold text-slate-400";
+  } else {
+    btnSingles.className = "py-1 rounded-lg text-[11px] font-bold bg-sky-500 text-slate-950";
+    btnDoubles.className = "py-1 rounded-lg text-[11px] font-bold text-slate-400";
+  }
+  runDamageCalculation();
+}
+
+function setFieldOption(fieldType, value) {
+  calcState.field[fieldType] = value;
+  const attr = fieldType === "weather" ? "data-field-weather" : "data-field-terrain";
   document.querySelectorAll(`[${attr}]`).forEach((btn) => {
-    const isSelected = btn.getAttribute(attr) === value;
-    btn.className = isSelected
-      ? "field-btn py-1.5 rounded-lg bg-sky-500 text-slate-950 font-bold"
-      : "field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700";
+    const isMatch = btn.getAttribute(attr) === value;
+    const colSpan = btn.getAttribute(attr) === "None" ? "col-span-2 " : "";
+    btn.className = isMatch
+      ? `${colSpan}py-1 rounded bg-sky-500 text-slate-950 font-bold`
+      : `${colSpan}py-1 rounded bg-slate-900 text-slate-300 border border-slate-800`;
   });
   runDamageCalculation();
 }
 
-function swapCalcSides() {
-  const temp = JSON.parse(JSON.stringify(appState.calc.attacker));
-  appState.calc.attacker = JSON.parse(JSON.stringify(appState.calc.defender));
-  appState.calc.defender = temp;
-  syncCalcSideUI("attacker");
-  syncCalcSideUI("defender");
-  runDamageCalculation();
-}
-
-function selectCalcMove(moveName) {
-  appState.calc.moveName = moveName;
-  const mv = MOVES_DB[moveName];
-  if (!mv) return;
-  document.getElementById("calc-move-name").value = moveName;
-  document.getElementById("calc-move-bp").value = mv.bp;
-  document.getElementById("calc-move-type").value = mv.type;
-  document.getElementById("calc-move-cat").value = mv.cat === "Status" ? "Physical" : mv.cat;
-  runDamageCalculation();
-}
-
-function applyStatStage(stat, stage, isCrit, isAttack) {
-  if (isCrit) {
-    if (isAttack && stage < 0) stage = 0;
-    if (!isAttack && stage > 0) stage = 0;
-  }
-  if (stage >= 0) return Math.floor((stat * (2 + stage)) / 2);
-  return Math.floor((stat * 2) / (2 - stage));
-}
-
-function getTypeEffectiveness(moveType, defTypes, defAbility) {
-  if (moveType === "Ground" && defAbility === "Levitate") return 0;
+function getTypeEffectiveness(moveType, defTypes) {
   let mult = 1;
-  defTypes.forEach((dt) => {
-    const chartRow = TYPE_CHART[moveType] || {};
-    const factor = chartRow[dt] !== undefined ? chartRow[dt] : 1;
-    mult *= factor;
+  const chartRow = TYPE_CHART[moveType] || {};
+  (defTypes || []).forEach((dt) => {
+    if (chartRow[dt] !== undefined) {
+      mult *= chartRow[dt];
+    }
   });
   return mult;
 }
 
-function runDamageCalculation() {
-  const atkCfg = appState.calc.attacker;
-  const defCfg = appState.calc.defender;
-  const atkForm = getEffectiveForm(atkCfg.species, atkCfg.item, atkCfg.isMega);
-  const defForm = getEffectiveForm(defCfg.species, defCfg.item, defCfg.isMega);
+function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
+  const atk = calcState[atkSideKey];
+  const def = calcState[defSideKey];
+  const atkForm = getEffectiveForm(atk.species, atk.isMega, atk.item);
+  const defForm = getEffectiveForm(def.species, def.isMega, def.item);
 
-  const moveName = document.getElementById("calc-move-name").value || "Earthquake";
-  const moveMeta = MOVES_DB[moveName] || { bp: 100, type: "Normal", cat: "Physical", spread: false };
-  let bp = parseInt(document.getElementById("calc-move-bp").value, 10) || 0;
-  let moveType = document.getElementById("calc-move-type").value;
-  const moveCat = document.getElementById("calc-move-cat").value;
+  const defMaxHp = calculateLv50Stat("hp", defForm.base.hp, def.sp.hp, def.nature);
+  const moveMeta = MOVES_DB[moveObj.name] || { bp: 0, type: "Normal", cat: "Status", spread: false };
 
-  const isDoubles = document.getElementById("calc-is-doubles").checked;
-  const isCrit = document.getElementById("calc-is-crit").checked;
-  const isBurned = document.getElementById("calc-atk-burn").checked;
-  const hasHH = document.getElementById("field-hh").checked;
-  const hasReflect = document.getElementById("field-reflect").checked;
-  const hasLightScreen = document.getElementById("field-lightscreen").checked;
-  const weather = appState.calc.weather;
-  const terrain = appState.calc.terrain;
-
-  // Ability type conversions (Aerilate, Pixilate, Liquid Voice)
-  if (moveType === "Normal" && atkCfg.ability === "Aerilate") {
-    moveType = "Flying";
-    bp = Math.floor(bp * 1.2);
-  } else if (moveType === "Normal" && atkCfg.ability === "Pixilate") {
-    moveType = "Fairy";
-    bp = Math.floor(bp * 1.2);
-  } else if (moveName === "Hyper Voice" && atkCfg.ability === "Liquid Voice") {
-    moveType = "Water";
+  if (moveMeta.cat === "Status" || !moveMeta.bp || moveMeta.bp <= 0) {
+    return {
+      rolls: Array(16).fill(0),
+      min: 0,
+      max: 0,
+      minPct: 0,
+      maxPct: 0,
+      defMaxHp,
+      koText: "Status Move (0%)"
+    };
   }
 
-  // Ability power boosts (Sharpness, Tough Claws)
-  if (atkCfg.ability === "Sharpness" && moveMeta.slicing) {
-    bp = Math.floor(bp * 1.5);
+  // Protect check
+  const defProtect = document.getElementById(`side-${defSideKey}-protect`)?.checked;
+  if (defProtect && moveObj.name !== "Feint") {
+    return {
+      rolls: Array(16).fill(0),
+      min: 0,
+      max: 0,
+      minPct: 0,
+      maxPct: 0,
+      defMaxHp,
+      koText: "Blocked by Protect"
+    };
   }
-  if (atkCfg.ability === "Tough Claws" && moveMeta.contact) {
-    bp = Math.floor(bp * 1.3);
+
+  // Effective move type & BP (Pixilate / Aerilate / Weather Ball)
+  let effType = moveMeta.type;
+  let bp = moveMeta.bp;
+  let abilityBoost = 1.0;
+
+  if (effType === "Normal" && (atk.ability === "Pixilate" || atk.ability === "Aerilate")) {
+    effType = atk.ability === "Pixilate" ? "Fairy" : "Flying";
+    abilityBoost *= 1.2;
+  }
+  if (moveObj.name === "Weather Ball" && calcState.field.weather !== "None") {
+    const wMap = { Sun: "Fire", Rain: "Water", Sand: "Rock", Snow: "Ice" };
+    effType = wMap[calcState.field.weather] || "Normal";
   }
 
-  // Terrain power boosts
-  if (terrain === "Electric" && moveType === "Electric") bp = Math.floor(bp * 1.3);
-  if (terrain === "Grassy" && moveType === "Grass") bp = Math.floor(bp * 1.3);
-  if (terrain === "Psychic" && moveType === "Psychic") bp = Math.floor(bp * 1.3);
-  if (terrain === "Misty" && moveType === "Dragon") bp = Math.floor(bp * 0.5);
-  if (terrain === "Grassy" && moveName === "Earthquake") bp = Math.floor(bp * 0.5);
-  if (terrain === "Psychic" && moveName === "Expanding Force") bp = Math.floor(bp * 1.5);
+  // Ability immunities
+  if (effType === "Ground" && def.ability === "Levitate") {
+    return { rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0, defMaxHp, koText: "Immune (Levitate)" };
+  }
+  if (effType === "Fire" && def.ability === "Flash Fire") {
+    return { rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0, defMaxHp, koText: "Immune (Flash Fire)" };
+  }
+  if (effType === "Electric" && def.ability === "Lightning Rod") {
+    return { rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0, defMaxHp, koText: "Immune (Lightning Rod)" };
+  }
 
-  if (hasHH) bp = Math.floor(bp * 1.5);
+  const typeMult = getTypeEffectiveness(effType, defForm.types);
+  if (typeMult === 0) {
+    return { rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0, defMaxHp, koText: "Immune (0x)" };
+  }
 
-  // Calculate Level 50 Champions Stats
-  const defMaxHp = calcChampionsStat("hp", defForm.base.hp, defCfg.sp.hp, defCfg.nature);
-
-  const isPhys = moveCat === "Physical";
-  const atkStatKey = isPhys ? "atk" : "spa";
+  // Determine Offensive & Defensive stats
+  const isPhys = moveMeta.cat === "Physical";
+  const isBodyPress = moveObj.name === "Body Press";
+  const atkStatKey = isBodyPress ? "def" : isPhys ? "atk" : "spa";
   const defStatKey = isPhys ? "def" : "spd";
 
-  let rawAtk = calcChampionsStat(atkStatKey, atkForm.base[atkStatKey], atkCfg.sp[atkStatKey], atkCfg.nature);
-  let rawDef = calcChampionsStat(defStatKey, defForm.base[defStatKey], defCfg.sp[defStatKey], defCfg.nature);
+  let rawA = calculateLv50Stat(atkStatKey, atkForm.base[atkStatKey], atk.sp[atkStatKey], atk.nature);
+  let rawD = calculateLv50Stat(defStatKey, defForm.base[defStatKey], def.sp[defStatKey], def.nature);
 
-  rawAtk = applyStatStage(rawAtk, atkCfg.boosts[atkStatKey] || 0, isCrit, true);
-  rawDef = applyStatStage(rawDef, defCfg.boosts[defStatKey] || 0, isCrit, false);
+  let atkStage = atk.stages[atkStatKey] || 0;
+  let defStage = def.stages[defStatKey] || 0;
+  if (moveObj.crit) {
+    if (atkStage < 0) atkStage = 0;
+    if (defStage > 0) defStage = 0;
+  }
 
-  // Item & Ability stat multipliers
-  if (isPhys && atkCfg.item === "Choice Band") rawAtk = Math.floor(rawAtk * 1.5);
-  if (!isPhys && atkCfg.item === "Choice Specs") rawAtk = Math.floor(rawAtk * 1.5);
-  if (isPhys && atkCfg.ability === "Huge Power") rawAtk = rawAtk * 2;
+  let A = Math.floor(rawA * getStageMultiplier(atkStage));
+  let D = Math.floor(rawD * getStageMultiplier(defStage));
 
-  if (!isPhys && defCfg.item === "Assault Vest") rawDef = Math.floor(rawDef * 1.5);
-  if (!isPhys && weather === "Sand" && defForm.types.includes("Rock")) rawDef = Math.floor(rawDef * 1.5);
-  if (isPhys && weather === "Snow" && defForm.types.includes("Ice")) rawDef = Math.floor(rawDef * 1.5);
+  // Item stat modifiers
+  if (isPhys && atk.item === "Choice Band") A = Math.floor(A * 1.5);
+  if (!isPhys && atk.item === "Choice Specs") A = Math.floor(A * 1.5);
+  if (!isPhys && def.item === "Assault Vest") D = Math.floor(D * 1.5);
+  if (def.item === "Eviolite") D = Math.floor(D * 1.5);
+  if (calcState.field.weather === "Sand" && defForm.types.includes("Rock") && !isPhys) {
+    D = Math.floor(D * 1.5);
+  }
+  if (calcState.field.weather === "Snow" && defForm.types.includes("Ice") && isPhys) {
+    D = Math.floor(D * 1.5);
+  }
 
-  // Base Damage Formula at Level 50
-  const levelFactor = Math.floor((2 * 50) / 5) + 2; // 22
-  let baseDamage = Math.floor(Math.floor((levelFactor * bp * rawAtk) / Math.max(1, rawDef)) / 50) + 2;
+  // Ability power boosts
+  if (atk.ability === "Tough Claws" && moveMeta.contact) abilityBoost *= 1.3;
+  if (atk.ability === "Sharpness" && moveMeta.slicing) abilityBoost *= 1.5;
+  if (atk.ability === "Solar Power" && calcState.field.weather === "Sun" && !isPhys) {
+    A = Math.floor(A * 1.5);
+  }
+  if (def.ability === "Thick Fat" && (effType === "Fire" || effType === "Ice")) {
+    abilityBoost *= 0.5;
+  }
+  if (def.ability === "Heatproof" && effType === "Fire") {
+    abilityBoost *= 0.5;
+  }
+  if (def.ability === "Multiscale") {
+    abilityBoost *= 0.5;
+  }
 
-  // Spread Modifier (Doubles 0.75x)
-  const isSpreadMove = moveMeta.spread || (moveName === "Expanding Force" && terrain === "Psychic");
-  if (isDoubles && isSpreadMove) {
+  bp = Math.max(1, Math.floor(bp * abilityBoost));
+
+  // Core Level 50 Damage Formula
+  let baseDamage = Math.floor(Math.floor(Math.floor((2 * 50) / 5 + 2) * bp * A / Math.max(1, D)) / 50) + 2;
+
+  // Doubles Spread Modifier
+  if (calcState.field.isDoubles && moveMeta.spread) {
     baseDamage = Math.floor(baseDamage * 0.75);
   }
 
   // Weather Modifier
-  if (weather === "Sun") {
-    if (moveType === "Fire") baseDamage = Math.floor(baseDamage * 1.5);
-    if (moveType === "Water") baseDamage = Math.floor(baseDamage * 0.5);
-  } else if (weather === "Rain") {
-    if (moveType === "Water") baseDamage = Math.floor(baseDamage * 1.5);
-    if (moveType === "Fire") baseDamage = Math.floor(baseDamage * 0.5);
+  if (calcState.field.weather === "Sun") {
+    if (effType === "Fire") baseDamage = Math.floor(baseDamage * 1.5);
+    if (effType === "Water") baseDamage = Math.floor(baseDamage * 0.5);
+  } else if (calcState.field.weather === "Rain") {
+    if (effType === "Water") baseDamage = Math.floor(baseDamage * 1.5);
+    if (effType === "Fire") baseDamage = Math.floor(baseDamage * 0.5);
   }
 
-  // Critical Hit (1.5x)
-  if (isCrit) {
+  // Critical Hit
+  if (moveObj.crit) {
     baseDamage = Math.floor(baseDamage * 1.5);
   }
 
-  // STAB & Type Effectiveness
-  const hasStab = atkForm.types.includes(moveType);
-  const stabMult = hasStab ? (atkCfg.ability === "Adaptability" ? 2.0 : 1.5) : 1.0;
-  const typeEff = getTypeEffectiveness(moveType, defForm.types, defCfg.ability);
+  // STAB
+  const hasStab = atkForm.types.includes(effType);
+  const stabMult = hasStab ? (atk.ability === "Adaptability" ? 2.0 : 1.5) : 1.0;
 
-  // Defender Defensive Abilities (Thick Fat, Aura Guard, Multiscale, Filter)
-  let defAbMult = 1.0;
-  if (defCfg.ability === "Thick Fat" && (moveType === "Fire" || moveType === "Ice")) defAbMult *= 0.5;
-  if (defCfg.ability === "Aura Guard" && moveMeta.contact) defAbMult *= 0.5;
-  if (defCfg.ability === "Multiscale") defAbMult *= 0.5;
-  if (defCfg.ability === "Filter" && typeEff > 1) defAbMult *= 0.75;
+  // Burn
+  const burnMult = isPhys && atk.status === "Burned" ? 0.5 : 1.0;
 
-  // Screens (ignored on Crit)
-  let screenMult = 1.0;
-  if (!isCrit) {
-    if (isPhys && hasReflect) screenMult = isDoubles ? 2 / 3 : 0.5;
-    if (!isPhys && hasLightScreen) screenMult = isDoubles ? 2 / 3 : 0.5;
+  // Terrain
+  let terrainMult = 1.0;
+  if (calcState.field.terrain === "Electric" && effType === "Electric" && !atkForm.types.includes("Flying") && atk.ability !== "Levitate") {
+    terrainMult = 1.3;
+  } else if (calcState.field.terrain === "Grassy" && effType === "Grass" && !atkForm.types.includes("Flying") && atk.ability !== "Levitate") {
+    terrainMult = 1.3;
+  } else if (calcState.field.terrain === "Psychic" && effType === "Psychic" && !atkForm.types.includes("Flying") && atk.ability !== "Levitate") {
+    terrainMult = 1.3;
+  } else if (calcState.field.terrain === "Misty" && effType === "Dragon") {
+    terrainMult = 0.5;
   }
 
-  // Attacker Held Item Damage Multipliers
-  let itemMult = 1.0;
-  if (atkCfg.item === "Life Orb") itemMult *= 1.3;
-  if (atkCfg.item === "Expert Belt" && typeEff > 1) itemMult *= 1.2;
-  const typeBoostMap = {
+  // Side Conditions (Helping Hand, Screens, Friend Guard)
+  const hhActive = document.getElementById(`side-${atkSideKey}-hh`)?.checked;
+  const hhMult = hhActive ? 1.5 : 1.0;
+
+  const fgActive = document.getElementById(`side-${defSideKey}-friendguard`)?.checked;
+  const fgMult = fgActive ? 0.75 : 1.0;
+
+  const reflectOn = document.getElementById(`side-${defSideKey}-reflect`)?.checked;
+  const lsOn = document.getElementById(`side-${defSideKey}-lightscreen`)?.checked;
+  const veilOn = document.getElementById(`side-${defSideKey}-auroraveil`)?.checked;
+
+  let screenMult = 1.0;
+  if (!moveObj.crit && atk.ability !== "Infiltrator") {
+    if ((isPhys && (reflectOn || veilOn)) || (!isPhys && (lsOn || veilOn))) {
+      screenMult = calcState.field.isDoubles ? 2732 / 4096 : 0.5;
+    }
+  }
+
+  // Offensive Held Item Boosts
+  let itemDmgMult = 1.0;
+  if (atk.item === "Life Orb") itemDmgMult *= 1.3;
+  if (atk.item === "Expert Belt" && typeMult > 1) itemDmgMult *= 1.2;
+
+  const typeItems = {
     "Black Glasses": "Dark",
     "Charcoal": "Fire",
     "Mystic Water": "Water",
@@ -1149,118 +1458,416 @@ function runDamageCalculation() {
     "Never-Melt Ice": "Ice",
     "Silk Scarf": "Normal"
   };
-  if (typeBoostMap[atkCfg.item] === moveType) itemMult *= 1.2;
+  if (typeItems[atk.item] === effType) {
+    itemDmgMult *= 1.2;
+  }
 
   // Generate 16 Damage Rolls (85% to 100%)
   const rolls = [];
   for (let r = 85; r <= 100; r++) {
-    let dmg = Math.floor((baseDamage * r) / 100);
-    dmg = Math.floor(dmg * stabMult);
-    dmg = Math.floor(dmg * typeEff);
-    if (isPhys && isBurned && atkCfg.ability !== "Guts") {
-      dmg = Math.floor(dmg * 0.5);
-    }
-    dmg = Math.floor(dmg * screenMult);
-    dmg = Math.floor(dmg * defAbMult);
-    dmg = Math.floor(dmg * itemMult);
-    if (typeEff > 0 && dmg < 1) dmg = 1;
-    rolls.push(dmg);
+    let d = Math.floor((baseDamage * r) / 100);
+    d = Math.floor(d * stabMult);
+    d = Math.floor(d * typeMult);
+    d = Math.floor(d * burnMult);
+    d = Math.floor(d * terrainMult);
+    d = Math.floor(d * hhMult);
+    d = Math.floor(d * screenMult);
+    d = Math.floor(d * fgMult);
+    d = Math.floor(d * itemDmgMult);
+    rolls.push(Math.max(1, d));
   }
 
-  const minDmg = rolls[0];
-  const maxDmg = rolls[15];
-  const minPct = ((minDmg / defMaxHp) * 100).toFixed(1);
-  const maxPct = ((maxDmg / defMaxHp) * 100).toFixed(1);
+  const min = rolls[0];
+  const max = rolls[15];
+  const minPct = Number(((min / defMaxHp) * 100).toFixed(1));
+  const maxPct = Number(((max / defMaxHp) * 100).toFixed(1));
 
-  // KO Calculation
-  const ohkoRolls = rolls.filter((d) => d >= defMaxHp).length;
-  let koVerdict = "";
-  if (typeEff === 0) {
-    koVerdict = "Miễn nhiễm (0% Damage)";
-  } else if (ohkoRolls === 16) {
-    koVerdict = "Guaranteed OHKO (100% hạ gục 1 hit)";
-  } else if (ohkoRolls > 0) {
-    const chance = ((ohkoRolls / 16) * 100).toFixed(1);
-    koVerdict = `${chance}% Chance to OHKO (${ohkoRolls}/16 rolls)`;
-  } else if (minDmg * 2 >= defMaxHp) {
-    koVerdict = "Guaranteed 2HKO";
-  } else if (maxDmg * 2 >= defMaxHp) {
-    koVerdict = "Possible 2HKO";
-  } else if (minDmg * 3 >= defMaxHp) {
-    koVerdict = "Guaranteed 3HKO";
-  } else {
-    const hits = Math.ceil(defMaxHp / Math.max(1, maxDmg));
-    koVerdict = `~${hits}HKO`;
+  // Determine KO Tier
+  let koText = "possible 5HKO+";
+  if (min >= defMaxHp) {
+    koText = "guaranteed OHKO";
+  } else if (max >= defMaxHp) {
+    const ohkoRolls = rolls.filter((v) => v >= defMaxHp).length;
+    const pct = ((ohkoRolls / 16) * 100).toFixed(1);
+    koText = `${pct}% chance to OHKO`;
+  } else if (min * 2 >= defMaxHp) {
+    koText = "guaranteed 2HKO";
+  } else if (max * 2 >= defMaxHp) {
+    koText = "possible 2HKO";
+  } else if (min * 3 >= defMaxHp) {
+    koText = "guaranteed 3HKO";
+  } else if (max * 3 >= defMaxHp) {
+    koText = "possible 3HKO";
+  } else if (max * 4 >= defMaxHp) {
+    koText = "possible 4HKO";
   }
 
-  // Update UI
-  document.getElementById("calc-move-badge").textContent = `${moveType} · ${moveCat} · ${bp} BP (${typeEff}x)`;
-  document.getElementById("calc-headline").textContent =
-    `${atkForm.displayName} (${atkCfg.sp[atkStatKey]} SP) ${moveName} vs. ${defForm.displayName} (${defCfg.sp.hp} HP / ${defCfg.sp[defStatKey]} Def SP): ` +
-    `${minDmg} - ${maxDmg} (${minPct}% - ${maxPct}%)`;
-  document.getElementById("calc-subline").textContent = `Rolls (16): (${rolls.join(", ")})`;
+  return { rolls, min, max, minPct, maxPct, defMaxHp, koText };
+}
 
-  const remMinPct = Math.max(0, 100 - parseFloat(maxPct)).toFixed(1);
-  const remMaxPct = Math.max(0, 100 - parseFloat(minPct)).toFixed(1);
+function runDamageCalculation() {
+  const p1Form = getEffectiveForm(calcState.p1.species, calcState.p1.isMega, calcState.p1.item);
+  const p2Form = getEffectiveForm(calcState.p2.species, calcState.p2.isMega, calcState.p2.item);
+
+  document.getElementById("calc-top-p1-name").textContent = p1Form.displayName;
+  document.getElementById("calc-top-p2-name").textContent = p2Form.displayName;
+
+  // Compute all 4 moves for P1 -> P2 and P2 -> P1
+  const p1Results = calcState.p1.moves.map((m) => computeSingleMoveDamage("p1", "p2", m));
+  const p2Results = calcState.p2.moves.map((m) => computeSingleMoveDamage("p2", "p1", m));
+
+  // Render Top Matrix P1
+  document.getElementById("calc-top-p1-moves").innerHTML = calcState.p1.moves
+    .map((m, idx) => {
+      const res = p1Results[idx];
+      const isSelected = calcState.activeSide === "p1" && calcState.p1.selectedMoveIdx === idx;
+      return `
+        <button type="button" onclick="selectCalcActiveMove('p1', ${idx})"
+          class="calc-move-pill w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-xs ${
+            isSelected ? "selected-move text-white font-bold" : "border-slate-800/80 bg-slate-900/50 text-slate-300 hover:border-slate-700"
+          }">
+          <span class="truncate">${escapeHtml(m.name)}</span>
+          <span class="font-mono text-[11px] ${res.maxPct >= 100 ? "text-rose-400 font-bold" : "text-sky-300"}">
+            ${res.minPct} - ${res.maxPct}%
+          </span>
+        </button>
+      `;
+    })
+    .join("");
+
+  // Render Top Matrix P2
+  document.getElementById("calc-top-p2-moves").innerHTML = calcState.p2.moves
+    .map((m, idx) => {
+      const res = p2Results[idx];
+      const isSelected = calcState.activeSide === "p2" && calcState.p2.selectedMoveIdx === idx;
+      return `
+        <button type="button" onclick="selectCalcActiveMove('p2', ${idx})"
+          class="calc-move-pill w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-xs ${
+            isSelected ? "selected-move text-white font-bold" : "border-slate-800/80 bg-slate-900/50 text-slate-300 hover:border-slate-700"
+          }">
+          <span class="truncate">${escapeHtml(m.name)}</span>
+          <span class="font-mono text-[11px] ${res.maxPct >= 100 ? "text-rose-400 font-bold" : "text-rose-300"}">
+            ${res.minPct} - ${res.maxPct}%
+          </span>
+        </button>
+      `;
+    })
+    .join("");
+
+  // Active Headline Calculation
+  const atkKey = calcState.activeSide;
+  const defKey = atkKey === "p1" ? "p2" : "p1";
+  const atk = calcState[atkKey];
+  const def = calcState[defKey];
+  const mIdx = atk.selectedMoveIdx;
+  const activeMove = atk.moves[mIdx];
+  const res = atkKey === "p1" ? p1Results[mIdx] : p2Results[mIdx];
+
+  const aForm = atkKey === "p1" ? p1Form : p2Form;
+  const dForm = defKey === "p1" ? p1Form : p2Form;
+  const moveMeta = MOVES_DB[activeMove.name] || { cat: "Physical" };
+  const atkStatUsed = moveMeta.cat === "Physical" ? "atk" : "spa";
+  const defStatUsed = moveMeta.cat === "Physical" ? "def" : "spd";
+
+  const atkNatSign = NATURES[atk.nature]?.plus === atkStatUsed ? "+" : NATURES[atk.nature]?.minus === atkStatUsed ? "-" : "";
+  const defNatSign = NATURES[def.nature]?.plus === defStatUsed ? "+" : NATURES[def.nature]?.minus === defStatUsed ? "-" : "";
+
+  const headline = `${atk.sp[atkStatUsed]}${atkNatSign} ${STAT_LABELS[atkStatUsed]} ${aForm.displayName} ${activeMove.name} vs. ${def.sp.hp} HP / ${def.sp[defStatUsed]}${defNatSign} ${STAT_LABELS[defStatUsed]} ${dForm.displayName}: ${res.min} - ${res.max} (${res.minPct} - ${res.maxPct}%) -- ${res.koText}`;
+
+  document.getElementById("calc-headline").textContent = headline;
+  document.getElementById("calc-subline").textContent = `Possible damage amounts: (${res.rolls.join(", ")})`;
+
+  // Remaining HP Bar
+  const remMinPct = Math.max(0, Number((100 - res.maxPct).toFixed(1)));
+  const remMaxPct = Math.max(0, Number((100 - res.minPct).toFixed(1)));
   document.getElementById("calc-hp-range-text").textContent = `${remMinPct}% - ${remMaxPct}%`;
-
-  const barMin = document.getElementById("calc-hp-bar-min");
-  const barMax = document.getElementById("calc-hp-bar-max");
-  barMin.style.width = `${remMinPct}%`;
-  barMax.style.width = `${remMaxPct}%`;
-
-  const barColor =
-    parseFloat(remMinPct) <= 20
-      ? "bg-rose-500"
-      : parseFloat(remMinPct) <= 50
-      ? "bg-amber-500"
-      : "bg-emerald-500";
-  barMin.className = `h-full ${barColor} rounded-full transition-all duration-300 relative z-10`;
-  document.getElementById("calc-ko-verdict").textContent = koVerdict;
+  document.getElementById("calc-hp-bar-max").style.width = `${remMaxPct}%`;
+  document.getElementById("calc-hp-bar-min").style.width = `${remMinPct}%`;
 }
 
 // ============================================================================
-// 7. GEMINI VISION AI — 6-POKÉMON TEAM SCREENSHOT SCANNER
+// DEDICATED SPEED CHECKER & META SPEED TIERS PAGE
 // ============================================================================
 
-function saveGeminiKey(key) {
-  localStorage.setItem(GEMINI_KEY_STORAGE, key.trim());
-  showToast("Đã lưu Gemini API Key vào trình duyệt.");
+function initSpeedWorkspace() {
+  refreshSpeedTeamDropdowns();
+  document.getElementById("speed-p1-species").value = "Garchomp";
+  document.getElementById("speed-p1-mega").checked = true;
+  document.getElementById("speed-p1-nature").value = "plus";
+  document.getElementById("speed-p1-sp").value = 32;
+  document.getElementById("speed-p1-sp-range").value = 32;
+
+  document.getElementById("speed-p2-species").value = "Sneasler";
+  document.getElementById("speed-p2-mega").checked = false;
+  document.getElementById("speed-p2-nature").value = "plus";
+  document.getElementById("speed-p2-sp").value = 32;
+  document.getElementById("speed-p2-sp-range").value = 32;
+
+  updateSpeedWorkspace();
 }
 
-function initAiScannerPasteListener() {
-  window.addEventListener("paste", (e) => {
-    const scannerView = document.getElementById("view-scanner");
-    if (scannerView.classList.contains("hidden")) return;
+function refreshSpeedTeamDropdowns() {
+  const team = getCurrentTeam();
+  if (!team) return;
+  const opts = `<option value="">Nạp từ Team...</option>` +
+    team.slots
+      .map((mon, idx) => {
+        const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
+        return `<option value="${idx}">Slot ${idx + 1}: ${form.displayName}</option>`;
+      })
+      .join("");
+  ["speed-p1-team-slot", "speed-p2-team-slot"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
 
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const file = item.getAsFile();
-        if (file) processSelectedImageFile(file);
+function applyPokemonObjectToSpeedSide(side, mon) {
+  const dexData = POKEDEX_MC[mon.species] || POKEDEX_MC["Garchomp"];
+  document.getElementById(`speed-${side}-species`).value = mon.species;
+
+  const megaChk = document.getElementById(`speed-${side}-mega`);
+  megaChk.disabled = !dexData.megas;
+  megaChk.checked = Boolean(mon.isMega && dexData.megas);
+
+  const nat = NATURES[mon.nature] || NATURES.Serious;
+  const natMode = nat.plus === "spe" ? "plus" : nat.minus === "spe" ? "minus" : "neutral";
+  document.getElementById(`speed-${side}-nature`).value = natMode;
+
+  const speSp = mon.sp?.spe || 0;
+  document.getElementById(`speed-${side}-sp`).value = speSp;
+  document.getElementById(`speed-${side}-sp-range`).value = speSp;
+
+  let mult = "1";
+  if (mon.item === "Choice Scarf" || mon.item === "Booster Energy") mult = "1.5";
+  if (mon.item === "Iron Ball") mult = "0.5";
+  document.getElementById(`speed-${side}-mult`).value = mult;
+
+  updateSpeedWorkspace();
+}
+
+function loadTeamSlotToSpeed(side, slotIdxStr) {
+  if (slotIdxStr === "") return;
+  const idx = parseInt(slotIdxStr, 10);
+  const team = getCurrentTeam();
+  if (!team || !team.slots[idx]) return;
+  applyPokemonObjectToSpeedSide(side, team.slots[idx]);
+}
+
+function onSpeedSpeciesChange(side, species) {
+  const dexData = POKEDEX_MC[species];
+  const megaChk = document.getElementById(`speed-${side}-mega`);
+  megaChk.disabled = !dexData?.megas;
+  megaChk.checked = Boolean(dexData?.megas);
+  updateSpeedWorkspace();
+}
+
+function computeEffectiveSpeedForSide(side, overrideSp = null) {
+  const species = document.getElementById(`speed-${side}-species`).value;
+  const dexData = POKEDEX_MC[species] || POKEDEX_MC["Garchomp"];
+  const isMega = document.getElementById(`speed-${side}-mega`).checked && !!dexData.megas;
+  const form = getEffectiveForm(species, isMega, dexData.defaultMegaStone);
+
+  const natMode = document.getElementById(`speed-${side}-nature`).value; // 'plus' | 'neutral' | 'minus'
+  const natName = natMode === "plus" ? "Timid" : natMode === "minus" ? "Brave" : "Serious";
+
+  const sp = overrideSp !== null
+    ? overrideSp
+    : Math.max(0, Math.min(32, parseInt(document.getElementById(`speed-${side}-sp`).value, 10) || 0));
+
+  let spe = calculateLv50Stat("spe", form.base.spe, sp, natName);
+
+  const stage = parseInt(document.getElementById(`speed-${side}-stage`).value, 10) || 0;
+  spe = Math.floor(spe * getStageMultiplier(stage));
+
+  const itemMult = parseFloat(document.getElementById(`speed-${side}-mult`).value) || 1.0;
+  spe = Math.floor(spe * itemMult);
+
+  if (document.getElementById(`speed-${side}-tailwind`).checked) {
+    spe *= 2;
+  }
+  if (document.getElementById(`speed-${side}-para`).checked) {
+    spe = Math.floor(spe * 0.5);
+  }
+
+  return { spe, form, baseSpe: form.base.spe };
+}
+
+function updateSpeedWorkspace() {
+  const p1Data = computeEffectiveSpeedForSide("p1");
+  const p2Data = computeEffectiveSpeedForSide("p2");
+  const isTrickRoom = document.getElementById("speed-trick-room").checked;
+
+  document.getElementById("speed-p1-sprite").src = getSpriteUrl(p1Data.form.sprite);
+  document.getElementById("speed-p2-sprite").src = getSpriteUrl(p2Data.form.sprite);
+  document.getElementById("speed-p1-final").textContent = p1Data.spe;
+  document.getElementById("speed-p2-final").textContent = p2Data.spe;
+
+  // Update Table Reference Header
+  document.getElementById("speed-table-ref-name").textContent = p1Data.form.displayName;
+  document.getElementById("speed-table-ref-val").textContent = p1Data.spe;
+
+  // Verdict Badge
+  const verdictEl = document.getElementById("speed-duel-verdict");
+  if (p1Data.spe === p2Data.spe) {
+    verdictEl.textContent = "SPEED TIE (50/50)";
+    verdictEl.className = "px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-extrabold";
+  } else {
+    const p1ActsFirst = isTrickRoom ? p1Data.spe < p2Data.spe : p1Data.spe > p2Data.spe;
+    if (p1ActsFirst) {
+      verdictEl.textContent = `Bạn đi TRƯỚC (${p1Data.spe} vs ${p2Data.spe})`;
+      verdictEl.className = "px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-extrabold";
+    } else {
+      verdictEl.textContent = `Bạn đi SAU (${p1Data.spe} vs ${p2Data.spe})`;
+      verdictEl.className = "px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-extrabold";
+    }
+  }
+
+  // Minimum SP needed to beat opponent
+  const hintEl = document.getElementById("speed-min-sp-hint");
+  if (!isTrickRoom) {
+    let minSpFound = null;
+    for (let testSp = 0; testSp <= 32; testSp++) {
+      const testRes = computeEffectiveSpeedForSide("p1", testSp);
+      if (testRes.spe > p2Data.spe) {
+        minSpFound = testSp;
         break;
       }
     }
-  });
+    if (minSpFound !== null) {
+      hintEl.innerHTML = `Để vượt qua <strong class="text-white">${p2Data.form.displayName} (${p2Data.spe} Spe)</strong> với Nature hiện tại, bạn cần tối thiểu <strong class="text-emerald-400 font-mono">${minSpFound} SP Speed</strong>.`;
+    } else {
+      const maxRes = computeEffectiveSpeedForSide("p1", 32);
+      if (maxRes.spe === p2Data.spe) {
+        hintEl.innerHTML = `Ở mức tối đa <strong class="text-amber-300 font-mono">32 SP</strong>, bạn đạt <strong class="text-white">${maxRes.spe} Spe</strong> (Speed Tie 50/50 với đối thủ).`;
+      } else {
+        hintEl.innerHTML = `Ngay cả khi nâng tối đa <strong class="text-rose-400 font-mono">32 SP</strong> (${maxRes.spe} Spe), bạn vẫn chậm hơn <strong class="text-white">${p2Data.form.displayName} (${p2Data.spe} Spe)</strong> — cần đổi sang Nature +Spe hoặc dùng Tailwind/Scarf.`;
+      }
+    }
+  } else {
+    hintEl.innerHTML = `Đang bật <strong class="text-purple-300">Trick Room</strong>: Pokémon có chỉ số Speed <strong>thấp hơn</strong> sẽ hành động trước.`;
+  }
+
+  renderSpeedTiersTable(p1Data.spe, isTrickRoom);
+}
+
+function renderSpeedTiersTable(mySpeOverride = null, trickRoomOverride = null) {
+  const tbody = document.getElementById("speed-tiers-tbody");
+  if (!tbody) return;
+
+  const mySpe = mySpeOverride !== null ? mySpeOverride : computeEffectiveSpeedForSide("p1").spe;
+  const isTrickRoom = trickRoomOverride !== null
+    ? trickRoomOverride
+    : document.getElementById("speed-trick-room").checked;
+
+  const filterMode = document.getElementById("speed-table-filter").value;
+  const benchmarkKey = document.getElementById("speed-table-opp-benchmark").value;
+
+  // Build list of entries (base species + mega forms)
+  let entries = [];
+  if (filterMode === "team") {
+    const team = getCurrentTeam();
+    team.slots.forEach((mon) => {
+      const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
+      entries.push({
+        name: form.displayName,
+        sprite: form.sprite,
+        baseSpe: form.base.spe,
+        isMega: form.isMegaActive
+      });
+    });
+  } else {
+    Object.entries(POKEDEX_MC).forEach(([spName, data]) => {
+      if (filterMode !== "megas") {
+        entries.push({
+          name: spName,
+          sprite: data.sprite,
+          baseSpe: data.base.spe,
+          isMega: false
+        });
+      }
+      if (data.megas) {
+        Object.values(data.megas).forEach((mObj) => {
+          entries.push({
+            name: mObj.name,
+            sprite: mObj.sprite,
+            baseSpe: mObj.base.spe,
+            isMega: true
+          });
+        });
+      }
+    });
+  }
+
+  entries.sort((a, b) => b.baseSpe - a.baseSpe);
+
+  tbody.innerHTML = entries
+    .map((item) => {
+      const minNeg = calculateLv50Stat("spe", item.baseSpe, 0, "Brave");
+      const zeroNeu = calculateLv50Stat("spe", item.baseSpe, 0, "Serious");
+      const maxNeu = calculateLv50Stat("spe", item.baseSpe, 32, "Serious");
+      const maxPlus = calculateLv50Stat("spe", item.baseSpe, 32, "Timid");
+      const scarf = Math.floor(maxPlus * 1.5);
+      const tailwind = maxPlus * 2;
+
+      const benchMap = { maxPlus, maxNeutral: maxNeu, zeroNeutral: zeroNeu, scarf, tailwind };
+      const targetVal = benchMap[benchmarkKey] || maxPlus;
+
+      let statusHtml = "";
+      if (mySpe === targetVal) {
+        statusHtml = `<span class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 font-bold">Tie (${targetVal})</span>`;
+      } else {
+        const faster = isTrickRoom ? mySpe < targetVal : mySpe > targetVal;
+        statusHtml = faster
+          ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold">Nhanh hơn (${targetVal})</span>`
+          : `<span class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 font-bold">Chậm hơn (${targetVal})</span>`;
+      }
+
+      return `
+        <tr class="hover:bg-slate-900/60 transition">
+          <td class="py-2 px-3 flex items-center gap-2 font-bold text-white">
+            <img src="${getSpriteUrl(item.sprite)}" alt="${item.name}" class="w-7 h-7 object-contain"
+              onerror="this.src='https://placehold.co/32x32/0f172a/38bdf8?text=P'" />
+            <span>${escapeHtml(item.name)}</span>
+          </td>
+          <td class="py-2 px-2 text-center font-mono text-slate-300 font-bold">${item.baseSpe}</td>
+          <td class="py-2 px-2 text-center font-mono text-slate-500">${minNeg}</td>
+          <td class="py-2 px-2 text-center font-mono text-slate-400">${zeroNeu}</td>
+          <td class="py-2 px-2 text-center font-mono text-slate-200">${maxNeu}</td>
+          <td class="py-2 px-2 text-center font-mono font-bold text-sky-300">${maxPlus}</td>
+          <td class="py-2 px-2 text-center font-mono text-amber-300">${scarf}</td>
+          <td class="py-2 px-3 text-right">${statusHtml}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+// ============================================================================
+// GEMINI VISION AI TEAM IMAGE SCANNER
+// ============================================================================
+
+function saveGeminiKey(val) {
+  localStorage.setItem(STORAGE_KEY_GEMINI_KEY, val.trim());
+  showToast("Đã lưu Gemini API Key trên trình duyệt!", "success");
 }
 
 function handleAiImageSelect(event) {
   const file = event.target.files?.[0];
-  if (file) processSelectedImageFile(file);
+  if (file) processAiImageFile(file);
 }
 
-function processSelectedImageFile(file) {
-  appState.aiImageMime = file.type || "image/png";
+function processAiImageFile(file) {
+  aiSelectedImageMime = file.type || "image/png";
   const reader = new FileReader();
-  reader.onload = () => {
-    const dataUrl = reader.result;
-    appState.aiImageBase64 = dataUrl.split(",")[1];
-
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    aiSelectedImageBase64 = dataUrl.split(",")[1];
     const preview = document.getElementById("ai-preview-img");
+    const placeholder = document.getElementById("ai-upload-placeholder");
     preview.src = dataUrl;
     preview.classList.remove("hidden");
-    document.getElementById("ai-upload-placeholder").classList.add("hidden");
+    placeholder.classList.add("hidden");
     document.getElementById("btn-run-ai-scan").disabled = false;
   };
   reader.readAsDataURL(file);
@@ -1269,26 +1876,33 @@ function processSelectedImageFile(file) {
 async function analyzeTeamImageWithAI() {
   const apiKey = document.getElementById("ai-api-key").value.trim();
   if (!apiKey) {
-    showToast("Vui lòng nhập Gemini API Key trước khi quét ảnh!", "error");
+    showToast("Vui lòng nhập Gemini API Key trước khi quét!", "warn");
     return;
   }
-  if (!appState.aiImageBase64) {
-    showToast("Vui lòng chọn hoặc dán ảnh đội hình 6 Pokémon!", "error");
+  if (!aiSelectedImageBase64) {
+    showToast("Vui lòng chọn hoặc dán ảnh đội hình!", "warn");
     return;
   }
 
   const btn = document.getElementById("btn-run-ai-scan");
   const btnText = document.getElementById("ai-scan-btn-text");
   btn.disabled = true;
-  btnText.textContent = "⏳ AI đang phân tích 6 Pokémon...";
+  btnText.textContent = "⏳ Đang phân tích ảnh bằng Gemini AI...";
 
-  const prompt = `You are a competitive Pokémon Champions VGC Regulation M-C expert.
-Inspect this team screenshot showing up to 6 Pokémon and output ONLY valid Pokémon Showdown export format (plain text, no markdown fences, no explanations).
+  const promptText = `You are a competitive Pokémon VGC Regulation M-C team parser.
+Extract all Pokémon visible in this team image and output ONLY clean Pokémon Showdown paste format.
 Rules:
-- Identify each Pokémon species accurately (use base species name like Garchomp, Lucario, Absol, Salamence, Baxcalibur, Golisopod, Sneasler, Rillaboom, Incineroar, Kingambit, etc., and put the Mega Stone like Garchompite Z, Lucarionite Z, Absolite Z, Salamencite, Baxcalibrite, Golisopodite after '@').
-- Include Ability, Level: 50, and the 4 moves starting with '- '.
-- If EVs/SPs or Nature are not visible in the screenshot, omit EVs/Nature (Open Team Sheet format).
-- Separate each Pokémon with one blank line.`;
+- Format each Pokémon cleanly:
+Species @ Item
+Ability: <Ability>
+Level: 50
+<Nature> Nature
+- Move 1
+- Move 2
+- Move 3
+- Move 4
+- If Nature or EVs are not visible in the screenshot, infer the standard competitive VGC Regulation M-C Nature (e.g., Timid, Jolly, Adamant, Modest, Careful).
+- Do NOT include markdown code fences or extra commentary, only the Showdown paste text.`;
 
   try {
     const response = await fetch(
@@ -1300,11 +1914,11 @@ Rules:
           contents: [
             {
               parts: [
-                { text: prompt },
+                { text: promptText },
                 {
                   inline_data: {
-                    mime_type: appState.aiImageMime,
-                    data: appState.aiImageBase64
+                    mime_type: aiSelectedImageMime,
+                    data: aiSelectedImageBase64
                   }
                 }
               ]
@@ -1319,15 +1933,12 @@ Rules:
       throw new Error(data.error?.message || "Lỗi kết nối Gemini API");
     }
 
-    const rawText =
-      data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
     const cleaned = rawText.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "").trim();
-
     document.getElementById("ai-output-textarea").value = cleaned;
-    showToast("Quét ảnh đội hình thành công!");
+    showToast("Quét ảnh đội hình thành công!", "success");
   } catch (err) {
-    console.error(err);
-    showToast(`Lỗi AI: ${err.message}`, "error");
+    showToast("Lỗi AI: " + err.message, "error");
   } finally {
     btn.disabled = false;
     btnText.textContent = "✨ Quét ảnh nhận diện đội hình";
@@ -1335,122 +1946,30 @@ Rules:
 }
 
 function loadAiOutputToBuilder() {
-  const pasteText = document.getElementById("ai-output-textarea").value.trim();
-  if (!pasteText) {
-    showToast("Chưa có dữ liệu Showdown để nạp!", "error");
+  const text = document.getElementById("ai-output-textarea").value.trim();
+  if (!text) {
+    showToast("Chưa có dữ liệu Showdown để nạp!", "warn");
     return;
   }
-  const slots = parseShowdownPasteToSlots(pasteText);
+  const slots = parseShowdownPasteToSlots(text);
   if (!slots) {
-    showToast("Định dạng chưa hợp lệ, vui lòng kiểm tra lại!", "error");
+    showToast("Không thể đọc định dạng đội hình từ kết quả AI.", "error");
     return;
   }
   const team = getCurrentTeam();
   team.slots = slots;
-  appState.activeSlotIndex = 0;
+  activeSlotIndex = 0;
   saveTeamsToStorage();
-  renderAllBuilderUI();
+  renderTeamRibbon();
+  renderActiveSlotEditor();
   switchMainTab("builder");
-  showToast("Đã nạp 6 Pokémon từ AI vào Team Builder!");
+  showToast("Đã nạp đội hình từ AI vào Team Builder!", "success");
 }
 
-// ============================================================================
-// 8. NAVIGATION, LOCALIZATION & UTILITIES
-// ============================================================================
-
-function switchMainTab(tabName) {
-  ["builder", "calc", "scanner"].forEach((t) => {
-    const view = document.getElementById(`view-${t}`);
-    const navBtn = document.getElementById(`nav-${t}`);
-    if (t === tabName) {
-      view.classList.remove("hidden");
-      navBtn.className = "nav-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-sky-500 text-slate-950 shadow";
-    } else {
-      view.classList.add("hidden");
-      navBtn.className = "nav-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition-all";
-    }
-  });
-
-  if (tabName === "calc") {
-    runDamageCalculation();
-  }
-}
-
-const I18N = {
-  vi: {
-    tabBuilder: "Team Builder",
-    tabCalc: "Damage Calc",
-    tabScanner: "AI Quét Ảnh",
-    currentTeam: "Đội hình:",
-    btnNewTeam: "Tạo mới",
-    btnClone: "Nhân bản",
-    btnImport: "Nhập Showdown",
-    btnExportRank: "Xuất Rank (Full SP/EVs)",
-    btnExportOTS: "Xuất Giải OTS (Giấu SP)",
-    lblItem: "Vật phẩm (Item)",
-    lblAbility: "Đặc tính (Ability)",
-    lblPreset: "Preset SP nhanh (Max 66)",
-    lblMoves: "Bộ chiêu thức (4 Moves)",
-    moveHint: "Chọn bộ 4 chiêu thi đấu chuẩn Reg M-C",
-    btnSendAtk: "Đưa sang Damage Calc (Bên Tấn Công)",
-    btnClearSlot: "Đặt lại Slot mặc định",
-    lblStatsTitle: "Chỉ số & Phân bổ Stat Points (SP)",
-    lblStatsSub: "Tối đa 32 SP/chỉ số • Cố định 31 IVs (Lv.50)",
-    lblNature: "Tính cách (Nature)"
-  },
-  en: {
-    tabBuilder: "Team Builder",
-    tabCalc: "Damage Calc",
-    tabScanner: "AI Scanner",
-    currentTeam: "Current Team:",
-    btnNewTeam: "New Team",
-    btnClone: "Clone",
-    btnImport: "Import Paste",
-    btnExportRank: "Export Rank (Full SP/EVs)",
-    btnExportOTS: "Export Tourney OTS (Hide SP)",
-    lblItem: "Held Item",
-    lblAbility: "Ability",
-    lblPreset: "Quick SP Spread (Max 66)",
-    lblMoves: "Moveset (4 Moves)",
-    moveHint: "Select 4 Regulation M-C legal moves",
-    btnSendAtk: "Send to Damage Calc (Attacker)",
-    btnClearSlot: "Reset Slot",
-    lblStatsTitle: "Stats & Stat Points (SP) Allocation",
-    lblStatsSub: "Max 32 SP per stat • Fixed 31 IVs (Lv.50)",
-    lblNature: "Nature / Stat Alignment"
-  }
-};
-
-function toggleLanguage() {
-  appState.lang = appState.lang === "vi" ? "en" : "vi";
-  const dict = I18N[appState.lang];
-  document.querySelectorAll("[data-i18n]").forEach((el) => {
-    const key = el.getAttribute("data-i18n");
-    if (dict[key]) el.textContent = dict[key];
-  });
-}
-
-function copyTextToClipboard(text) {
-  if (!text) return;
-  navigator.clipboard.writeText(text).then(() => {
-    showToast("Đã sao chép vào Clipboard!");
-  });
-}
-
-function showToast(message, type = "success") {
-  const container = document.getElementById("toast-container");
-  const toast = document.createElement("div");
-  const colors =
-    type === "error"
-      ? "bg-rose-950/95 border-rose-500/60 text-rose-200"
-      : "bg-slate-900/95 border-sky-500/60 text-sky-200";
-  toast.className = `toast-enter px-4 py-2.5 rounded-xl border ${colors} text-xs font-semibold shadow-xl backdrop-blur-md`;
-  toast.textContent = message;
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.style.opacity = "0";
-    toast.style.transition = "opacity 0.25s ease";
-    setTimeout(() => toast.remove(), 250);
-  }, 2600);
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

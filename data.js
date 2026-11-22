@@ -61,7 +61,7 @@ const POKEDEX_MC = {
     types: ["Dragon", "Ground"],
     base: { hp: 108, atk: 130, def: 95, spa: 80, spd: 85, spe: 102 },
     abilities: ["Rough Skin", "Sand Veil"],
-    defaultMoves: ["Earthquake", "Dragon Claw", "Rock Slide", "Protect"],
+    defaultMoves: ["Draco Meteor", "Earth Power", "Flamethrower", "Protect"],
     megas: {
       "Garchompite Z": {
         name: "Garchomp-Mega-Z",
@@ -513,7 +513,7 @@ const POKEDEX_MC = {
   }
 };
 
-// Held Items in Regulation M-C (including Mega Stones & Terrain Seeds)
+// Held Items in Regulation M-C
 const ITEMS_MC = [
   "None",
   "Focus Sash",
@@ -548,6 +548,7 @@ const ITEMS_MC = [
   "Expert Belt",
   "Wide Lens",
   "Eviolite",
+  "Iron Ball",
   "Garchompite Z",
   "Garchompite",
   "Lucarionite Z",
@@ -615,6 +616,7 @@ const MOVES_DB = {
   "U-turn":           { bp: 70,  type: "Bug",      cat: "Physical", spread: false, contact: true },
   "First Impression": { bp: 90,  type: "Bug",      cat: "Physical", spread: false, contact: true },
   "Flare Blitz":      { bp: 120, type: "Fire",     cat: "Physical", spread: false, contact: true },
+  "Flamethrower":     { bp: 90,  type: "Fire",     cat: "Special",  spread: false },
   "Heat Wave":        { bp: 95,  type: "Fire",     cat: "Special",  spread: true },
   "Eruption":         { bp: 150, type: "Fire",     cat: "Special",  spread: true },
   "Armor Cannon":     { bp: 120, type: "Fire",     cat: "Special",  spread: false },
@@ -648,7 +650,9 @@ const MOVES_DB = {
   "Ice Shard":        { bp: 40,  type: "Ice",      cat: "Physical", spread: false },
   "Ice Beam":         { bp: 90,  type: "Ice",      cat: "Special",  spread: false },
   "Blizzard":         { bp: 110, type: "Ice",      cat: "Special",  spread: true },
+  "Icy Wind":         { bp: 55,  type: "Ice",      cat: "Special",  spread: true },
   "Electro Shot":     { bp: 130, type: "Electric", cat: "Special",  spread: false },
+  "Thunderbolt":      { bp: 90,  type: "Electric", cat: "Special",  spread: false },
   "Volt Switch":      { bp: 70,  type: "Electric", cat: "Special",  spread: false },
   "Zing Zap":         { bp: 80,  type: "Electric", cat: "Physical", spread: false, contact: true },
   "Nuzzle":           { bp: 20,  type: "Electric", cat: "Physical", spread: false, contact: true },
@@ -668,7 +672,7 @@ const DEFAULT_SAMPLE_TEAM = [
     nature: "Timid",
     isMega: true,
     sp: { hp: 2, atk: 0, def: 0, spa: 32, spd: 0, spe: 32 },
-    moves: ["Draco Meteor", "Earth Power", "Flamethrower" in MOVES_DB ? "Flamethrower" : "Power Gem", "Protect"]
+    moves: ["Draco Meteor", "Earth Power", "Flamethrower", "Protect"]
   },
   {
     species: "Sneasler",

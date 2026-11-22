@@ -47,22 +47,25 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white">VGC Tactics Studio</h1>
-            <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">Champions · Reg M-C</span>
+            <span class="hidden md:inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">Champions · Reg M-C</span>
           </div>
-          <p class="text-[11px] text-slate-400 hidden sm:block">66 SP (Max 32/Stat) • Mega Evolution • OTS / Rank • Damage Calc</p>
+          <p class="text-[11px] text-slate-400 hidden lg:block">66 SP (Max 32/Stat) • Mega Evolution • OTS / Rank • Damage & Speed Calc</p>
         </div>
       </div>
 
-      <!-- Main Navigation Tabs -->
-      <nav class="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800">
-        <button onclick="switchMainTab('builder')" id="nav-builder" class="nav-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-sky-500 text-slate-950 shadow">
+      <!-- Main Navigation Tabs (4 Pages) -->
+      <nav class="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 overflow-x-auto">
+        <button onclick="switchMainTab('builder')" id="nav-builder" class="nav-tab px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-sky-500 text-slate-950 shadow whitespace-nowrap">
           <span data-i18n="tabBuilder">Team Builder</span>
         </button>
-        <button onclick="switchMainTab('calc')" id="nav-calc" class="nav-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition-all">
+        <button onclick="switchMainTab('calc')" id="nav-calc" class="nav-tab px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition-all whitespace-nowrap">
           <span data-i18n="tabCalc">Damage Calc</span>
         </button>
-        <button onclick="switchMainTab('scanner')" id="nav-scanner" class="nav-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition-all flex items-center gap-1.5">
-          <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <button onclick="switchMainTab('speed')" id="nav-speed" class="nav-tab px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition-all whitespace-nowrap">
+          <span data-i18n="tabSpeed">Đo Speed</span>
+        </button>
+        <button onclick="switchMainTab('scanner')" id="nav-scanner" class="nav-tab px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition-all flex items-center gap-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
@@ -71,11 +74,11 @@
       </nav>
 
       <!-- Language & Storage Status -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 shrink-0">
         <button onclick="toggleLanguage()" id="lang-btn" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition">
           VI / EN
         </button>
-        <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+        <div class="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span>Auto Saved</span>
         </div>
@@ -115,7 +118,7 @@
             Xuất Rank (Full SP/EVs)
           </button>
           <button onclick="openExportModal('ots')" class="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition" data-i18n="btnExportOTS">
-            Xuất Giải OTS (Giấu SP)
+            Xuất Giải OTS (Giấu EVs)
           </button>
           <button onclick="deleteCurrentTeam()" class="px-2.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-semibold text-rose-400 transition" title="Xóa team">
             ✕
@@ -208,13 +211,18 @@
             </div>
           </div>
 
-          <!-- Quick Action: Send to Damage Calc -->
+          <!-- Quick Actions: Send to Damage Calc & Speed Checker -->
           <div class="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
-            <button onclick="sendCurrentToCalc('attacker')" class="px-3.5 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-xs font-semibold text-sky-300 transition">
-              ⚔️ <span data-i18n="btnSendAtk">Đưa sang Damage Calc (Bên Tấn Công)</span>
-            </button>
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="sendCurrentToCalc('p1')" class="px-3 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-xs font-semibold text-sky-300 transition">
+                ⚔️ <span data-i18n="btnSendAtk">Sang Damage Calc</span>
+              </button>
+              <button onclick="sendCurrentToSpeed()" class="px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-semibold text-emerald-300 transition">
+                ⚡ <span data-i18n="btnSendSpeed">Sang Đo Speed</span>
+              </button>
+            </div>
             <button onclick="clearCurrentSlot()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-400 hover:text-slate-200 transition" data-i18n="btnClearSlot">
-              Đặt lại Slot mặc định
+              Đặt lại Slot
             </button>
           </div>
         </div>
@@ -262,284 +270,496 @@
       </div>
     </section>
 
-    <!-- ==================== VIEW 2: VGC DAMAGE CALCULATOR ==================== -->
-    <section id="view-calc" class="hidden space-y-5">
+    <!-- ==================== VIEW 2: SHOWDOWN-STYLE DAMAGE CALCULATOR ==================== -->
+    <section id="view-calc" class="hidden space-y-4">
 
-      <!-- Top Result Banner -->
-      <div class="glass-panel rounded-2xl p-4 sm:p-6 border-sky-500/30 bg-gradient-to-r from-slate-900 via-slate-900 to-sky-950/40">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div class="space-y-1.5 flex-1">
-            <div class="flex items-center gap-2">
-              <span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[11px] font-bold uppercase tracking-wider">Champions Lv.50 Calc</span>
-              <span id="calc-move-badge" class="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[11px] font-semibold">Move Info</span>
+      <!-- Top Showdown-Style Two-Way Move Matrix + Result Box -->
+      <div class="glass-panel rounded-2xl p-4 sm:p-5 border-sky-500/30 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Side 1 Moves (P1 -> P2) -->
+          <div class="bg-slate-950/75 border border-slate-800 rounded-xl p-3 space-y-1.5">
+            <div class="flex items-center justify-between border-b border-slate-800/80 pb-1.5 mb-1">
+              <span id="calc-top-p1-name" class="text-xs sm:text-sm font-extrabold text-sky-400">Garchomp-Mega-Z</span>
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Move 1–4 (P1 → P2)</span>
             </div>
-            <h2 id="calc-headline" class="text-base sm:text-xl font-extrabold text-white leading-snug">
-              Chọn Pokémon và chiêu thức để tính sát thương
-            </h2>
-            <p id="calc-subline" class="text-xs sm:text-sm font-mono text-sky-300">
-              Rolls: (0)
-            </p>
+            <div id="calc-top-p1-moves" class="space-y-1">
+              <!-- Rendered via JS -->
+            </div>
           </div>
 
-          <!-- Defender Visual HP Bar -->
-          <div class="w-full lg:w-80 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-2">
-            <div class="flex justify-between text-xs font-semibold">
-              <span class="text-slate-400">HP Đối thủ còn lại:</span>
-              <span id="calc-hp-range-text" class="font-mono text-emerald-400">100% - 100%</span>
+          <!-- Side 2 Moves (P2 -> P1) -->
+          <div class="bg-slate-950/75 border border-slate-800 rounded-xl p-3 space-y-1.5">
+            <div class="flex items-center justify-between border-b border-slate-800/80 pb-1.5 mb-1">
+              <span id="calc-top-p2-name" class="text-xs sm:text-sm font-extrabold text-rose-400">Incineroar</span>
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Move 1–4 (P2 → P1)</span>
             </div>
-            <div class="w-full h-4 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 relative">
-              <div id="calc-hp-bar-max" class="h-full bg-emerald-500/40 rounded-full transition-all duration-300 absolute top-0 left-0" style="width: 100%"></div>
-              <div id="calc-hp-bar-min" class="h-full bg-emerald-500 rounded-full transition-all duration-300 relative z-10" style="width: 100%"></div>
+            <div id="calc-top-p2-moves" class="space-y-1">
+              <!-- Rendered via JS -->
             </div>
-            <div id="calc-ko-verdict" class="text-center text-xs font-extrabold uppercase tracking-wider text-amber-400">
-              -
+          </div>
+        </div>
+
+        <!-- Bottom Calculation Headline & 16 Rolls -->
+        <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div class="space-y-1 flex-1">
+            <div id="calc-headline" class="text-sm sm:text-base font-extrabold text-white leading-snug">
+              32 SpA Garchomp-Mega-Z Earth Power vs. 32 HP / 20+ SpD Incineroar: 168 - 198 (83.1 - 98%) -- guaranteed 2HKO
+            </div>
+            <div id="calc-subline" class="text-xs font-mono text-sky-300 break-all">
+              Possible damage amounts: (168, 170, 170, 174, 176, 176, 180, 182, 182, 186, 188, 188, 192, 194, 194, 198)
+            </div>
+          </div>
+
+          <!-- Remaining HP Visual Bar -->
+          <div class="w-full lg:w-64 shrink-0 space-y-1">
+            <div class="flex justify-between text-[11px] font-semibold">
+              <span class="text-slate-400">HP còn lại:</span>
+              <span id="calc-hp-range-text" class="font-mono text-emerald-400">2.0% - 16.9%</span>
+            </div>
+            <div class="w-full h-3.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 relative">
+              <div id="calc-hp-bar-max" class="h-full bg-emerald-500/35 rounded-full transition-all duration-200 absolute top-0 left-0" style="width: 16.9%"></div>
+              <div id="calc-hp-bar-min" class="h-full bg-rose-500 rounded-full transition-all duration-200 relative z-10" style="width: 2.0%"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 3-Column Calculator Workspace: Attacker | Field & Move | Defender -->
+      <!-- 3-Column Showdown Workspace: Pokémon 1 | Field Conditions | Pokémon 2 -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-        <!-- Attacker Panel (4 cols) -->
-        <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3.5">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
-            <h3 class="text-sm font-extrabold text-sky-400 uppercase tracking-wider">Bên Tấn Công (Attacker)</h3>
-            <select id="calc-atk-team-slot" onchange="loadTeamSlotToCalc('attacker', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
+        <!-- Pokémon 1 Panel (4.5 -> 4 cols) -->
+        <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-sky-400">Pokémon 1</span>
+            <select id="calc-p1-team-slot" onchange="loadTeamSlotToCalc('p1', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
               <option value="">Nạp từ Team...</option>
             </select>
           </div>
 
-          <div class="grid grid-cols-2 gap-2">
-            <div class="col-span-2 flex items-center gap-2">
-              <div class="flex-1">
-                <label class="text-[11px] text-slate-400 font-semibold">Pokémon</label>
-                <select id="calc-atk-species" onchange="updateCalcSide('attacker', 'species', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-bold text-white"></select>
-              </div>
-              <label class="flex items-center gap-1.5 text-xs font-extrabold text-pink-400 cursor-pointer shrink-0 bg-slate-900 px-3 py-2 rounded-xl border border-slate-700 mt-4">
-                <input type="checkbox" id="calc-atk-mega" onchange="updateCalcSide('attacker', 'isMega', this.checked)" /> Mega
-              </label>
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-400 font-semibold">Item</label>
-              <select id="calc-atk-item" onchange="updateCalcSide('attacker', 'item', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white"></select>
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-400 font-semibold">Ability</label>
-              <select id="calc-atk-ability" onchange="updateCalcSide('attacker', 'ability', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white"></select>
-            </div>
-            <div class="col-span-2">
-              <label class="text-[11px] text-slate-400 font-semibold">Nature</label>
-              <select id="calc-atk-nature" onchange="updateCalcSide('attacker', 'nature', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white"></select>
-            </div>
-          </div>
-
-          <!-- Attacker Offensive SP (0-32) & Boosts -->
-          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800 space-y-2">
-            <div class="grid grid-cols-3 gap-2 text-xs">
-              <div>
-                <span class="text-[10px] text-slate-400 block">Atk SP (0-32)</span>
-                <div class="flex gap-1">
-                  <input type="number" id="calc-atk-sp-atk" min="0" max="32" value="32" onchange="updateCalcSp('attacker', 'atk', this.value)" class="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono text-center" />
-                  <select id="calc-atk-boost-atk" onchange="updateCalcBoost('attacker', 'atk', this.value)" class="bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono">
-                    <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
-                    <option value="0" selected>0</option>
-                    <option value="-1">-1</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <span class="text-[10px] text-slate-400 block">SpA SP (0-32)</span>
-                <div class="flex gap-1">
-                  <input type="number" id="calc-atk-sp-spa" min="0" max="32" value="0" onchange="updateCalcSp('attacker', 'spa', this.value)" class="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono text-center" />
-                  <select id="calc-atk-boost-spa" onchange="updateCalcBoost('attacker', 'spa', this.value)" class="bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono">
-                    <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
-                    <option value="0" selected>0</option>
-                    <option value="-1">-1</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <span class="text-[10px] text-slate-400 block">Trạng thái</span>
-                <label class="flex items-center gap-1.5 text-xs text-rose-400 font-semibold mt-1 cursor-pointer">
-                  <input type="checkbox" id="calc-atk-burn" onchange="runDamageCalculation()" /> Burned
+          <!-- Species & Sprite -->
+          <div class="flex items-center gap-3">
+            <img id="calc-p1-sprite" src="" alt="P1" class="w-14 h-14 object-contain bg-slate-900 rounded-xl border border-slate-800 p-1 shrink-0" />
+            <div class="flex-1 space-y-1.5 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <select id="calc-p1-species" onchange="updateCalcSide('p1', 'species', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-bold text-white"></select>
+                <label class="flex items-center gap-1 text-[11px] font-extrabold text-pink-400 bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 cursor-pointer shrink-0">
+                  <input type="checkbox" id="calc-p1-mega" onchange="updateCalcSide('p1', 'isMega', this.checked)" /> Mega
                 </label>
               </div>
+              <div id="calc-p1-types" class="flex items-center gap-1"></div>
             </div>
           </div>
 
-          <!-- Move Selection -->
-          <div class="space-y-2 pt-1">
-            <label class="text-xs font-bold text-slate-300 block">Chiêu thức sử dụng (Move)</label>
-            <select id="calc-move-name" onchange="selectCalcMove(this.value)" class="w-full bg-slate-900 border border-sky-500/50 rounded-xl px-3 py-2 text-sm font-bold text-sky-300"></select>
-            <div class="grid grid-cols-3 gap-2">
-              <div>
-                <label class="text-[10px] text-slate-400">Base Power</label>
-                <input type="number" id="calc-move-bp" value="100" onchange="runDamageCalculation()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-white" />
-              </div>
-              <div>
-                <label class="text-[10px] text-slate-400">Hệ chiêu</label>
-                <select id="calc-move-type" onchange="runDamageCalculation()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white"></select>
-              </div>
-              <div>
-                <label class="text-[10px] text-slate-400">Phân loại</label>
-                <select id="calc-move-cat" onchange="runDamageCalculation()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white">
-                  <option value="Physical">Physical</option>
-                  <option value="Special">Special</option>
-                </select>
-              </div>
+          <!-- Item, Ability, Nature, Status -->
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <label class="text-[10px] text-slate-400 font-semibold">Item</label>
+              <select id="calc-p1-item" onchange="updateCalcSide('p1', 'item', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white"></select>
             </div>
+            <div>
+              <label class="text-[10px] text-slate-400 font-semibold">Ability</label>
+              <select id="calc-p1-ability" onchange="updateCalcSide('p1', 'ability', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white"></select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 font-semibold">Nature</label>
+              <select id="calc-p1-nature" onchange="updateCalcSide('p1', 'nature', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white"></select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 font-semibold">Status</label>
+              <select id="calc-p1-status" onchange="updateCalcSide('p1', 'status', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                <option value="Healthy">Healthy</option>
+                <option value="Burned">Burned</option>
+                <option value="Paralyzed">Paralyzed</option>
+                <option value="Poisoned">Poisoned</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 6-Stat SP & Boost Table -->
+          <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-1">
+            <div class="grid grid-cols-12 gap-1 text-[10px] font-bold uppercase text-slate-500 pb-1 border-b border-slate-800">
+              <div class="col-span-3">Stat</div>
+              <div class="col-span-2 text-center">Base</div>
+              <div class="col-span-3 text-center">SP (0-32)</div>
+              <div class="col-span-2 text-center">Lv.50</div>
+              <div class="col-span-2 text-center">Stage</div>
+            </div>
+            <div id="calc-p1-stats-table" class="space-y-1"></div>
+          </div>
+
+          <!-- 4 Moves Editor -->
+          <div class="space-y-1.5">
+            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">4 Chiêu thức (Power / Type / Cat / Crit)</label>
+            <div id="calc-p1-moves-editor" class="space-y-1.5"></div>
           </div>
         </div>
 
-        <!-- Center Column: VGC Field Conditions (4 cols) -->
-        <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
-            <h3 class="text-sm font-extrabold text-amber-400 uppercase tracking-wider">Môi trường VGC Doubles</h3>
+        <!-- Center Field Conditions Panel (4 cols) -->
+        <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-amber-400">Field & Sân đấu</span>
             <button onclick="swapCalcSides()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition">
-              ⇄ Đảo bên
+              ⇄ Đổi 2 bên
             </button>
           </div>
 
-          <!-- Format Single vs Doubles -->
-          <div class="grid grid-cols-2 gap-2">
-            <label class="flex items-center justify-center gap-2 p-2 rounded-xl bg-slate-900 border border-slate-700 cursor-pointer text-xs font-semibold">
-              <input type="checkbox" id="calc-is-doubles" checked onchange="runDamageCalculation()" />
-              <span>Doubles (Spread 0.75x)</span>
-            </label>
-            <label class="flex items-center justify-center gap-2 p-2 rounded-xl bg-slate-900 border border-slate-700 cursor-pointer text-xs font-semibold text-amber-300">
-              <input type="checkbox" id="calc-is-crit" onchange="runDamageCalculation()" />
-              <span>Critical Hit (1.5x)</span>
-            </label>
+          <!-- Singles / Doubles Toggle -->
+          <div class="grid grid-cols-2 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+            <button type="button" id="field-fmt-singles" onclick="setCalcFormat(false)" class="py-1 rounded-lg text-[11px] font-bold text-slate-400">Singles</button>
+            <button type="button" id="field-fmt-doubles" onclick="setCalcFormat(true)" class="py-1 rounded-lg text-[11px] font-bold bg-sky-500 text-slate-950">Doubles (VGC)</button>
           </div>
 
           <!-- Weather -->
           <div>
-            <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">Thời tiết (Weather)</label>
-            <div class="grid grid-cols-5 gap-1 text-[11px]">
-              <button type="button" onclick="setFieldOption('weather', 'None')" data-field-weather="None" class="field-btn py-1.5 rounded-lg bg-sky-500 text-slate-950 font-bold">None</button>
-              <button type="button" onclick="setFieldOption('weather', 'Sun')" data-field-weather="Sun" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Sun</button>
-              <button type="button" onclick="setFieldOption('weather', 'Rain')" data-field-weather="Rain" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Rain</button>
-              <button type="button" onclick="setFieldOption('weather', 'Sand')" data-field-weather="Sand" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Sand</button>
-              <button type="button" onclick="setFieldOption('weather', 'Snow')" data-field-weather="Snow" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Snow</button>
+            <label class="text-[10px] font-bold uppercase text-slate-400 block mb-1">Thời tiết (Weather)</label>
+            <div class="grid grid-cols-6 gap-1 text-[11px]">
+              <button type="button" onclick="setFieldOption('weather', 'None')" data-field-weather="None" class="col-span-2 py-1 rounded bg-sky-500 text-slate-950 font-bold">None</button>
+              <button type="button" onclick="setFieldOption('weather', 'Sun')" data-field-weather="Sun" class="py-1 rounded bg-slate-900 text-slate-300 border border-slate-800">Sun</button>
+              <button type="button" onclick="setFieldOption('weather', 'Rain')" data-field-weather="Rain" class="py-1 rounded bg-slate-900 text-slate-300 border border-slate-800">Rain</button>
+              <button type="button" onclick="setFieldOption('weather', 'Sand')" data-field-weather="Sand" class="py-1 rounded bg-slate-900 text-slate-300 border border-slate-800">Sand</button>
+              <button type="button" onclick="setFieldOption('weather', 'Snow')" data-field-weather="Snow" class="py-1 rounded bg-slate-900 text-slate-300 border border-slate-800">Snow</button>
             </div>
           </div>
 
           <!-- Terrain -->
           <div>
-            <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">Địa hình (Terrain)</label>
-            <div class="grid grid-cols-5 gap-1 text-[11px]">
-              <button type="button" onclick="setFieldOption('terrain', 'None')" data-field-terrain="None" class="field-btn py-1.5 rounded-lg bg-sky-500 text-slate-950 font-bold">None</button>
-              <button type="button" onclick="setFieldOption('terrain', 'Electric')" data-field-terrain="Electric" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Electric</button>
-              <button type="button" onclick="setFieldOption('terrain', 'Grassy')" data-field-terrain="Grassy" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Grassy</button>
-              <button type="button" onclick="setFieldOption('terrain', 'Psychic')" data-field-terrain="Psychic" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Psychic</button>
-              <button type="button" onclick="setFieldOption('terrain', 'Misty')" data-field-terrain="Misty" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Misty</button>
+            <label class="text-[10px] font-bold uppercase text-slate-400 block mb-1">Địa hình (Terrain)</label>
+            <div class="grid grid-cols-6 gap-1 text-[11px]">
+              <button type="button" onclick="setFieldOption('terrain', 'None')" data-field-terrain="None" class="col-span-2 py-1 rounded bg-sky-500 text-slate-950 font-bold">None</button>
+              <button type="button" onclick="setFieldOption('terrain', 'Electric')" data-field-terrain="Electric" class="py-1 rounded bg-slate-900 text-slate-300 border border-slate-800">Elec</button>
+              <button type="button" onclick="setFieldOption('terrain', 'Grassy')" data-field-terrain="Grassy" class="py-1 rounded bg-slate-900 text-slate-300 border border-slate-800">Grass</button>
+              <button type="button" onclick="setFieldOption('terrain', 'Psychic')" data-field-terrain="Psychic" class="py-1 rounded bg-slate-900 text-slate-300 border border-slate-800">Psych</button>
+              <button type="button" onclick="setFieldOption('terrain', 'Misty')" data-field-terrain="Misty" class="py-1 rounded bg-slate-900 text-slate-300 border border-slate-800">Misty</button>
             </div>
           </div>
 
-          <!-- Screens & Helping Hand -->
-          <div>
-            <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">Hỗ trợ & Tường chắn</label>
-            <div class="grid grid-cols-3 gap-1.5 text-xs">
-              <label class="flex items-center gap-1.5 bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-800 cursor-pointer">
-                <input type="checkbox" id="field-hh" onchange="runDamageCalculation()" />
-                <span>Helping Hand</span>
-              </label>
-              <label class="flex items-center gap-1.5 bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-800 cursor-pointer">
-                <input type="checkbox" id="field-reflect" onchange="runDamageCalculation()" />
-                <span>Reflect</span>
-              </label>
-              <label class="flex items-center gap-1.5 bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-800 cursor-pointer">
-                <input type="checkbox" id="field-lightscreen" onchange="runDamageCalculation()" />
-                <span>Light Screen</span>
-              </label>
+          <!-- Per-Side Conditions Table (P1 vs P2) -->
+          <div class="bg-slate-950/70 rounded-xl border border-slate-800 p-2.5 space-y-1.5 text-xs">
+            <div class="grid grid-cols-12 text-[10px] font-bold uppercase text-slate-400 border-b border-slate-800 pb-1">
+              <div class="col-span-3 text-center text-sky-400">P1</div>
+              <div class="col-span-6 text-center">Hiệu ứng sân bên</div>
+              <div class="col-span-3 text-center text-rose-400">P2</div>
             </div>
-          </div>
 
-          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
-            <strong class="text-slate-200">Luật Regulation M-C:</strong> Cấm Restricted Legendaries, Paradox và Treasures of Ruin. Cho phép tối đa 1 Mega Evolution mỗi đội.
+            <div class="grid grid-cols-12 items-center py-0.5">
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p1-protect" onchange="runDamageCalculation()" /></div>
+              <div class="col-span-6 text-center text-slate-300">Protect</div>
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p2-protect" onchange="runDamageCalculation()" /></div>
+            </div>
+            <div class="grid grid-cols-12 items-center py-0.5">
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p1-hh" onchange="runDamageCalculation()" /></div>
+              <div class="col-span-6 text-center text-slate-300">Helping Hand</div>
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p2-hh" onchange="runDamageCalculation()" /></div>
+            </div>
+            <div class="grid grid-cols-12 items-center py-0.5">
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p1-reflect" onchange="runDamageCalculation()" /></div>
+              <div class="col-span-6 text-center text-slate-300">Reflect</div>
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p2-reflect" onchange="runDamageCalculation()" /></div>
+            </div>
+            <div class="grid grid-cols-12 items-center py-0.5">
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p1-lightscreen" onchange="runDamageCalculation()" /></div>
+              <div class="col-span-6 text-center text-slate-300">Light Screen</div>
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p2-lightscreen" onchange="runDamageCalculation()" /></div>
+            </div>
+            <div class="grid grid-cols-12 items-center py-0.5">
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p1-auroraveil" onchange="runDamageCalculation()" /></div>
+              <div class="col-span-6 text-center text-slate-300">Aurora Veil</div>
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p2-auroraveil" onchange="runDamageCalculation()" /></div>
+            </div>
+            <div class="grid grid-cols-12 items-center py-0.5">
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p1-friendguard" onchange="runDamageCalculation()" /></div>
+              <div class="col-span-6 text-center text-slate-300">Friend Guard</div>
+              <div class="col-span-3 text-center"><input type="checkbox" id="side-p2-friendguard" onchange="runDamageCalculation()" /></div>
+            </div>
           </div>
         </div>
 
-        <!-- Defender Panel (4 cols) -->
-        <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3.5">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
-            <h3 class="text-sm font-extrabold text-rose-400 uppercase tracking-wider">Bên Phòng Thủ (Defender)</h3>
-            <select id="calc-def-team-slot" onchange="loadTeamSlotToCalc('defender', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
+        <!-- Pokémon 2 Panel (4 cols) -->
+        <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-rose-400">Pokémon 2</span>
+            <select id="calc-p2-team-slot" onchange="loadTeamSlotToCalc('p2', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
               <option value="">Nạp từ Team...</option>
             </select>
           </div>
 
-          <div class="grid grid-cols-2 gap-2">
-            <div class="col-span-2 flex items-center gap-2">
-              <div class="flex-1">
-                <label class="text-[11px] text-slate-400 font-semibold">Pokémon</label>
-                <select id="calc-def-species" onchange="updateCalcSide('defender', 'species', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-bold text-white"></select>
+          <!-- Species & Sprite -->
+          <div class="flex items-center gap-3">
+            <img id="calc-p2-sprite" src="" alt="P2" class="w-14 h-14 object-contain bg-slate-900 rounded-xl border border-slate-800 p-1 shrink-0" />
+            <div class="flex-1 space-y-1.5 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <select id="calc-p2-species" onchange="updateCalcSide('p2', 'species', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-bold text-white"></select>
+                <label class="flex items-center gap-1 text-[11px] font-extrabold text-pink-400 bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 cursor-pointer shrink-0">
+                  <input type="checkbox" id="calc-p2-mega" onchange="updateCalcSide('p2', 'isMega', this.checked)" /> Mega
+                </label>
               </div>
-              <label class="flex items-center gap-1.5 text-xs font-extrabold text-pink-400 cursor-pointer shrink-0 bg-slate-900 px-3 py-2 rounded-xl border border-slate-700 mt-4">
-                <input type="checkbox" id="calc-def-mega" onchange="updateCalcSide('defender', 'isMega', this.checked)" /> Mega
-              </label>
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-400 font-semibold">Item</label>
-              <select id="calc-def-item" onchange="updateCalcSide('defender', 'item', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white"></select>
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-400 font-semibold">Ability</label>
-              <select id="calc-def-ability" onchange="updateCalcSide('defender', 'ability', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white"></select>
-            </div>
-            <div class="col-span-2">
-              <label class="text-[11px] text-slate-400 font-semibold">Nature</label>
-              <select id="calc-def-nature" onchange="updateCalcSide('defender', 'nature', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white"></select>
+              <div id="calc-p2-types" class="flex items-center gap-1"></div>
             </div>
           </div>
 
-          <!-- Defender Defensive SP (0-32) & Boosts -->
-          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800 space-y-2">
-            <div class="grid grid-cols-3 gap-2 text-xs">
-              <div>
-                <span class="text-[10px] text-slate-400 block">HP SP (0-32)</span>
-                <input type="number" id="calc-def-sp-hp" min="0" max="32" value="32" onchange="updateCalcSp('defender', 'hp', this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 font-mono text-center" />
-              </div>
-              <div>
-                <span class="text-[10px] text-slate-400 block">Def SP / Stage</span>
-                <div class="flex gap-1">
-                  <input type="number" id="calc-def-sp-def" min="0" max="32" value="20" onchange="updateCalcSp('defender', 'def', this.value)" class="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono text-center" />
-                  <select id="calc-def-boost-def" onchange="updateCalcBoost('defender', 'def', this.value)" class="bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono">
-                    <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
-                    <option value="0" selected>0</option>
-                    <option value="-1">-1</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <span class="text-[10px] text-slate-400 block">SpD SP / Stage</span>
-                <div class="flex gap-1">
-                  <input type="number" id="calc-def-sp-spd" min="0" max="32" value="14" onchange="updateCalcSp('defender', 'spd', this.value)" class="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono text-center" />
-                  <select id="calc-def-boost-spd" onchange="updateCalcBoost('defender', 'spd', this.value)" class="bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono">
-                    <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
-                    <option value="0" selected>0</option>
-                    <option value="-1">-1</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
-                  </select>
-                </div>
-              </div>
+          <!-- Item, Ability, Nature, Status -->
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <label class="text-[10px] text-slate-400 font-semibold">Item</label>
+              <select id="calc-p2-item" onchange="updateCalcSide('p2', 'item', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white"></select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 font-semibold">Ability</label>
+              <select id="calc-p2-ability" onchange="updateCalcSide('p2', 'ability', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white"></select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 font-semibold">Nature</label>
+              <select id="calc-p2-nature" onchange="updateCalcSide('p2', 'nature', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white"></select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 font-semibold">Status</label>
+              <select id="calc-p2-status" onchange="updateCalcSide('p2', 'status', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                <option value="Healthy">Healthy</option>
+                <option value="Burned">Burned</option>
+                <option value="Paralyzed">Paralyzed</option>
+                <option value="Poisoned">Poisoned</option>
+              </select>
             </div>
           </div>
 
-          <!-- Quick Defender Bulk Presets -->
+          <!-- 6-Stat SP & Boost Table -->
+          <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-1">
+            <div class="grid grid-cols-12 gap-1 text-[10px] font-bold uppercase text-slate-500 pb-1 border-b border-slate-800">
+              <div class="col-span-3">Stat</div>
+              <div class="col-span-2 text-center">Base</div>
+              <div class="col-span-3 text-center">SP (0-32)</div>
+              <div class="col-span-2 text-center">Lv.50</div>
+              <div class="col-span-2 text-center">Stage</div>
+            </div>
+            <div id="calc-p2-stats-table" class="space-y-1"></div>
+          </div>
+
+          <!-- 4 Moves Editor -->
           <div class="space-y-1.5">
-            <label class="text-[11px] font-semibold text-slate-400">Mẫu phòng thủ nhanh (Defender SP)</label>
-            <div class="grid grid-cols-3 gap-1.5 text-[11px]">
-              <button type="button" onclick="setDefBulkPreset(0, 0, 0, 'Serious')" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300">0 HP / 0 Def</button>
-              <button type="button" onclick="setDefBulkPreset(32, 20, 0, 'Bold')" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300">32 HP / 20 +Def</button>
-              <button type="button" onclick="setDefBulkPreset(32, 0, 20, 'Calm')" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300">32 HP / 20 +SpD</button>
-            </div>
+            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">4 Chiêu thức (Power / Type / Cat / Crit)</label>
+            <div id="calc-p2-moves-editor" class="space-y-1.5"></div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ==================== VIEW 3: AI TEAM IMAGE SCANNER ==================== -->
+    <!-- ==================== VIEW 3: DEDICATED SPEED TIERS & 1v1 SPEED CHECKER ==================== -->
+    <section id="view-speed" class="hidden space-y-5">
+
+      <!-- Top 1v1 Speed Duel & Minimum SP Calculator -->
+      <div class="glass-panel rounded-2xl p-4 sm:p-5 space-y-4 border-emerald-500/30">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="text-base sm:text-lg font-extrabold text-white">So Sánh Tốc Độ 1v1 & Tính Mốc SP Tối Thiểu (Lv.50)</h2>
+            <p id="speed-min-sp-hint" class="text-xs text-slate-400 mt-0.5">
+              Chọn 2 Pokémon để kiểm tra thứ tự ra đòn và số SP Speed tối thiểu cần nâng.
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/40 text-xs font-bold text-purple-300 cursor-pointer">
+              <input type="checkbox" id="speed-trick-room" onchange="updateSpeedWorkspace()" />
+              <span>Trick Room (Đảo thứ tự)</span>
+            </label>
+            <span id="speed-duel-verdict" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-extrabold">
+              Bạn đi TRƯỚC
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Left: My Pokémon (P1) -->
+          <div class="bg-slate-950/75 border border-slate-800 rounded-xl p-3.5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold uppercase tracking-wider text-sky-400">Pokémon của bạn</span>
+              <select id="speed-p1-team-slot" onchange="loadTeamSlotToSpeed('p1', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
+                <option value="">Nạp từ Team...</option>
+              </select>
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                <img id="speed-p1-sprite" src="" alt="P1" class="w-12 h-12 object-contain bg-slate-900 rounded-xl border border-slate-800 p-1 shrink-0" />
+                <div class="flex-1 space-y-1.5 min-w-0">
+                  <select id="speed-p1-species" onchange="onSpeedSpeciesChange('p1', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-bold text-white"></select>
+                  <label class="inline-flex items-center gap-1.5 text-[11px] font-bold text-pink-400 cursor-pointer">
+                    <input type="checkbox" id="speed-p1-mega" onchange="updateSpeedWorkspace()" /> Tiến hóa Mega
+                  </label>
+                </div>
+              </div>
+              <div class="text-right bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 shrink-0">
+                <span class="text-[10px] uppercase text-slate-400 block">Speed thực tế</span>
+                <span id="speed-p1-final" class="font-mono text-xl font-extrabold text-sky-400">223</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              <div>
+                <label class="text-[10px] text-slate-400 font-semibold block mb-1">Tính cách Speed (Nature)</label>
+                <select id="speed-p1-nature" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white">
+                  <option value="plus">+Spe (Timid / Jolly · 1.1x)</option>
+                  <option value="neutral">Trung tính (1.0x)</option>
+                  <option value="minus">-Spe (Brave / Quiet · 0.9x)</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-semibold block mb-1">Phân bổ SP Speed (0–32)</label>
+                <div class="flex items-center gap-2">
+                  <input type="range" id="speed-p1-sp-range" min="0" max="32" value="32" oninput="document.getElementById('speed-p1-sp').value=this.value; updateSpeedWorkspace();" class="sp-slider w-full" />
+                  <input type="number" id="speed-p1-sp" min="0" max="32" value="32" oninput="document.getElementById('speed-p1-sp-range').value=this.value; updateSpeedWorkspace();" class="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 font-mono text-center text-sky-300 font-bold" />
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs items-center">
+              <div>
+                <label class="text-[10px] text-slate-400 block">Stage</label>
+                <select id="speed-p1-stage" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 font-mono text-white">
+                  <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
+                  <option value="0" selected>0</option>
+                  <option value="-1">-1 (Icy Wind)</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 block">Item / Ability</label>
+                <select id="speed-p1-mult" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                  <option value="1" selected>1.0x (Thường)</option>
+                  <option value="1.5">1.5x (Scarf / Booster)</option>
+                  <option value="2">2.0x (Swift Swim / Unburden)</option>
+                  <option value="0.5">0.5x (Iron Ball)</option>
+                </select>
+              </div>
+              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer mt-3.5">
+                <input type="checkbox" id="speed-p1-tailwind" onchange="updateSpeedWorkspace()" />
+                <span>Tailwind</span>
+              </label>
+              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer mt-3.5 text-amber-300">
+                <input type="checkbox" id="speed-p1-para" onchange="updateSpeedWorkspace()" />
+                <span>Paralyzed</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Right: Opponent Pokémon (P2) -->
+          <div class="bg-slate-950/75 border border-slate-800 rounded-xl p-3.5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold uppercase tracking-wider text-rose-400">Đối thủ so sánh</span>
+              <select id="speed-p2-team-slot" onchange="loadTeamSlotToSpeed('p2', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
+                <option value="">Nạp từ Team...</option>
+              </select>
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                <img id="speed-p2-sprite" src="" alt="P2" class="w-12 h-12 object-contain bg-slate-900 rounded-xl border border-slate-800 p-1 shrink-0" />
+                <div class="flex-1 space-y-1.5 min-w-0">
+                  <select id="speed-p2-species" onchange="onSpeedSpeciesChange('p2', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-bold text-white"></select>
+                  <label class="inline-flex items-center gap-1.5 text-[11px] font-bold text-pink-400 cursor-pointer">
+                    <input type="checkbox" id="speed-p2-mega" onchange="updateSpeedWorkspace()" /> Tiến hóa Mega
+                  </label>
+                </div>
+              </div>
+              <div class="text-right bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 shrink-0">
+                <span class="text-[10px] uppercase text-slate-400 block">Speed đối thủ</span>
+                <span id="speed-p2-final" class="font-mono text-xl font-extrabold text-rose-400">189</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              <div>
+                <label class="text-[10px] text-slate-400 font-semibold block mb-1">Tính cách Speed (Nature)</label>
+                <select id="speed-p2-nature" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white">
+                  <option value="plus">+Spe (Timid / Jolly · 1.1x)</option>
+                  <option value="neutral">Trung tính (1.0x)</option>
+                  <option value="minus">-Spe (Brave / Quiet · 0.9x)</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 font-semibold block mb-1">Phân bổ SP Speed (0–32)</label>
+                <div class="flex items-center gap-2">
+                  <input type="range" id="speed-p2-sp-range" min="0" max="32" value="32" oninput="document.getElementById('speed-p2-sp').value=this.value; updateSpeedWorkspace();" class="sp-slider w-full" />
+                  <input type="number" id="speed-p2-sp" min="0" max="32" value="32" oninput="document.getElementById('speed-p2-sp-range').value=this.value; updateSpeedWorkspace();" class="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 font-mono text-center text-rose-300 font-bold" />
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs items-center">
+              <div>
+                <label class="text-[10px] text-slate-400 block">Stage</label>
+                <select id="speed-p2-stage" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 font-mono text-white">
+                  <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
+                  <option value="0" selected>0</option>
+                  <option value="-1">-1 (Icy Wind)</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 block">Item / Ability</label>
+                <select id="speed-p2-mult" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white">
+                  <option value="1" selected>1.0x (Thường)</option>
+                  <option value="1.5">1.5x (Scarf / Booster)</option>
+                  <option value="2">2.0x (Swift Swim / Unburden)</option>
+                  <option value="0.5">0.5x (Iron Ball)</option>
+                </select>
+              </div>
+              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer mt-3.5">
+                <input type="checkbox" id="speed-p2-tailwind" onchange="updateSpeedWorkspace()" />
+                <span>Tailwind</span>
+              </label>
+              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer mt-3.5 text-amber-300">
+                <input type="checkbox" id="speed-p2-para" onchange="updateSpeedWorkspace()" />
+                <span>Paralyzed</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Meta Speed Tiers Reference Table -->
+      <div class="glass-panel rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h3 class="text-sm sm:text-base font-extrabold text-white">Bảng Speed Tiers Toàn Bộ Meta Regulation M-C (Lv.50)</h3>
+            <p class="text-xs text-slate-400">So sánh tự động với tốc độ của <strong id="speed-table-ref-name" class="text-sky-400">Garchomp-Mega-Z</strong> (<span id="speed-table-ref-val" class="font-mono font-bold text-white">223</span> Spe)</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <select id="speed-table-filter" onchange="renderSpeedTiersTable()" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-slate-200 font-semibold">
+              <option value="all">Tất cả Pokémon Reg M-C + Megas</option>
+              <option value="team">Chỉ 6 Pokémon trong Team của tôi</option>
+              <option value="megas">Chỉ các dạng Mega Evolution</option>
+            </select>
+            <select id="speed-table-opp-benchmark" onchange="renderSpeedTiersTable()" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-slate-200 font-semibold">
+              <option value="maxPlus">Mốc so sánh: 32 SP +Spe Nature</option>
+              <option value="maxNeutral">Mốc so sánh: 32 SP Trung tính</option>
+              <option value="zeroNeutral">Mốc so sánh: 0 SP Trung tính</option>
+              <option value="scarf">Mốc so sánh: 32 SP +Spe + Scarf (1.5x)</option>
+              <option value="tailwind">Mốc so sánh: 32 SP +Spe + Tailwind (2x)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
+                <th class="py-2.5 px-3">Pokémon</th>
+                <th class="py-2.5 px-2 text-center">Base Spe</th>
+                <th class="py-2.5 px-2 text-center">Min (-Spe 0 SP)</th>
+                <th class="py-2.5 px-2 text-center">0 SP Neutral</th>
+                <th class="py-2.5 px-2 text-center">32 SP Neutral</th>
+                <th class="py-2.5 px-2 text-center text-sky-300">32 SP +Spe</th>
+                <th class="py-2.5 px-2 text-center text-amber-300">+Spe Scarf</th>
+                <th class="py-2.5 px-3 text-right">Kết quả vs Bạn</th>
+              </tr>
+            </thead>
+            <tbody id="speed-tiers-tbody" class="divide-y divide-slate-800/60">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== VIEW 4: AI TEAM IMAGE SCANNER ==================== -->
     <section id="view-scanner" class="hidden space-y-5">
       <div class="glass-panel rounded-2xl p-5 sm:p-6 max-w-4xl mx-auto space-y-6">
         <div class="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -549,7 +769,7 @@
               <h2 class="text-lg sm:text-xl font-extrabold text-white">Quét ảnh đội hình 6 Pokémon ra Showdown</h2>
             </div>
             <p class="text-xs sm:text-sm text-slate-400 mt-1">
-              Tải lên hoặc dán ảnh chụp màn hình team 6 Pokémon Champions Regulation M-C. AI sẽ trích xuất tên Pokémon, Mega Stone/Item, Ability và 4 chiêu thức.
+              Tải lên hoặc dán ảnh chụp màn hình team 6 Pokémon Champions Regulation M-C. AI sẽ trích xuất tên Pokémon, Mega Stone/Item, Ability, Nature và 4 chiêu thức.
             </p>
           </div>
         </div>
@@ -617,7 +837,7 @@
           Đấu Rank (Đầy đủ SP / EVs & Nature)
         </button>
         <button id="modal-tab-ots" onclick="switchExportModalMode('ots')" class="flex-1 py-1.5 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white">
-          Đánh Giải OTS (Giấu SP / EVs & Nature)
+          Đánh Giải OTS (Giấu SP / EVs, Giữ Nature)
         </button>
       </div>
 
