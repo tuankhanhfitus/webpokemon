@@ -1,29 +1,101 @@
-/* Glassmorphism & Base Surfaces */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.76);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(51, 65, 85, 0.65);
-  box-shadow: 0 10px 30px -10px rgba(2, 6, 23, 0.75);
+/* ============================================================================
+   VGC TACTICS STUDIO — STYLESHEET (DARK MODE & REGULATION M-C THEME)
+   ============================================================================ */
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  color-scheme: dark;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: #060911;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #1e293b;
   border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #38bdf8;
+  background: #334155;
 }
 
-/* Range Input (SP 0-32 Sliders) */
+/* Glassmorphism Panel */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 65, 85, 0.65);
+}
+
+/* Fix White Dropdown Options in Dark Mode (Chrome / Edge / Windows) */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+select option:checked,
+select option:hover,
+select option:focus {
+  background-color: #0284c7;
+  color: #ffffff;
+}
+
+/* Active Slot Card in 6-Slot Team Ribbon */
+.slot-card {
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.slot-card:hover {
+  transform: translateY(-1px);
+}
+
+.slot-card.active-slot {
+  border-color: #38bdf8;
+  background: linear-gradient(145deg, rgba(14, 165, 233, 0.18), rgba(15, 23, 42, 0.92));
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35), 0 10px 24px -12px rgba(14, 165, 233, 0.45);
+}
+
+/* Mega Evolution Toggle Button States */
+.mega-btn-active {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 4px 16px -3px rgba(236, 72, 153, 0.55);
+}
+
+.mega-btn-ready {
+  background: rgba(236, 72, 153, 0.12);
+  color: #f472b6;
+  border-color: rgba(236, 72, 153, 0.4);
+}
+
+.mega-btn-ready:hover {
+  background: rgba(236, 72, 153, 0.22);
+}
+
+.mega-btn-disabled {
+  background: rgba(15, 23, 42, 0.5);
+  color: #475569;
+  border-color: rgba(30, 41, 59, 0.7);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Custom Range Slider for Stat Points (SP 0 - 32) */
 input[type="range"].sp-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -37,21 +109,43 @@ input[type="range"].sp-slider {
 input[type="range"].sp-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #38bdf8;
   border: 2px solid #0f172a;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.65);
+  cursor: pointer;
   transition: transform 0.12s ease, background-color 0.12s ease;
 }
 
 input[type="range"].sp-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.18);
+  transform: scale(1.15);
   background: #7dd3fc;
 }
 
-/* Pokémon Type Badges */
+input[type="range"].sp-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #38bdf8;
+  border: 2px solid #0f172a;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.65);
+  cursor: pointer;
+}
+
+/* Selected Move Pill in Damage Calculator */
+.calc-move-pill {
+  transition: all 0.14s ease;
+}
+
+.calc-move-pill.selected-move {
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.25), rgba(99, 102, 241, 0.15));
+  border-color: #38bdf8;
+  box-shadow: inset 3px 0 0 #38bdf8;
+}
+
+/* 18 Pokémon Type Badges */
 .type-badge {
   display: inline-flex;
   align-items: center;
@@ -60,97 +154,43 @@ input[type="range"].sp-slider::-webkit-slider-thumb:hover {
   border-radius: 6px;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
 }
 
-.type-Normal   { background: #94a3b8; }
-.type-Fire     { background: #ea580c; }
-.type-Water    { background: #0284c7; }
-.type-Electric { background: #eab308; color: #0f172a; text-shadow: none; }
-.type-Grass    { background: #16a34a; }
-.type-Ice      { background: #06b6d4; color: #0f172a; text-shadow: none; }
-.type-Fighting { background: #dc2626; }
-.type-Poison   { background: #9333ea; }
-.type-Ground   { background: #b45309; }
-.type-Flying   { background: #6366f1; }
-.type-Psychic  { background: #ec4899; }
-.type-Bug      { background: #65a30d; }
-.type-Rock     { background: #78716c; }
-.type-Ghost    { background: #581c87; }
-.type-Dragon   { background: #4f46e5; }
-.type-Dark     { background: #334155; border: 1px solid #475569; }
-.type-Steel    { background: #64748b; }
-.type-Fairy    { background: #f472b6; color: #0f172a; text-shadow: none; }
-
-/* Slot Ribbon Card */
-.slot-card {
-  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.slot-card:hover {
-  transform: translateY(-2px);
-}
-.slot-card.active-slot {
-  border-color: #38bdf8;
-  background: linear-gradient(145deg, rgba(14, 165, 233, 0.16), rgba(15, 23, 42, 0.92));
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45), 0 10px 20px -8px rgba(14, 165, 233, 0.35);
-}
-
-/* Mega Button States */
-.mega-btn-active {
-  background: linear-gradient(135deg, #ec4899, #8b5cf6, #06b6d4);
-  color: #ffffff;
-  border-color: rgba(244, 114, 182, 0.75);
-  box-shadow: 0 0 14px rgba(236, 72, 153, 0.45);
-}
-.mega-btn-ready {
-  background: rgba(236, 72, 153, 0.14);
-  color: #f472b6;
-  border-color: rgba(236, 72, 153, 0.4);
-}
-.mega-btn-ready:hover {
-  background: rgba(236, 72, 153, 0.25);
-}
-.mega-btn-disabled {
-  background: rgba(15, 23, 42, 0.5);
-  color: #475569;
-  border-color: #1e293b;
-  cursor: not-allowed;
-}
-
-/* Showdown-style Move Radio Row */
-.calc-move-pill {
-  transition: all 0.14s ease;
-}
-.calc-move-pill.selected-move {
-  background: rgba(14, 165, 233, 0.18);
-  border-color: rgba(56, 189, 248, 0.65);
-}
+.type-Normal   { background-color: #94a3b8; color: #0f172a; text-shadow: none; }
+.type-Fire     { background-color: #f97316; color: #ffffff; }
+.type-Water    { background-color: #3b82f6; color: #ffffff; }
+.type-Electric { background-color: #eab308; color: #0f172a; text-shadow: none; }
+.type-Grass    { background-color: #22c55e; color: #052e16; text-shadow: none; }
+.type-Ice      { background-color: #67e8f9; color: #083344; text-shadow: none; }
+.type-Fighting { background-color: #dc2626; color: #ffffff; }
+.type-Poison   { background-color: #a855f7; color: #ffffff; }
+.type-Ground   { background-color: #d97706; color: #ffffff; }
+.type-Flying   { background-color: #818cf8; color: #ffffff; }
+.type-Psychic  { background-color: #ec4899; color: #ffffff; }
+.type-Bug      { background-color: #84cc16; color: #1a2e05; text-shadow: none; }
+.type-Rock     { background-color: #a16207; color: #ffffff; }
+.type-Ghost    { background-color: #6d28d9; color: #ffffff; }
+.type-Dragon   { background-color: #4f46e5; color: #ffffff; }
+.type-Dark     { background-color: #334155; color: #f8fafc; }
+.type-Steel    { background-color: #64748b; color: #ffffff; }
+.type-Fairy    { background-color: #f472b6; color: #3b0764; text-shadow: none; }
 
 /* Toast Animation */
-@keyframes slideInRight {
+@keyframes toastIn {
   from {
     opacity: 0;
-    transform: translateX(24px);
+    transform: translateY(10px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0) scale(1);
   }
 }
+
 .toast-enter {
-  animation: slideInRight 0.22s ease-out forwards;
-}
-
-select option {
-  background-color: #0f172a; /* bg-slate-900 */
-  color: #f8fafc;            /* text-slate-50 */
-}
-
-select option:checked,
-select option:hover {
-  background-color: #0284c7; /* bg-sky-600 */
-  color: #ffffff;
+  animation: toastIn 0.2s ease forwards;
 }
