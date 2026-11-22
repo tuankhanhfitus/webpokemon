@@ -53,7 +53,7 @@ const NATURES = {
   Serious: { plus: null,  minus: null,  label: "Serious (Trung tính)" }
 };
 
-// Regulation M-C Legal Pokédex & Mega Evolutions (including New Reg M-C Megas & Z-Megas)
+// Regulation M-C Legal Pokédex & Mega Evolutions (including Mega Z Forms)
 const POKEDEX_MC = {
   "Garchomp": {
     dex: 445,
@@ -65,7 +65,8 @@ const POKEDEX_MC = {
     megas: {
       "Garchompite Z": {
         name: "Garchomp-Mega-Z",
-        sprite: "garchomp-mega",
+        sprite: "garchomp-megaz",
+        fallbackSprite: "garchomp-mega",
         types: ["Dragon"],
         base: { hp: 108, atk: 130, def: 85, spa: 141, spd: 85, spe: 151 },
         ability: "Levitate"
@@ -73,6 +74,7 @@ const POKEDEX_MC = {
       "Garchompite": {
         name: "Garchomp-Mega",
         sprite: "garchomp-mega",
+        fallbackSprite: "garchomp",
         types: ["Dragon", "Ground"],
         base: { hp: 108, atk: 170, def: 115, spa: 120, spd: 95, spe: 92 },
         ability: "Sand Force"
@@ -90,7 +92,8 @@ const POKEDEX_MC = {
     megas: {
       "Lucarionite Z": {
         name: "Lucario-Mega-Z",
-        sprite: "lucario-mega",
+        sprite: "lucario-megaz",
+        fallbackSprite: "lucario-mega",
         types: ["Fighting", "Steel"],
         base: { hp: 70, atk: 100, def: 70, spa: 164, spd: 70, spe: 151 },
         ability: "Aura Guard"
@@ -98,6 +101,7 @@ const POKEDEX_MC = {
       "Lucarionite": {
         name: "Lucario-Mega",
         sprite: "lucario-mega",
+        fallbackSprite: "lucario",
         types: ["Fighting", "Steel"],
         base: { hp: 70, atk: 145, def: 88, spa: 140, spd: 70, spe: 112 },
         ability: "Adaptability"
@@ -115,7 +119,8 @@ const POKEDEX_MC = {
     megas: {
       "Absolite Z": {
         name: "Absol-Mega-Z",
-        sprite: "absol-mega",
+        sprite: "absol-megaz",
+        fallbackSprite: "absol-mega",
         types: ["Dark", "Ghost"],
         base: { hp: 65, atk: 154, def: 60, spa: 75, spd: 60, spe: 151 },
         ability: "Sharpness"
@@ -123,6 +128,7 @@ const POKEDEX_MC = {
       "Absolite": {
         name: "Absol-Mega",
         sprite: "absol-mega",
+        fallbackSprite: "absol",
         types: ["Dark"],
         base: { hp: 65, atk: 150, def: 60, spa: 115, spd: 60, spe: 115 },
         ability: "Magic Bounce"
@@ -141,6 +147,7 @@ const POKEDEX_MC = {
       "Salamencite": {
         name: "Salamence-Mega",
         sprite: "salamence-mega",
+        fallbackSprite: "salamence",
         types: ["Dragon", "Flying"],
         base: { hp: 95, atk: 145, def: 130, spa: 120, spd: 90, spe: 120 },
         ability: "Aerilate"
@@ -159,6 +166,7 @@ const POKEDEX_MC = {
       "Baxcalibrite": {
         name: "Baxcalibur-Mega",
         sprite: "baxcalibur-mega",
+        fallbackSprite: "baxcalibur",
         types: ["Dragon", "Ice"],
         base: { hp: 115, atk: 175, def: 117, spa: 105, spd: 101, spe: 87 },
         ability: "Thermal Exchange"
@@ -177,12 +185,37 @@ const POKEDEX_MC = {
       "Golisopodite": {
         name: "Golisopod-Mega",
         sprite: "golisopod-mega",
+        fallbackSprite: "golisopod",
         types: ["Bug", "Steel"],
         base: { hp: 75, atk: 150, def: 175, spa: 70, spd: 120, spe: 40 },
         ability: "Tough Claws"
       }
     },
     defaultMegaStone: "Golisopodite"
+  },
+  "Arcanine": {
+    dex: 59,
+    sprite: "arcanine",
+    types: ["Fire"],
+    base: { hp: 90, atk: 110, def: 80, spa: 100, spd: 80, spe: 95 },
+    abilities: ["Intimidate", "Flash Fire", "Justified"],
+    defaultMoves: ["Flare Blitz", "Extreme Speed", "Protect", "Helping Hand"]
+  },
+  "Arcanine-Hisui": {
+    dex: 59,
+    sprite: "arcanine-hisui",
+    types: ["Fire", "Rock"],
+    base: { hp: 95, atk: 115, def: 80, spa: 95, spd: 80, spe: 90 },
+    abilities: ["Intimidate", "Rock Head"],
+    defaultMoves: ["Rock Slide", "Flare Blitz", "Extreme Speed", "Protect"]
+  },
+  "Bellibolt": {
+    dex: 939,
+    sprite: "bellibolt",
+    types: ["Electric"],
+    base: { hp: 109, atk: 64, def: 91, spa: 103, spd: 83, spe: 45 },
+    abilities: ["Electromorphosis", "Static"],
+    defaultMoves: ["Thunderbolt", "Muddy Water", "Protect", "Sucker Punch"]
   },
   "Sneasler": {
     dex: 903,
@@ -291,6 +324,7 @@ const POKEDEX_MC = {
       "Charizardite Y": {
         name: "Charizard-Mega-Y",
         sprite: "charizard-megay",
+        fallbackSprite: "charizard",
         types: ["Fire", "Flying"],
         base: { hp: 78, atk: 104, def: 78, spa: 159, spd: 115, spe: 100 },
         ability: "Drought"
@@ -298,6 +332,7 @@ const POKEDEX_MC = {
       "Charizardite X": {
         name: "Charizard-Mega-X",
         sprite: "charizard-megax",
+        fallbackSprite: "charizard",
         types: ["Fire", "Dragon"],
         base: { hp: 78, atk: 130, def: 111, spa: 130, spd: 85, spe: 100 },
         ability: "Tough Claws"
@@ -316,6 +351,7 @@ const POKEDEX_MC = {
       "Venusaurite": {
         name: "Venusaur-Mega",
         sprite: "venusaur-mega",
+        fallbackSprite: "venusaur",
         types: ["Grass", "Poison"],
         base: { hp: 80, atk: 100, def: 123, spa: 122, spd: 120, spe: 80 },
         ability: "Thick Fat"
@@ -334,6 +370,7 @@ const POKEDEX_MC = {
       "Gardevoirite": {
         name: "Gardevoir-Mega",
         sprite: "gardevoir-mega",
+        fallbackSprite: "gardevoir",
         types: ["Psychic", "Fairy"],
         base: { hp: 68, atk: 85, def: 65, spa: 165, spd: 135, spe: 100 },
         ability: "Pixilate"
@@ -352,6 +389,7 @@ const POKEDEX_MC = {
       "Metagrossite": {
         name: "Metagross-Mega",
         sprite: "metagross-mega",
+        fallbackSprite: "metagross",
         types: ["Steel", "Psychic"],
         base: { hp: 80, atk: 145, def: 150, spa: 105, spd: 110, spe: 110 },
         ability: "Tough Claws"
@@ -370,6 +408,7 @@ const POKEDEX_MC = {
       "Tyranitarite": {
         name: "Tyranitar-Mega",
         sprite: "tyranitar-mega",
+        fallbackSprite: "tyranitar",
         types: ["Rock", "Dark"],
         base: { hp: 100, atk: 164, def: 150, spa: 95, spd: 120, spe: 71 },
         ability: "Sand Stream"
@@ -388,6 +427,7 @@ const POKEDEX_MC = {
       "Glimmoranite": {
         name: "Glimmora-Mega",
         sprite: "glimmora-mega",
+        fallbackSprite: "glimmora",
         types: ["Rock", "Poison"],
         base: { hp: 83, atk: 90, def: 105, spa: 150, spd: 96, spe: 101 },
         ability: "Adaptability"
@@ -406,6 +446,7 @@ const POKEDEX_MC = {
       "Dragoninite": {
         name: "Dragonite-Mega",
         sprite: "dragonite-mega",
+        fallbackSprite: "dragonite",
         types: ["Dragon", "Flying"],
         base: { hp: 91, atk: 124, def: 115, spa: 145, spd: 125, spe: 100 },
         ability: "Multiscale"
@@ -423,10 +464,19 @@ const POKEDEX_MC = {
     megas: {
       "Raichunite Y": {
         name: "Raichu-Mega-Y",
-        sprite: "raichu",
+        sprite: "raichu-megay",
+        fallbackSprite: "raichu",
         types: ["Electric"],
         base: { hp: 60, atk: 100, def: 55, spa: 160, spd: 85, spe: 130 },
         ability: "Lightning Rod"
+      },
+      "Raichunite X": {
+        name: "Raichu-Mega-X",
+        sprite: "raichu-megax",
+        fallbackSprite: "raichu",
+        types: ["Electric"],
+        base: { hp: 60, atk: 135, def: 95, spa: 90, spd: 95, spe: 110 },
+        ability: "Levitate"
       }
     },
     defaultMegaStone: "Raichunite Y"
@@ -478,14 +528,6 @@ const POKEDEX_MC = {
     base: { hp: 80, atk: 74, def: 74, spa: 126, spd: 116, spe: 60 },
     abilities: ["Liquid Voice", "Torrent"],
     defaultMoves: ["Hyper Voice", "Moonblast", "Haze", "Protect"]
-  },
-  "Arcanine-Hisui": {
-    dex: 59,
-    sprite: "arcanine-hisui",
-    types: ["Fire", "Rock"],
-    base: { hp: 95, atk: 115, def: 80, spa: 95, spd: 80, spe: 90 },
-    abilities: ["Intimidate", "Rock Head"],
-    defaultMoves: ["Rock Slide", "Flare Blitz", "Extreme Speed", "Protect"]
   },
   "Torkoal": {
     dex: 324,
@@ -566,7 +608,8 @@ const ITEMS_MC = [
   "Tyranitarite",
   "Glimmoranite",
   "Dragoninite",
-  "Raichunite Y"
+  "Raichunite Y",
+  "Raichunite X"
 ];
 
 // Competitive VGC Moves Database

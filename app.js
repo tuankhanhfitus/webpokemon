@@ -26,7 +26,7 @@ let aiSelectedImageMime = "image/png";
 
 // Damage Calculator State
 let calcState = {
-  activeSide: "p1", // 'p1' or 'p2' determines which side's selected move shows in main headline
+  activeSide: "p1",
   field: {
     isDoubles: true,
     weather: "None",
@@ -68,6 +68,10 @@ let calcState = {
   }
 };
 
+// Multi-Card Speed Comparison State
+let speedCards = [];
+let speedCardCounter = 1;
+
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
@@ -82,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize Damage Calc UI
   initCalcWorkspace();
 
-  // Initialize Speed Checker UI
+  // Initialize Multi-Card Speed Workspace
   initSpeedWorkspace();
 
   // Load saved Gemini API Key
@@ -109,11 +113,49 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ============================================================================
-// HELPERS: STATS, SPRITES & FORM RESOLUTION
+// HELPERS: STATS, SPRITES (MEGA Z SUPPORT) & FORM RESOLUTION
 // ============================================================================
 
 function getSpriteUrl(spriteSlug) {
   return `https://play.pokemonshowdown.com/sprites/dex/${spriteSlug}.png`;
+}
+
+// Multi-step fallback so Mega Z sprites (e.g. garchomp-megaz -> garchompmegaz -> garchomp-mega -> garchomp) never break
+function handleSpriteError(imgEl, primarySlug, fallbackSlug, baseSlug) {
+  const step = parseInt(imgEl.dataset.errStep || "0", 10);
+  if (step === 0 && primarySlug && primarySlug.includes("-")) {
+    imgEl.dataset.errStep = "1";
+    const compactSlug = primarySlug.replace(/-/g, "");
+    imgEl.src = getSpriteUrl(compactSlug);
+    return;
+  }
+  if (step <= 1 && fallbackSlug && fallbackSlug !== primarySlug) {
+    imgEl.dataset.errStep = "2";
+    imgEl.src = getSpriteUrl(fallbackSlug);
+    return;
+  }
+  if (step <= 2 && baseSlug && baseSlug !== fallbackSlug) {
+    imgEl.dataset.errStep = "3";
+    imgEl.src = getSpriteUrl(baseSlug);
+    return;
+  }
+  imgEl.onerror = null;
+  imgEl.src = "https://placehold.co/80x80/0f172a/38bdf8?text=PKMN";
+}
+
+function buildSpriteImgHtml(form, sizeClass = "w-16 h-16", extraClass = "") {
+  return `<img src="${getSpriteUrl(form.sprite)}" alt="${escapeHtml(form.displayName)}"
+    class="${sizeClass} object-contain ${extraClass}"
+    onerror="handleSpriteError(this, '${form.sprite}', '${form.fallbackSprite || form.baseSprite}', '${form.baseSprite}')" />`;
+}
+
+function setImgElementForm(imgEl, form) {
+  if (!imgEl || !form) return;
+  imgEl.dataset.errStep = "0";
+  imgEl.onerror = function () {
+    handleSpriteError(this, form.sprite, form.fallbackSprite || form.baseSprite, form.baseSprite);
+  };
+  imgEl.src = getSpriteUrl(form.sprite);
 }
 
 function getEffectiveForm(species, isMega, item) {
@@ -127,6 +169,8 @@ function getEffectiveForm(species, isMega, item) {
       return {
         displayName: megaObj.name,
         sprite: megaObj.sprite,
+        fallbackSprite: megaObj.fallbackSprite || baseData.sprite,
+        baseSprite: baseData.sprite,
         types: megaObj.types,
         base: megaObj.base,
         ability: megaObj.ability,
@@ -137,6 +181,8 @@ function getEffectiveForm(species, isMega, item) {
   return {
     displayName: species,
     sprite: baseData.sprite,
+    fallbackSprite: baseData.sprite,
+    baseSprite: baseData.sprite,
     types: baseData.types,
     base: baseData.base,
     ability: null,
@@ -156,7 +202,7 @@ function getNatureMultiplier(natureName, statKey) {
 function calculateLv50Stat(statKey, baseVal, spVal, natureName) {
   const sp = Math.max(0, Math.min(32, parseInt(spVal, 10) || 0));
   if (statKey === "hp") {
-    if (baseVal === 1) return 1; // Shedinja edge case
+    if (baseVal === 1) return 1;
     return baseVal + 75 + sp;
   }
   const mult = getNatureMultiplier(natureName, statKey);
@@ -231,8 +277,7 @@ function switchMainTab(tabName) {
     refreshCalcTeamDropdowns();
     runDamageCalculation();
   } else if (tabName === "speed") {
-    refreshSpeedTeamDropdowns();
-    updateSpeedWorkspace();
+    renderSpeedComparisonCards();
   }
 }
 
@@ -263,7 +308,7 @@ const I18N_DICT = {
   en: {
     tabBuilder: "Team Builder",
     tabCalc: "Damage Calc",
-    tabSpeed: "Speed Tiers",
+    tabSpeed: "Speed Calc",
     tabScanner: "AI Team Scan",
     currentTeam: "Team:",
     btnNewTeam: "New",
@@ -333,7 +378,6 @@ function loadTeamsFromStorage() {
     console.warn("Storage load failed:", err);
   }
 
-  // Default initial team
   const defaultId = "team_" + Date.now();
   teams = [
     {
@@ -370,7 +414,7 @@ function populateStaticDropdowns() {
     .map((sp) => `<option value="${sp}">${sp}</option>`)
     .join("");
 
-  ["sel-species", "calc-p1-species", "calc-p2-species", "speed-p1-species", "speed-p2-species"].forEach((id) => {
+  ["sel-species", "calc-p1-species", "calc-p2-species"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = speciesHtml;
   });
@@ -489,8 +533,7 @@ function renderTeamRibbon() {
         <button type="button" onclick="selectSlot(${idx})"
           class="slot-card text-left p-2.5 rounded-2xl border ${isSelected ? "active-slot" : "border-slate-800 bg-slate-900/70 hover:border-slate-700"} flex items-center gap-2.5">
           <div class="w-12 h-12 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-center shrink-0 relative">
-            <img src="${getSpriteUrl(form.sprite)}" alt="${form.displayName}" class="w-10 h-10 object-contain"
-              onerror="this.src='https://placehold.co/64x64/0f172a/38bdf8?text=PKMN'" />
+            ${buildSpriteImgHtml(form, "w-10 h-10")}
             ${form.isMegaActive ? `<span class="absolute -top-1 -right-1 text-[9px] px-1 rounded bg-pink-500 text-white font-extrabold">M</span>` : ""}
           </div>
           <div class="min-w-0 flex-1">
@@ -520,7 +563,7 @@ function renderActiveSlotEditor() {
   const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
 
   document.getElementById("editor-slot-num").textContent = activeSlotIndex + 1;
-  document.getElementById("editor-sprite").src = getSpriteUrl(form.sprite);
+  setImgElementForm(document.getElementById("editor-sprite"), form);
   document.getElementById("editor-types").innerHTML = renderTypeBadgesHtml(form.types);
 
   document.getElementById("sel-species").value = mon.species;
@@ -529,7 +572,6 @@ function renderActiveSlotEditor() {
   document.getElementById("sel-item").value = mon.item || "None";
   document.getElementById("sel-nature").value = mon.nature || "Serious";
 
-  // Ability options (if Mega active, show Mega ability clearly while keeping base ability stored for OTS/Battle start)
   const selAbility = document.getElementById("sel-ability");
   const baseAbilities = dexData.abilities || ["Pressure"];
   if (!baseAbilities.includes(mon.ability)) {
@@ -544,7 +586,6 @@ function renderActiveSlotEditor() {
     })
     .join("");
 
-  // Mega button state
   const btnMega = document.getElementById("btn-mega");
   if (dexData.megas) {
     btnMega.disabled = false;
@@ -556,7 +597,6 @@ function renderActiveSlotEditor() {
     btnMega.className = "px-3 py-1.5 rounded-xl border text-xs font-extrabold transition flex items-center gap-1 mega-btn-disabled";
   }
 
-  // 4 Moves dropdowns
   const movesContainer = document.getElementById("moves-inputs-container");
   const allMoveNames = Object.keys(MOVES_DB).sort();
   movesContainer.innerHTML = [0, 1, 2, 3]
@@ -632,7 +672,7 @@ function changeActiveSpecies(newSpecies) {
     mon.item = dexData.defaultMegaStone;
   } else {
     mon.isMega = false;
-    if (mon.item && mon.item.endsWith("ite") || (mon.item && mon.item.includes("ite "))) {
+    if ((mon.item && mon.item.endsWith("ite")) || (mon.item && mon.item.includes("ite "))) {
       mon.item = "Focus Sash";
     }
   }
@@ -646,7 +686,6 @@ function updateActivePokemon(key, value) {
   if (!mon) return;
   mon[key] = value;
 
-  // Auto-sync Mega toggle if user equips or unequips the matching Mega Stone
   if (key === "item") {
     const dexData = POKEDEX_MC[mon.species];
     if (dexData && dexData.megas && dexData.megas[value]) {
@@ -742,9 +781,10 @@ function sendCurrentToCalc(side = "p1") {
 function sendCurrentToSpeed() {
   const mon = getCurrentPokemon();
   if (!mon) return;
-  applyPokemonObjectToSpeedSide("p1", mon);
+  const newCard = createSpeedCardFromMon(mon);
+  speedCards.unshift(newCard);
   switchMainTab("speed");
-  showToast(`Đã nạp ${mon.species} sang Đo Speed!`, "success");
+  showToast(`Đã thêm ${mon.species} vào trang Đo Speed!`, "success");
 }
 
 // ============================================================================
@@ -752,8 +792,6 @@ function sendCurrentToSpeed() {
 // ============================================================================
 
 function formatTeamToShowdown(team, mode = "ranked") {
-  // mode: 'ranked' -> Full EVs/SP + Nature
-  // mode: 'ots'    -> Open Team Sheet: KEEPS Nature, HIDES EVs/SP!
   return team.slots
     .map((mon) => {
       const lines = [];
@@ -778,7 +816,7 @@ function formatTeamToShowdown(team, mode = "ranked") {
         }
       }
 
-      // Both Ranked and OTS tournament sheets KEEP Nature!
+      // Open Team Sheet (OTS) KEEPS Nature and HIDES EVs/SP
       if (mon.nature) {
         lines.push(`${mon.nature} Nature`);
       }
@@ -811,7 +849,6 @@ function parseShowdownPasteToSlots(pasteText) {
     const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
     if (lines.length === 0) return slot;
 
-    // Line 1: Nickname (Species) (M/F) @ Item
     let header = lines[0];
     if (header.includes("@")) {
       const parts = header.split("@");
@@ -823,7 +860,6 @@ function parseShowdownPasteToSlots(pasteText) {
       slot.item = "None";
     }
 
-    // Gender check
     if (header.endsWith("(M)")) {
       slot.gender = "M";
       header = header.slice(0, -3).trim();
@@ -834,7 +870,6 @@ function parseShowdownPasteToSlots(pasteText) {
       slot.gender = "";
     }
 
-    // Nickname (Species) check
     const parenMatch = header.match(/^(.*?)\(([^)]+)\)$/);
     let rawSpecies = header;
     if (parenMatch) {
@@ -842,7 +877,6 @@ function parseShowdownPasteToSlots(pasteText) {
       rawSpecies = parenMatch[2].trim();
     }
 
-    // Match species (handle -Mega / -Mega-Z / -Mega-X / -Mega-Y suffixes)
     let matchedSpecies = knownSpecies.find(
       (s) => s.toLowerCase() === rawSpecies.toLowerCase()
     );
@@ -854,7 +888,6 @@ function parseShowdownPasteToSlots(pasteText) {
     slot.species = matchedSpecies || "Garchomp";
     const dexData = POKEDEX_MC[slot.species];
 
-    // Auto-enable Mega if item is a Mega Stone or species string had -Mega
     if (dexData && dexData.megas && (dexData.megas[slot.item] || rawSpecies.toLowerCase().includes("mega"))) {
       slot.isMega = true;
       if (!dexData.megas[slot.item]) {
@@ -1045,7 +1078,6 @@ function applyPokemonObjectToCalcSide(side, mon) {
     })),
     selectedMoveIdx: 0
   };
-  // Pick first damaging move if available
   const dmgIdx = calcState[side].moves.findIndex((m) => (MOVES_DB[m.name]?.bp || 0) > 0);
   if (dmgIdx !== -1) calcState[side].selectedMoveIdx = dmgIdx;
 
@@ -1137,7 +1169,7 @@ function renderCalcSideUI(side) {
   const dexData = POKEDEX_MC[st.species] || POKEDEX_MC["Garchomp"];
   const form = getEffectiveForm(st.species, st.isMega, st.item);
 
-  document.getElementById(`calc-${side}-sprite`).src = getSpriteUrl(form.sprite);
+  setImgElementForm(document.getElementById(`calc-${side}-sprite`), form);
   document.getElementById(`calc-${side}-species`).value = st.species;
 
   const megaChk = document.getElementById(`calc-${side}-mega`);
@@ -1149,7 +1181,6 @@ function renderCalcSideUI(side) {
   document.getElementById(`calc-${side}-nature`).value = st.nature;
   document.getElementById(`calc-${side}-status`).value = st.status;
 
-  // Ability selector (includes Mega ability if active)
   const abSel = document.getElementById(`calc-${side}-ability`);
   const abilitiesPool = [...dexData.abilities];
   if (form.isMegaActive && form.ability && !abilitiesPool.includes(form.ability)) {
@@ -1160,7 +1191,6 @@ function renderCalcSideUI(side) {
     .map((ab) => `<option value="${ab}" ${st.ability === ab ? "selected" : ""}>${ab}</option>`)
     .join("");
 
-  // 6-Stat SP & Stage table
   const nat = NATURES[st.nature] || NATURES.Serious;
   const statsContainer = document.getElementById(`calc-${side}-stats-table`);
   statsContainer.innerHTML = STAT_KEYS.map((k) => {
@@ -1192,7 +1222,6 @@ function renderCalcSideUI(side) {
     `;
   }).join("");
 
-  // 4 Moves Editor
   const allMoves = Object.keys(MOVES_DB).sort();
   const movesContainer = document.getElementById(`calc-${side}-moves-editor`);
   movesContainer.innerHTML = [0, 1, 2, 3]
@@ -1288,7 +1317,6 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
     };
   }
 
-  // Protect check
   const defProtect = document.getElementById(`side-${defSideKey}-protect`)?.checked;
   if (defProtect && moveObj.name !== "Feint") {
     return {
@@ -1302,7 +1330,6 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
     };
   }
 
-  // Effective move type & BP (Pixilate / Aerilate / Weather Ball)
   let effType = moveMeta.type;
   let bp = moveMeta.bp;
   let abilityBoost = 1.0;
@@ -1316,7 +1343,6 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
     effType = wMap[calcState.field.weather] || "Normal";
   }
 
-  // Ability immunities
   if (effType === "Ground" && def.ability === "Levitate") {
     return { rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0, defMaxHp, koText: "Immune (Levitate)" };
   }
@@ -1332,7 +1358,6 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
     return { rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0, defMaxHp, koText: "Immune (0x)" };
   }
 
-  // Determine Offensive & Defensive stats
   const isPhys = moveMeta.cat === "Physical";
   const isBodyPress = moveObj.name === "Body Press";
   const atkStatKey = isBodyPress ? "def" : isPhys ? "atk" : "spa";
@@ -1351,7 +1376,6 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   let A = Math.floor(rawA * getStageMultiplier(atkStage));
   let D = Math.floor(rawD * getStageMultiplier(defStage));
 
-  // Item stat modifiers
   if (isPhys && atk.item === "Choice Band") A = Math.floor(A * 1.5);
   if (!isPhys && atk.item === "Choice Specs") A = Math.floor(A * 1.5);
   if (!isPhys && def.item === "Assault Vest") D = Math.floor(D * 1.5);
@@ -1363,7 +1387,6 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
     D = Math.floor(D * 1.5);
   }
 
-  // Ability power boosts
   if (atk.ability === "Tough Claws" && moveMeta.contact) abilityBoost *= 1.3;
   if (atk.ability === "Sharpness" && moveMeta.slicing) abilityBoost *= 1.5;
   if (atk.ability === "Solar Power" && calcState.field.weather === "Sun" && !isPhys) {
@@ -1381,15 +1404,12 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
 
   bp = Math.max(1, Math.floor(bp * abilityBoost));
 
-  // Core Level 50 Damage Formula
   let baseDamage = Math.floor(Math.floor(Math.floor((2 * 50) / 5 + 2) * bp * A / Math.max(1, D)) / 50) + 2;
 
-  // Doubles Spread Modifier
   if (calcState.field.isDoubles && moveMeta.spread) {
     baseDamage = Math.floor(baseDamage * 0.75);
   }
 
-  // Weather Modifier
   if (calcState.field.weather === "Sun") {
     if (effType === "Fire") baseDamage = Math.floor(baseDamage * 1.5);
     if (effType === "Water") baseDamage = Math.floor(baseDamage * 0.5);
@@ -1398,19 +1418,14 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
     if (effType === "Fire") baseDamage = Math.floor(baseDamage * 0.5);
   }
 
-  // Critical Hit
   if (moveObj.crit) {
     baseDamage = Math.floor(baseDamage * 1.5);
   }
 
-  // STAB
   const hasStab = atkForm.types.includes(effType);
   const stabMult = hasStab ? (atk.ability === "Adaptability" ? 2.0 : 1.5) : 1.0;
-
-  // Burn
   const burnMult = isPhys && atk.status === "Burned" ? 0.5 : 1.0;
 
-  // Terrain
   let terrainMult = 1.0;
   if (calcState.field.terrain === "Electric" && effType === "Electric" && !atkForm.types.includes("Flying") && atk.ability !== "Levitate") {
     terrainMult = 1.3;
@@ -1422,7 +1437,6 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
     terrainMult = 0.5;
   }
 
-  // Side Conditions (Helping Hand, Screens, Friend Guard)
   const hhActive = document.getElementById(`side-${atkSideKey}-hh`)?.checked;
   const hhMult = hhActive ? 1.5 : 1.0;
 
@@ -1440,7 +1454,6 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
     }
   }
 
-  // Offensive Held Item Boosts
   let itemDmgMult = 1.0;
   if (atk.item === "Life Orb") itemDmgMult *= 1.3;
   if (atk.item === "Expert Belt" && typeMult > 1) itemDmgMult *= 1.2;
@@ -1462,7 +1475,6 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
     itemDmgMult *= 1.2;
   }
 
-  // Generate 16 Damage Rolls (85% to 100%)
   const rolls = [];
   for (let r = 85; r <= 100; r++) {
     let d = Math.floor((baseDamage * r) / 100);
@@ -1482,7 +1494,6 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   const minPct = Number(((min / defMaxHp) * 100).toFixed(1));
   const maxPct = Number(((max / defMaxHp) * 100).toFixed(1));
 
-  // Determine KO Tier
   let koText = "possible 5HKO+";
   if (min >= defMaxHp) {
     koText = "guaranteed OHKO";
@@ -1512,11 +1523,9 @@ function runDamageCalculation() {
   document.getElementById("calc-top-p1-name").textContent = p1Form.displayName;
   document.getElementById("calc-top-p2-name").textContent = p2Form.displayName;
 
-  // Compute all 4 moves for P1 -> P2 and P2 -> P1
   const p1Results = calcState.p1.moves.map((m) => computeSingleMoveDamage("p1", "p2", m));
   const p2Results = calcState.p2.moves.map((m) => computeSingleMoveDamage("p2", "p1", m));
 
-  // Render Top Matrix P1
   document.getElementById("calc-top-p1-moves").innerHTML = calcState.p1.moves
     .map((m, idx) => {
       const res = p1Results[idx];
@@ -1535,7 +1544,6 @@ function runDamageCalculation() {
     })
     .join("");
 
-  // Render Top Matrix P2
   document.getElementById("calc-top-p2-moves").innerHTML = calcState.p2.moves
     .map((m, idx) => {
       const res = p2Results[idx];
@@ -1554,7 +1562,6 @@ function runDamageCalculation() {
     })
     .join("");
 
-  // Active Headline Calculation
   const atkKey = calcState.activeSide;
   const defKey = atkKey === "p1" ? "p2" : "p1";
   const atk = calcState[atkKey];
@@ -1577,7 +1584,6 @@ function runDamageCalculation() {
   document.getElementById("calc-headline").textContent = headline;
   document.getElementById("calc-subline").textContent = `Possible damage amounts: (${res.rolls.join(", ")})`;
 
-  // Remaining HP Bar
   const remMinPct = Math.max(0, Number((100 - res.maxPct).toFixed(1)));
   const remMaxPct = Math.max(0, Number((100 - res.minPct).toFixed(1)));
   document.getElementById("calc-hp-range-text").textContent = `${remMinPct}% - ${remMaxPct}%`;
@@ -1586,258 +1592,363 @@ function runDamageCalculation() {
 }
 
 // ============================================================================
-// DEDICATED SPEED CHECKER & META SPEED TIERS PAGE
+// MULTI-CARD VISUAL SPEED COMPARISON (MATCHING SCREENSHOT WORKFLOW)
 // ============================================================================
 
-function initSpeedWorkspace() {
-  refreshSpeedTeamDropdowns();
-  document.getElementById("speed-p1-species").value = "Garchomp";
-  document.getElementById("speed-p1-mega").checked = true;
-  document.getElementById("speed-p1-nature").value = "plus";
-  document.getElementById("speed-p1-sp").value = 32;
-  document.getElementById("speed-p1-sp-range").value = 32;
-
-  document.getElementById("speed-p2-species").value = "Sneasler";
-  document.getElementById("speed-p2-mega").checked = false;
-  document.getElementById("speed-p2-nature").value = "plus";
-  document.getElementById("speed-p2-sp").value = 32;
-  document.getElementById("speed-p2-sp-range").value = 32;
-
-  updateSpeedWorkspace();
+function createSpeedCardObj(species = "Arcanine", overrides = {}) {
+  const dexData = POKEDEX_MC[species] || POKEDEX_MC["Arcanine"];
+  return {
+    id: speedCardCounter++,
+    species,
+    isMega: Boolean(overrides.isMega && dexData.megas),
+    megaStone: overrides.megaStone || dexData.defaultMegaStone || null,
+    sp: overrides.sp !== undefined ? overrides.sp : 0,
+    natureMode: overrides.natureMode || "neutral", // 'minus' | 'neutral' | 'plus'
+    stage: overrides.stage !== undefined ? overrides.stage : 0, // -6..+6
+    weatherAbilityDouble: Boolean(overrides.weatherAbilityDouble),
+    choiceScarf: Boolean(overrides.choiceScarf),
+    tailwind: Boolean(overrides.tailwind)
+  };
 }
 
-function refreshSpeedTeamDropdowns() {
-  const team = getCurrentTeam();
-  if (!team) return;
-  const opts = `<option value="">Nạp từ Team...</option>` +
-    team.slots
-      .map((mon, idx) => {
-        const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
-        return `<option value="${idx}">Slot ${idx + 1}: ${form.displayName}</option>`;
-      })
-      .join("");
-  ["speed-p1-team-slot", "speed-p2-team-slot"].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = opts;
+function createSpeedCardFromMon(mon) {
+  const dexData = POKEDEX_MC[mon.species] || POKEDEX_MC["Arcanine"];
+  const nat = NATURES[mon.nature] || NATURES.Serious;
+  const natureMode = nat.plus === "spe" ? "plus" : nat.minus === "spe" ? "minus" : "neutral";
+  return createSpeedCardObj(mon.species, {
+    isMega: Boolean(mon.isMega && dexData.megas),
+    megaStone: mon.item,
+    sp: mon.sp?.spe || 0,
+    natureMode,
+    choiceScarf: mon.item === "Choice Scarf"
   });
 }
 
-function applyPokemonObjectToSpeedSide(side, mon) {
-  const dexData = POKEDEX_MC[mon.species] || POKEDEX_MC["Garchomp"];
-  document.getElementById(`speed-${side}-species`).value = mon.species;
-
-  const megaChk = document.getElementById(`speed-${side}-mega`);
-  megaChk.disabled = !dexData.megas;
-  megaChk.checked = Boolean(mon.isMega && dexData.megas);
-
-  const nat = NATURES[mon.nature] || NATURES.Serious;
-  const natMode = nat.plus === "spe" ? "plus" : nat.minus === "spe" ? "minus" : "neutral";
-  document.getElementById(`speed-${side}-nature`).value = natMode;
-
-  const speSp = mon.sp?.spe || 0;
-  document.getElementById(`speed-${side}-sp`).value = speSp;
-  document.getElementById(`speed-${side}-sp-range`).value = speSp;
-
-  let mult = "1";
-  if (mon.item === "Choice Scarf" || mon.item === "Booster Energy") mult = "1.5";
-  if (mon.item === "Iron Ball") mult = "0.5";
-  document.getElementById(`speed-${side}-mult`).value = mult;
-
-  updateSpeedWorkspace();
+function initSpeedWorkspace() {
+  resetDefaultSpeedCards(false);
 }
 
-function loadTeamSlotToSpeed(side, slotIdxStr) {
+function resetDefaultSpeedCards(notify = true) {
+  speedCards = [
+    createSpeedCardObj("Arcanine", { sp: 0, natureMode: "neutral", stage: 0 }),
+    createSpeedCardObj("Basculegion", { sp: 0, natureMode: "neutral", stage: 0 }),
+    createSpeedCardObj("Bellibolt", { sp: 0, natureMode: "neutral", stage: 0 })
+  ];
+  renderSpeedComparisonCards();
+  if (notify) showToast("Đã đặt lại 3 thẻ so sánh Speed mặc định!");
+}
+
+function addSpeedComparisonCard() {
+  const pool = ["Garchomp", "Sneasler", "Lucario", "Absol", "Rillaboom", "Incineroar", "Gholdengo"];
+  const pick = pool[speedCards.length % pool.length];
+  const dexData = POKEDEX_MC[pick];
+  speedCards.push(
+    createSpeedCardObj(pick, {
+      isMega: Boolean(dexData?.megas),
+      sp: 32,
+      natureMode: "plus"
+    })
+  );
+  renderSpeedComparisonCards();
+}
+
+function loadAllTeamToSpeedCards() {
+  const team = getCurrentTeam();
+  if (!team) return;
+  speedCards = team.slots.map((mon) => createSpeedCardFromMon(mon));
+  renderSpeedComparisonCards();
+  showToast("Đã nạp toàn bộ 6 Pokémon từ Team sang Đo Speed!", "success");
+}
+
+function removeSpeedCard(cardId) {
+  if (speedCards.length <= 1) {
+    showToast("Cần giữ lại ít nhất 1 thẻ Pokémon để so sánh!", "warn");
+    return;
+  }
+  speedCards = speedCards.filter((c) => c.id !== cardId);
+  renderSpeedComparisonCards();
+}
+
+function loadSlotIntoSpeedCard(cardId, slotIdxStr) {
   if (slotIdxStr === "") return;
   const idx = parseInt(slotIdxStr, 10);
   const team = getCurrentTeam();
   if (!team || !team.slots[idx]) return;
-  applyPokemonObjectToSpeedSide(side, team.slots[idx]);
+
+  const cardIdx = speedCards.findIndex((c) => c.id === cardId);
+  if (cardIdx === -1) return;
+
+  const replacement = createSpeedCardFromMon(team.slots[idx]);
+  replacement.id = cardId;
+  speedCards[cardIdx] = replacement;
+  renderSpeedComparisonCards();
 }
 
-function onSpeedSpeciesChange(side, species) {
-  const dexData = POKEDEX_MC[species];
-  const megaChk = document.getElementById(`speed-${side}-mega`);
-  megaChk.disabled = !dexData?.megas;
-  megaChk.checked = Boolean(dexData?.megas);
-  updateSpeedWorkspace();
-}
+function updateSpeedCard(cardId, field, value) {
+  const card = speedCards.find((c) => c.id === cardId);
+  if (!card) return;
 
-function computeEffectiveSpeedForSide(side, overrideSp = null) {
-  const species = document.getElementById(`speed-${side}-species`).value;
-  const dexData = POKEDEX_MC[species] || POKEDEX_MC["Garchomp"];
-  const isMega = document.getElementById(`speed-${side}-mega`).checked && !!dexData.megas;
-  const form = getEffectiveForm(species, isMega, dexData.defaultMegaStone);
-
-  const natMode = document.getElementById(`speed-${side}-nature`).value; // 'plus' | 'neutral' | 'minus'
-  const natName = natMode === "plus" ? "Timid" : natMode === "minus" ? "Brave" : "Serious";
-
-  const sp = overrideSp !== null
-    ? overrideSp
-    : Math.max(0, Math.min(32, parseInt(document.getElementById(`speed-${side}-sp`).value, 10) || 0));
-
-  let spe = calculateLv50Stat("spe", form.base.spe, sp, natName);
-
-  const stage = parseInt(document.getElementById(`speed-${side}-stage`).value, 10) || 0;
-  spe = Math.floor(spe * getStageMultiplier(stage));
-
-  const itemMult = parseFloat(document.getElementById(`speed-${side}-mult`).value) || 1.0;
-  spe = Math.floor(spe * itemMult);
-
-  if (document.getElementById(`speed-${side}-tailwind`).checked) {
-    spe *= 2;
-  }
-  if (document.getElementById(`speed-${side}-para`).checked) {
-    spe = Math.floor(spe * 0.5);
-  }
-
-  return { spe, form, baseSpe: form.base.spe };
-}
-
-function updateSpeedWorkspace() {
-  const p1Data = computeEffectiveSpeedForSide("p1");
-  const p2Data = computeEffectiveSpeedForSide("p2");
-  const isTrickRoom = document.getElementById("speed-trick-room").checked;
-
-  document.getElementById("speed-p1-sprite").src = getSpriteUrl(p1Data.form.sprite);
-  document.getElementById("speed-p2-sprite").src = getSpriteUrl(p2Data.form.sprite);
-  document.getElementById("speed-p1-final").textContent = p1Data.spe;
-  document.getElementById("speed-p2-final").textContent = p2Data.spe;
-
-  // Update Table Reference Header
-  document.getElementById("speed-table-ref-name").textContent = p1Data.form.displayName;
-  document.getElementById("speed-table-ref-val").textContent = p1Data.spe;
-
-  // Verdict Badge
-  const verdictEl = document.getElementById("speed-duel-verdict");
-  if (p1Data.spe === p2Data.spe) {
-    verdictEl.textContent = "SPEED TIE (50/50)";
-    verdictEl.className = "px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-extrabold";
+  if (field === "species") {
+    const dexData = POKEDEX_MC[value];
+    card.species = value;
+    card.isMega = Boolean(dexData?.megas);
+    card.megaStone = dexData?.defaultMegaStone || null;
+  } else if (field === "isMega") {
+    const dexData = POKEDEX_MC[card.species];
+    card.isMega = Boolean(value && dexData?.megas);
+  } else if (field === "sp") {
+    card.sp = Math.max(0, Math.min(32, parseInt(value, 10) || 0));
+  } else if (field === "stage") {
+    card.stage = Math.max(-6, Math.min(6, parseInt(value, 10) || 0));
   } else {
-    const p1ActsFirst = isTrickRoom ? p1Data.spe < p2Data.spe : p1Data.spe > p2Data.spe;
-    if (p1ActsFirst) {
-      verdictEl.textContent = `Bạn đi TRƯỚC (${p1Data.spe} vs ${p2Data.spe})`;
-      verdictEl.className = "px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-extrabold";
-    } else {
-      verdictEl.textContent = `Bạn đi SAU (${p1Data.spe} vs ${p2Data.spe})`;
-      verdictEl.className = "px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-extrabold";
-    }
+    card[field] = value;
   }
 
-  // Minimum SP needed to beat opponent
-  const hintEl = document.getElementById("speed-min-sp-hint");
-  if (!isTrickRoom) {
-    let minSpFound = null;
-    for (let testSp = 0; testSp <= 32; testSp++) {
-      const testRes = computeEffectiveSpeedForSide("p1", testSp);
-      if (testRes.spe > p2Data.spe) {
-        minSpFound = testSp;
-        break;
-      }
-    }
-    if (minSpFound !== null) {
-      hintEl.innerHTML = `Để vượt qua <strong class="text-white">${p2Data.form.displayName} (${p2Data.spe} Spe)</strong> với Nature hiện tại, bạn cần tối thiểu <strong class="text-emerald-400 font-mono">${minSpFound} SP Speed</strong>.`;
-    } else {
-      const maxRes = computeEffectiveSpeedForSide("p1", 32);
-      if (maxRes.spe === p2Data.spe) {
-        hintEl.innerHTML = `Ở mức tối đa <strong class="text-amber-300 font-mono">32 SP</strong>, bạn đạt <strong class="text-white">${maxRes.spe} Spe</strong> (Speed Tie 50/50 với đối thủ).`;
-      } else {
-        hintEl.innerHTML = `Ngay cả khi nâng tối đa <strong class="text-rose-400 font-mono">32 SP</strong> (${maxRes.spe} Spe), bạn vẫn chậm hơn <strong class="text-white">${p2Data.form.displayName} (${p2Data.spe} Spe)</strong> — cần đổi sang Nature +Spe hoặc dùng Tailwind/Scarf.`;
-      }
-    }
-  } else {
-    hintEl.innerHTML = `Đang bật <strong class="text-purple-300">Trick Room</strong>: Pokémon có chỉ số Speed <strong>thấp hơn</strong> sẽ hành động trước.`;
-  }
-
-  renderSpeedTiersTable(p1Data.spe, isTrickRoom);
+  renderSpeedComparisonCards();
 }
 
-function renderSpeedTiersTable(mySpeOverride = null, trickRoomOverride = null) {
-  const tbody = document.getElementById("speed-tiers-tbody");
-  if (!tbody) return;
+function computeSpeedCardFinalValue(card) {
+  const form = getEffectiveForm(card.species, card.isMega, card.megaStone);
+  const natName = card.natureMode === "plus" ? "Timid" : card.natureMode === "minus" ? "Brave" : "Serious";
+  let spe = calculateLv50Stat("spe", form.base.spe, card.sp, natName);
 
-  const mySpe = mySpeOverride !== null ? mySpeOverride : computeEffectiveSpeedForSide("p1").spe;
-  const isTrickRoom = trickRoomOverride !== null
-    ? trickRoomOverride
-    : document.getElementById("speed-trick-room").checked;
+  // Stat stage (-6 to +6)
+  spe = Math.floor(spe * getStageMultiplier(card.stage));
 
-  const filterMode = document.getElementById("speed-table-filter").value;
-  const benchmarkKey = document.getElementById("speed-table-opp-benchmark").value;
-
-  // Build list of entries (base species + mega forms)
-  let entries = [];
-  if (filterMode === "team") {
-    const team = getCurrentTeam();
-    team.slots.forEach((mon) => {
-      const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
-      entries.push({
-        name: form.displayName,
-        sprite: form.sprite,
-        baseSpe: form.base.spe,
-        isMega: form.isMegaActive
-      });
-    });
-  } else {
-    Object.entries(POKEDEX_MC).forEach(([spName, data]) => {
-      if (filterMode !== "megas") {
-        entries.push({
-          name: spName,
-          sprite: data.sprite,
-          baseSpe: data.base.spe,
-          isMega: false
-        });
-      }
-      if (data.megas) {
-        Object.values(data.megas).forEach((mObj) => {
-          entries.push({
-            name: mObj.name,
-            sprite: mObj.sprite,
-            baseSpe: mObj.base.spe,
-            isMega: true
-          });
-        });
-      }
-    });
+  // Weather / Ability 2x (Swift Swim, Chlorophyll, Sand Rush, Unburden)
+  if (card.weatherAbilityDouble) {
+    spe = Math.floor(spe * 2);
   }
 
-  entries.sort((a, b) => b.baseSpe - a.baseSpe);
+  // Choice Scarf 1.5x
+  if (card.choiceScarf) {
+    spe = Math.floor(spe * 1.5);
+  }
 
-  tbody.innerHTML = entries
-    .map((item) => {
-      const minNeg = calculateLv50Stat("spe", item.baseSpe, 0, "Brave");
-      const zeroNeu = calculateLv50Stat("spe", item.baseSpe, 0, "Serious");
-      const maxNeu = calculateLv50Stat("spe", item.baseSpe, 32, "Serious");
-      const maxPlus = calculateLv50Stat("spe", item.baseSpe, 32, "Timid");
-      const scarf = Math.floor(maxPlus * 1.5);
-      const tailwind = maxPlus * 2;
+  // Tailwind 2x
+  if (card.tailwind) {
+    spe = Math.floor(spe * 2);
+  }
 
-      const benchMap = { maxPlus, maxNeutral: maxNeu, zeroNeutral: zeroNeu, scarf, tailwind };
-      const targetVal = benchMap[benchmarkKey] || maxPlus;
+  return { finalSpe: spe, form };
+}
 
-      let statusHtml = "";
-      if (mySpe === targetVal) {
-        statusHtml = `<span class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 font-bold">Tie (${targetVal})</span>`;
-      } else {
-        const faster = isTrickRoom ? mySpe < targetVal : mySpe > targetVal;
-        statusHtml = faster
-          ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold">Nhanh hơn (${targetVal})</span>`
-          : `<span class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 font-bold">Chậm hơn (${targetVal})</span>`;
-      }
+function renderSpeedComparisonCards() {
+  const grid = document.getElementById("speed-cards-grid");
+  if (!grid) return;
+
+  const isTrickRoom = document.getElementById("speed-trick-room")?.checked || false;
+  const speciesList = Object.keys(POKEDEX_MC).sort();
+  const team = getCurrentTeam();
+
+  // Compute all final speeds first to determine the winner badge
+  const computedList = speedCards.map((card) => {
+    const res = computeSpeedCardFinalValue(card);
+    return { card, finalSpe: res.finalSpe, form: res.form };
+  });
+
+  const bestSpe = computedList.reduce((best, item) => {
+    if (best === null) return item.finalSpe;
+    return isTrickRoom ? Math.min(best, item.finalSpe) : Math.max(best, item.finalSpe);
+  }, null);
+
+  const stagesList = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6];
+
+  grid.innerHTML = computedList
+    .map(({ card, finalSpe, form }) => {
+      const dexData = POKEDEX_MC[card.species] || POKEDEX_MC["Arcanine"];
+      const isWinner = bestSpe !== null && finalSpe === bestSpe;
+      const badgeLabel = isTrickRoom ? "Đi trước (TR)" : "Nhanh nhất";
+
+      const speciesOptions = speciesList
+        .map((sp) => `<option value="${sp}" ${sp === card.species ? "selected" : ""}>${sp}</option>`)
+        .join("");
+
+      const teamSlotOptions = `<option value="">Nạp slot...</option>` +
+        (team?.slots || [])
+          .map((m, idx) => {
+            const f = getEffectiveForm(m.species, m.isMega, m.item);
+            return `<option value="${idx}">#${idx + 1} ${f.displayName}</option>`;
+          })
+          .join("");
+
+      const stageButtonsHtml = stagesList
+        .map((st) => {
+          const isCurrent = card.stage === st;
+          const label = st > 0 ? `+${st}` : `${st}`;
+          return `
+            <button type="button" onclick="updateSpeedCard(${card.id}, 'stage', ${st})"
+              class="py-1 rounded text-[11px] font-mono font-bold transition ${
+                isCurrent
+                  ? "bg-sky-500 text-slate-950 shadow-sm shadow-sky-500/40"
+                  : "bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800"
+              }">
+              ${label}
+            </button>
+          `;
+        })
+        .join("");
 
       return `
-        <tr class="hover:bg-slate-900/60 transition">
-          <td class="py-2 px-3 flex items-center gap-2 font-bold text-white">
-            <img src="${getSpriteUrl(item.sprite)}" alt="${item.name}" class="w-7 h-7 object-contain"
-              onerror="this.src='https://placehold.co/32x32/0f172a/38bdf8?text=P'" />
-            <span>${escapeHtml(item.name)}</span>
-          </td>
-          <td class="py-2 px-2 text-center font-mono text-slate-300 font-bold">${item.baseSpe}</td>
-          <td class="py-2 px-2 text-center font-mono text-slate-500">${minNeg}</td>
-          <td class="py-2 px-2 text-center font-mono text-slate-400">${zeroNeu}</td>
-          <td class="py-2 px-2 text-center font-mono text-slate-200">${maxNeu}</td>
-          <td class="py-2 px-2 text-center font-mono font-bold text-sky-300">${maxPlus}</td>
-          <td class="py-2 px-2 text-center font-mono text-amber-300">${scarf}</td>
-          <td class="py-2 px-3 text-right">${statusHtml}</td>
-        </tr>
+        <div class="glass-panel rounded-2xl p-5 relative flex flex-col justify-between space-y-4 transition-all ${
+          isWinner
+            ? "border-2 border-emerald-500 shadow-lg shadow-emerald-500/15"
+            : "border border-slate-800"
+        }">
+          <!-- Top Bar: Winner Badge + Quick Slot Loader + Remove Button -->
+          <div class="flex items-center justify-between gap-2 min-h-[26px]">
+            <div>
+              ${
+                isWinner
+                  ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[11px] font-extrabold tracking-wide shadow">${badgeLabel}</span>`
+                  : `<span class="text-[11px] font-semibold text-slate-500">So sánh tốc độ</span>`
+              }
+            </div>
+            <div class="flex items-center gap-1.5">
+              <select onchange="loadSlotIntoSpeedCard(${card.id}, this.value)"
+                class="bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-0.5 text-[11px] text-slate-300 focus:outline-none">
+                ${teamSlotOptions}
+              </select>
+              <button type="button" onclick="removeSpeedCard(${card.id})"
+                class="w-7 h-7 rounded-full bg-slate-900 hover:bg-rose-500/20 border border-slate-700 hover:border-rose-500/40 text-slate-400 hover:text-rose-300 flex items-center justify-center text-xs transition"
+                title="Xóa thẻ">
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <!-- Center Avatar, Species Selector, Mega Toggle, Types & Base Speed -->
+          <div class="flex flex-col items-center text-center space-y-2">
+            <div class="w-20 h-20 rounded-full bg-slate-900/90 border border-slate-700/80 flex items-center justify-center shadow-inner">
+              ${buildSpriteImgHtml(form, "w-16 h-16")}
+            </div>
+
+            <div class="flex items-center justify-center gap-1.5 w-full max-w-[260px]">
+              <select onchange="updateSpeedCard(${card.id}, 'species', this.value)"
+                class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1 text-sm font-extrabold text-white text-center focus:outline-none focus:border-sky-500">
+                ${speciesOptions}
+              </select>
+              ${
+                dexData.megas
+                  ? `<label class="inline-flex items-center gap-1 px-2 py-1 rounded-xl border text-[11px] font-extrabold cursor-pointer transition ${
+                      card.isMega
+                        ? "bg-pink-500/20 border-pink-500/50 text-pink-300"
+                        : "bg-slate-900 border-slate-700 text-slate-400"
+                    }">
+                      <input type="checkbox" ${card.isMega ? "checked" : ""} onchange="updateSpeedCard(${card.id}, 'isMega', this.checked)" class="hidden" />
+                      <span>Mega</span>
+                    </label>`
+                  : ""
+              }
+            </div>
+
+            <div class="text-xs font-bold text-slate-200">${escapeHtml(form.displayName)}</div>
+
+            <div class="flex items-center justify-center gap-1.5">
+              ${renderTypeBadgesHtml(form.types)}
+            </div>
+
+            <div class="text-xs text-slate-400">
+              Base Speed: <span class="font-mono font-extrabold text-white">${form.base.spe}</span>
+            </div>
+          </div>
+
+          <!-- Stat Points (SP) Slider -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-slate-200">Stat Points (SP) vào Speed</span>
+              <span class="font-mono font-extrabold text-sky-400">${card.sp}</span>
+            </div>
+            <input type="range" min="0" max="32" value="${card.sp}"
+              oninput="updateSpeedCard(${card.id}, 'sp', this.value)"
+              class="sp-slider w-full" />
+          </div>
+
+          <!-- Nature Speed Segmented Control -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold text-slate-200">Nature ảnh hưởng Speed</label>
+            <div class="grid grid-cols-3 gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-xs">
+              <button type="button" onclick="updateSpeedCard(${card.id}, 'natureMode', 'minus')"
+                class="py-1.5 rounded-lg font-bold transition ${
+                  card.natureMode === "minus"
+                    ? "bg-slate-800 text-sky-300 border border-sky-500/40 shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }">
+                Giảm
+              </button>
+              <button type="button" onclick="updateSpeedCard(${card.id}, 'natureMode', 'neutral')"
+                class="py-1.5 rounded-lg font-bold transition ${
+                  card.natureMode === "neutral"
+                    ? "bg-slate-800 text-white border border-slate-600 shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }">
+                Trung tính
+              </button>
+              <button type="button" onclick="updateSpeedCard(${card.id}, 'natureMode', 'plus')"
+                class="py-1.5 rounded-lg font-bold transition ${
+                  card.natureMode === "plus"
+                    ? "bg-slate-800 text-rose-300 border border-rose-500/40 shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }">
+                Tăng
+              </button>
+            </div>
+          </div>
+
+          <!-- Speed Stage (-6 to +6) -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-slate-200">Thang bậc Speed trong trận (tăng / giảm)</span>
+              <span class="font-mono font-extrabold text-sky-400">${card.stage > 0 ? "+" + card.stage : card.stage}</span>
+            </div>
+            <div class="grid grid-cols-13 gap-0.5" style="grid-template-columns: repeat(13, minmax(0, 1fr));">
+              ${stageButtonsHtml}
+            </div>
+            <p class="text-[10px] leading-relaxed text-slate-400">
+              0 = không đổi · số dương = được tăng tốc · số âm = bị giảm tốc (khi dính kỹ năng làm giảm Speed)
+            </p>
+          </div>
+
+          <!-- Extra Multipliers Checkboxes -->
+          <div class="space-y-2 pt-1">
+            <div class="text-xs font-bold text-slate-200">Chọn thêm yếu tố ảnh hưởng tốc độ khác</div>
+
+            <label class="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer select-none">
+              <input type="checkbox" ${card.weatherAbilityDouble ? "checked" : ""}
+                onchange="updateSpeedCard(${card.id}, 'weatherAbilityDouble', this.checked)"
+                class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0" />
+              <span>Nhân đôi do thời tiết/ability (vd Swift Swim + Mưa)</span>
+            </label>
+
+            <label class="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer select-none">
+              <input type="checkbox" ${card.choiceScarf ? "checked" : ""}
+                onchange="updateSpeedCard(${card.id}, 'choiceScarf', this.checked)"
+                class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0" />
+              <span>Choice Scarf</span>
+            </label>
+
+            <label class="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer select-none">
+              <input type="checkbox" ${card.tailwind ? "checked" : ""}
+                onchange="updateSpeedCard(${card.id}, 'tailwind', this.checked)"
+                class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0" />
+              <span>Tailwind (đồng đội hỗ trợ)</span>
+            </label>
+          </div>
+
+          <!-- Final Speed Readout Box -->
+          <div class="rounded-xl p-3 text-center border ${
+            isWinner
+              ? "bg-emerald-500/10 border-emerald-500/40"
+              : "bg-slate-950/90 border-slate-800"
+          }">
+            <div class="text-[11px] font-semibold text-slate-400">Tốc độ cuối cùng</div>
+            <div class="font-mono text-3xl font-extrabold mt-0.5 ${
+              isWinner ? "text-emerald-400" : "text-white"
+            }">
+              ${finalSpe}
+            </div>
+          </div>
+        </div>
       `;
     })
     .join("");

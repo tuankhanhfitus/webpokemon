@@ -138,7 +138,7 @@
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
             <div class="flex items-center gap-4">
               <div class="w-20 h-20 rounded-2xl bg-slate-900 border border-slate-700/80 flex items-center justify-center relative overflow-hidden shrink-0">
-                <img id="editor-sprite" src="" alt="Pokemon" class="w-16 h-16 object-contain z-10" onerror="this.src='https://placehold.co/80x80/0f172a/38bdf8?text=PKMN'" />
+                <img id="editor-sprite" src="" alt="Pokemon" class="w-16 h-16 object-contain z-10" />
                 <div class="absolute inset-0 bg-gradient-to-t from-sky-500/10 to-transparent"></div>
               </div>
               <div class="space-y-1.5 flex-1">
@@ -283,7 +283,6 @@
               <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Move 1–4 (P1 → P2)</span>
             </div>
             <div id="calc-top-p1-moves" class="space-y-1">
-              <!-- Rendered via JS -->
             </div>
           </div>
 
@@ -294,7 +293,6 @@
               <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Move 1–4 (P2 → P1)</span>
             </div>
             <div id="calc-top-p2-moves" class="space-y-1">
-              <!-- Rendered via JS -->
             </div>
           </div>
         </div>
@@ -327,7 +325,7 @@
       <!-- 3-Column Showdown Workspace: Pokémon 1 | Field Conditions | Pokémon 2 -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-        <!-- Pokémon 1 Panel (4.5 -> 4 cols) -->
+        <!-- Pokémon 1 Panel (4 cols) -->
         <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3">
           <div class="flex items-center justify-between border-b border-slate-800 pb-2">
             <span class="text-xs font-extrabold uppercase tracking-wider text-sky-400">Pokémon 1</span>
@@ -543,218 +541,36 @@
       </div>
     </section>
 
-    <!-- ==================== VIEW 3: DEDICATED SPEED TIERS & 1v1 SPEED CHECKER ==================== -->
+    <!-- ==================== VIEW 3: MULTI-CARD SPEED COMPARISON PAGE ==================== -->
     <section id="view-speed" class="hidden space-y-5">
 
-      <!-- Top 1v1 Speed Duel & Minimum SP Calculator -->
-      <div class="glass-panel rounded-2xl p-4 sm:p-5 space-y-4 border-emerald-500/30">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div>
-            <h2 class="text-base sm:text-lg font-extrabold text-white">So Sánh Tốc Độ 1v1 & Tính Mốc SP Tối Thiểu (Lv.50)</h2>
-            <p id="speed-min-sp-hint" class="text-xs text-slate-400 mt-0.5">
-              Chọn 2 Pokémon để kiểm tra thứ tự ra đòn và số SP Speed tối thiểu cần nâng.
-            </p>
-          </div>
-          <div class="flex items-center gap-3">
-            <label class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/40 text-xs font-bold text-purple-300 cursor-pointer">
-              <input type="checkbox" id="speed-trick-room" onchange="updateSpeedWorkspace()" />
-              <span>Trick Room (Đảo thứ tự)</span>
-            </label>
-            <span id="speed-duel-verdict" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-extrabold">
-              Bạn đi TRƯỚC
-            </span>
-          </div>
+      <!-- Speed Workspace Header Bar -->
+      <div class="glass-panel rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base sm:text-lg font-extrabold text-white">So Sánh Tốc Độ Đa Pokémon (Lv.50 · 31 IVs)</h2>
+          <p class="text-xs text-slate-400">Tự động đánh dấu <span class="text-emerald-400 font-bold">Nhanh nhất</span> theo chỉ số SP, Nature, thang bậc (-6 đến +6) và điều kiện trận đấu.</p>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <!-- Left: My Pokémon (P1) -->
-          <div class="bg-slate-950/75 border border-slate-800 rounded-xl p-3.5 space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-extrabold uppercase tracking-wider text-sky-400">Pokémon của bạn</span>
-              <select id="speed-p1-team-slot" onchange="loadTeamSlotToSpeed('p1', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
-                <option value="">Nạp từ Team...</option>
-              </select>
-            </div>
-
-            <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2.5 flex-1 min-w-0">
-                <img id="speed-p1-sprite" src="" alt="P1" class="w-12 h-12 object-contain bg-slate-900 rounded-xl border border-slate-800 p-1 shrink-0" />
-                <div class="flex-1 space-y-1.5 min-w-0">
-                  <select id="speed-p1-species" onchange="onSpeedSpeciesChange('p1', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-bold text-white"></select>
-                  <label class="inline-flex items-center gap-1.5 text-[11px] font-bold text-pink-400 cursor-pointer">
-                    <input type="checkbox" id="speed-p1-mega" onchange="updateSpeedWorkspace()" /> Tiến hóa Mega
-                  </label>
-                </div>
-              </div>
-              <div class="text-right bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 shrink-0">
-                <span class="text-[10px] uppercase text-slate-400 block">Speed thực tế</span>
-                <span id="speed-p1-final" class="font-mono text-xl font-extrabold text-sky-400">223</span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-              <div>
-                <label class="text-[10px] text-slate-400 font-semibold block mb-1">Tính cách Speed (Nature)</label>
-                <select id="speed-p1-nature" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white">
-                  <option value="plus">+Spe (Timid / Jolly · 1.1x)</option>
-                  <option value="neutral">Trung tính (1.0x)</option>
-                  <option value="minus">-Spe (Brave / Quiet · 0.9x)</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-[10px] text-slate-400 font-semibold block mb-1">Phân bổ SP Speed (0–32)</label>
-                <div class="flex items-center gap-2">
-                  <input type="range" id="speed-p1-sp-range" min="0" max="32" value="32" oninput="document.getElementById('speed-p1-sp').value=this.value; updateSpeedWorkspace();" class="sp-slider w-full" />
-                  <input type="number" id="speed-p1-sp" min="0" max="32" value="32" oninput="document.getElementById('speed-p1-sp-range').value=this.value; updateSpeedWorkspace();" class="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 font-mono text-center text-sky-300 font-bold" />
-                </div>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs items-center">
-              <div>
-                <label class="text-[10px] text-slate-400 block">Stage</label>
-                <select id="speed-p1-stage" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 font-mono text-white">
-                  <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
-                  <option value="0" selected>0</option>
-                  <option value="-1">-1 (Icy Wind)</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-[10px] text-slate-400 block">Item / Ability</label>
-                <select id="speed-p1-mult" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white">
-                  <option value="1" selected>1.0x (Thường)</option>
-                  <option value="1.5">1.5x (Scarf / Booster)</option>
-                  <option value="2">2.0x (Swift Swim / Unburden)</option>
-                  <option value="0.5">0.5x (Iron Ball)</option>
-                </select>
-              </div>
-              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer mt-3.5">
-                <input type="checkbox" id="speed-p1-tailwind" onchange="updateSpeedWorkspace()" />
-                <span>Tailwind</span>
-              </label>
-              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer mt-3.5 text-amber-300">
-                <input type="checkbox" id="speed-p1-para" onchange="updateSpeedWorkspace()" />
-                <span>Paralyzed</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Right: Opponent Pokémon (P2) -->
-          <div class="bg-slate-950/75 border border-slate-800 rounded-xl p-3.5 space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-extrabold uppercase tracking-wider text-rose-400">Đối thủ so sánh</span>
-              <select id="speed-p2-team-slot" onchange="loadTeamSlotToSpeed('p2', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
-                <option value="">Nạp từ Team...</option>
-              </select>
-            </div>
-
-            <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2.5 flex-1 min-w-0">
-                <img id="speed-p2-sprite" src="" alt="P2" class="w-12 h-12 object-contain bg-slate-900 rounded-xl border border-slate-800 p-1 shrink-0" />
-                <div class="flex-1 space-y-1.5 min-w-0">
-                  <select id="speed-p2-species" onchange="onSpeedSpeciesChange('p2', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-bold text-white"></select>
-                  <label class="inline-flex items-center gap-1.5 text-[11px] font-bold text-pink-400 cursor-pointer">
-                    <input type="checkbox" id="speed-p2-mega" onchange="updateSpeedWorkspace()" /> Tiến hóa Mega
-                  </label>
-                </div>
-              </div>
-              <div class="text-right bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 shrink-0">
-                <span class="text-[10px] uppercase text-slate-400 block">Speed đối thủ</span>
-                <span id="speed-p2-final" class="font-mono text-xl font-extrabold text-rose-400">189</span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-              <div>
-                <label class="text-[10px] text-slate-400 font-semibold block mb-1">Tính cách Speed (Nature)</label>
-                <select id="speed-p2-nature" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white">
-                  <option value="plus">+Spe (Timid / Jolly · 1.1x)</option>
-                  <option value="neutral">Trung tính (1.0x)</option>
-                  <option value="minus">-Spe (Brave / Quiet · 0.9x)</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-[10px] text-slate-400 font-semibold block mb-1">Phân bổ SP Speed (0–32)</label>
-                <div class="flex items-center gap-2">
-                  <input type="range" id="speed-p2-sp-range" min="0" max="32" value="32" oninput="document.getElementById('speed-p2-sp').value=this.value; updateSpeedWorkspace();" class="sp-slider w-full" />
-                  <input type="number" id="speed-p2-sp" min="0" max="32" value="32" oninput="document.getElementById('speed-p2-sp-range').value=this.value; updateSpeedWorkspace();" class="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 font-mono text-center text-rose-300 font-bold" />
-                </div>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs items-center">
-              <div>
-                <label class="text-[10px] text-slate-400 block">Stage</label>
-                <select id="speed-p2-stage" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 font-mono text-white">
-                  <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
-                  <option value="0" selected>0</option>
-                  <option value="-1">-1 (Icy Wind)</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-[10px] text-slate-400 block">Item / Ability</label>
-                <select id="speed-p2-mult" onchange="updateSpeedWorkspace()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white">
-                  <option value="1" selected>1.0x (Thường)</option>
-                  <option value="1.5">1.5x (Scarf / Booster)</option>
-                  <option value="2">2.0x (Swift Swim / Unburden)</option>
-                  <option value="0.5">0.5x (Iron Ball)</option>
-                </select>
-              </div>
-              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer mt-3.5">
-                <input type="checkbox" id="speed-p2-tailwind" onchange="updateSpeedWorkspace()" />
-                <span>Tailwind</span>
-              </label>
-              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer mt-3.5 text-amber-300">
-                <input type="checkbox" id="speed-p2-para" onchange="updateSpeedWorkspace()" />
-                <span>Paralyzed</span>
-              </label>
-            </div>
-          </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-500/15 border border-purple-500/40 text-xs font-bold text-purple-300 cursor-pointer">
+            <input type="checkbox" id="speed-trick-room" onchange="renderSpeedComparisonCards()" />
+            <span>Trick Room (Chậm đi trước)</span>
+          </label>
+          <button onclick="addSpeedComparisonCard()" class="px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-xs font-extrabold text-slate-950 shadow-md shadow-sky-500/20 transition">
+            + Thêm Pokémon
+          </button>
+          <button onclick="loadAllTeamToSpeedCards()" class="px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition">
+            ⚡ Nạp cả 6 con từ Team
+          </button>
+          <button onclick="resetDefaultSpeedCards()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition">
+            Đặt lại
+          </button>
         </div>
       </div>
 
-      <!-- Meta Speed Tiers Reference Table -->
-      <div class="glass-panel rounded-2xl p-4 sm:p-5 space-y-4">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div>
-            <h3 class="text-sm sm:text-base font-extrabold text-white">Bảng Speed Tiers Toàn Bộ Meta Regulation M-C (Lv.50)</h3>
-            <p class="text-xs text-slate-400">So sánh tự động với tốc độ của <strong id="speed-table-ref-name" class="text-sky-400">Garchomp-Mega-Z</strong> (<span id="speed-table-ref-val" class="font-mono font-bold text-white">223</span> Spe)</p>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2 text-xs">
-            <select id="speed-table-filter" onchange="renderSpeedTiersTable()" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-slate-200 font-semibold">
-              <option value="all">Tất cả Pokémon Reg M-C + Megas</option>
-              <option value="team">Chỉ 6 Pokémon trong Team của tôi</option>
-              <option value="megas">Chỉ các dạng Mega Evolution</option>
-            </select>
-            <select id="speed-table-opp-benchmark" onchange="renderSpeedTiersTable()" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-slate-200 font-semibold">
-              <option value="maxPlus">Mốc so sánh: 32 SP +Spe Nature</option>
-              <option value="maxNeutral">Mốc so sánh: 32 SP Trung tính</option>
-              <option value="zeroNeutral">Mốc so sánh: 0 SP Trung tính</option>
-              <option value="scarf">Mốc so sánh: 32 SP +Spe + Scarf (1.5x)</option>
-              <option value="tailwind">Mốc so sánh: 32 SP +Spe + Tailwind (2x)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr class="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
-                <th class="py-2.5 px-3">Pokémon</th>
-                <th class="py-2.5 px-2 text-center">Base Spe</th>
-                <th class="py-2.5 px-2 text-center">Min (-Spe 0 SP)</th>
-                <th class="py-2.5 px-2 text-center">0 SP Neutral</th>
-                <th class="py-2.5 px-2 text-center">32 SP Neutral</th>
-                <th class="py-2.5 px-2 text-center text-sky-300">32 SP +Spe</th>
-                <th class="py-2.5 px-2 text-center text-amber-300">+Spe Scarf</th>
-                <th class="py-2.5 px-3 text-right">Kết quả vs Bạn</th>
-              </tr>
-            </thead>
-            <tbody id="speed-tiers-tbody" class="divide-y divide-slate-800/60">
-            </tbody>
-          </table>
-        </div>
+      <!-- Multi-Card Speed Comparison Grid (Matching Screenshot Layout) -->
+      <div id="speed-cards-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <!-- Rendered dynamically by renderSpeedComparisonCards() -->
       </div>
 
     </section>
