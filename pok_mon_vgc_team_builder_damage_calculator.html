@@ -1,0 +1,2379 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VGC Tactics Studio — Pokémon Team Builder & Damage Calc</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            slate: {
+              925: '#0a0f1c',
+              950: '#060911',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Custom scrollbar for sleek dark tactical look */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    input[type="range"] {
+      accent-color: #38bdf8;
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.7);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-sky-500/30 selection:text-sky-200">
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-925/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2">
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 border border-sky-400/30">
+          <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9" />
+            <circle cx="12" cy="12" r="3" />
+            <line x1="3" y1="12" x2="9" y2="12" />
+            <line x1="15" y1="12" x2="21" y2="12" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white">VGC Tactics Studio</h1>
+            <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/30">Reg G / H</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Team Builder • OTS / Rank Export • Damage Calc • AI Vision</p>
+        </div>
+      </div>
+
+      <!-- Main Navigation Tabs -->
+      <nav class="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+        <button onclick="switchMainTab('builder')" id="nav-builder" class="nav-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-sky-500 text-slate-950 shadow">
+          <span data-i18n="tabBuilder">Team Builder</span>
+        </button>
+        <button onclick="switchMainTab('calc')" id="nav-calc" class="nav-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition-all">
+          <span data-i18n="tabCalc">Damage Calc</span>
+        </button>
+        <button onclick="switchMainTab('scanner')" id="nav-scanner" class="nav-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition-all flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span data-i18n="tabScanner">AI Quét Ảnh</span>
+        </button>
+      </nav>
+
+      <!-- Language & Cloud Status -->
+      <div class="flex items-center gap-2">
+        <button onclick="toggleLanguage()" id="lang-btn" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition">
+          VI / EN
+        </button>
+        <div id="cloud-badge" class="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium" title="Cloud Sync Status">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="cloud-status-text">Cloud Ready</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast Notification Banner -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-5">
+
+    <!-- ==================== VIEW 1: TEAM BUILDER ==================== -->
+    <section id="view-builder" class="space-y-5">
+      
+      <!-- Team Management Bar -->
+      <div class="glass-panel rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-2.5 flex-1">
+          <label class="text-xs font-semibold uppercase tracking-wider text-slate-400" data-i18n="currentTeam">Đội hình:</label>
+          <select id="team-selector" onchange="selectTeam(this.value)" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-white focus:outline-none focus:border-sky-500 min-w-[180px] sm:min-w-[230px]">
+          </select>
+          <input type="text" id="team-name-input" onchange="renameCurrentTeam(this.value)" placeholder="Tên đội hình..." class="bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 w-44 sm:w-56" />
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="createNewTeam()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition">
+            <span>+</span> <span data-i18n="btnNewTeam">Tạo mới</span>
+          </button>
+          <button onclick="duplicateCurrentTeam()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition" data-i18n="btnClone">
+            Nhân bản
+          </button>
+          <button onclick="openImportModal()" class="px-3 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-xs font-semibold text-indigo-300 transition" data-i18n="btnImport">
+            Nhập Showdown
+          </button>
+          <button onclick="openExportModal('ranked')" class="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-xs font-bold text-slate-950 shadow-md shadow-sky-500/20 transition" data-i18n="btnExportRank">
+            Xuất Rank (Full EVs)
+          </button>
+          <button onclick="openExportModal('ots')" class="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition" data-i18n="btnExportOTS">
+            Xuất Giải OTS (Giấu EVs)
+          </button>
+          <button onclick="deleteCurrentTeam()" class="px-2.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-semibold text-rose-400 transition" title="Xóa team">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- 6-Slot Team Ribbon -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5" id="team-slots-ribbon">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Active Pokémon Editor Panel -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- Left Column: Identity, Item, Ability, Tera, Moves (7 cols) -->
+        <div class="lg:col-span-7 glass-panel rounded-2xl p-4 sm:p-5 space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div class="flex items-center gap-4">
+              <div class="w-20 h-20 rounded-2xl bg-slate-900 border border-slate-700/80 flex items-center justify-center relative overflow-hidden shrink-0">
+                <img id="editor-sprite" src="" alt="Pokemon" class="w-16 h-16 object-contain z-10" onerror="this.src='https://placehold.co/80x80/0f172a/38bdf8?text=PKMN'" />
+                <div class="absolute inset-0 bg-gradient-to-t from-sky-500/10 to-transparent"></div>
+              </div>
+              <div class="space-y-1.5 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <label class="text-[11px] font-bold uppercase tracking-wider text-sky-400">Slot <span id="editor-slot-num">1</span></label>
+                  <div id="editor-types" class="flex items-center gap-1.5"></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <input list="pokemon-species-list" id="input-species" onchange="updateActivePokemon('species', this.value)" placeholder="Chọn hoặc nhập Pokémon..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-sky-500" />
+                    <datalist id="pokemon-species-list"></datalist>
+                  </div>
+                  <div>
+                    <input type="text" id="input-nickname" oninput="updateActivePokemon('nickname', this.value)" placeholder="Biệt danh (Nickname)..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-sky-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Level, Gender, Shiny -->
+            <div class="flex items-center gap-2 self-start sm:self-center">
+              <div class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5">
+                <span class="text-[11px] text-slate-400 font-semibold">Lv.</span>
+                <input type="number" id="input-level" min="1" max="100" value="50" onchange="updateActivePokemon('level', parseInt(this.value)||50)" class="w-10 bg-transparent text-xs font-bold text-white focus:outline-none text-center" />
+              </div>
+              <select id="input-gender" onchange="updateActivePokemon('gender', this.value)" class="bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs font-semibold text-slate-200 focus:outline-none">
+                <option value="">-</option>
+                <option value="M">♂</option>
+                <option value="F">♀</option>
+              </select>
+              <button id="btn-shiny" onclick="toggleShiny()" class="px-2.5 py-1.5 rounded-xl border text-xs font-bold transition" title="Shiny">
+                ★
+              </button>
+            </div>
+          </div>
+
+          <!-- Item, Ability, Tera Type -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1" data-i18n="lblItem">Vật phẩm (Item)</label>
+              <input list="items-list" id="input-item" onchange="updateActivePokemon('item', this.value)" placeholder="Chọn hoặc nhập Item..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-white focus:outline-none focus:border-sky-500" />
+              <datalist id="items-list"></datalist>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1" data-i18n="lblAbility">Đặc tính (Ability)</label>
+              <input list="abilities-list" id="input-ability" onchange="updateActivePokemon('ability', this.value)" placeholder="Chọn hoặc nhập Ability..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-white focus:outline-none focus:border-sky-500" />
+              <datalist id="abilities-list"></datalist>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1" data-i18n="lblTera">Hệ Tera (Tera Type)</label>
+              <select id="input-tera" onchange="updateActivePokemon('teraType', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-white focus:outline-none focus:border-sky-500">
+              </select>
+            </div>
+          </div>
+
+          <!-- 4 Moves -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-semibold uppercase tracking-wider text-slate-400" data-i18n="lblMoves">Bộ chiêu thức (4 Moves)</label>
+              <span class="text-[11px] text-slate-500" data-i18n="moveHint">Gợi ý chiêu chuẩn VGC hoặc tự nhập</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="moves-inputs-container">
+              <!-- 4 move inputs rendered via JS -->
+            </div>
+            <datalist id="moves-list"></datalist>
+          </div>
+
+          <!-- Quick Action: Send to Damage Calc -->
+          <div class="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+            <button onclick="sendCurrentToCalc('attacker')" class="px-3.5 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-xs font-semibold text-sky-300 transition">
+              ⚔️ <span data-i18n="btnSendAtk">Đưa sang Damage Calc (Bên Tấn Công)</span>
+            </button>
+            <button onclick="clearCurrentSlot()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-400 hover:text-slate-200 transition" data-i18n="btnClearSlot">
+              Xóa trống Slot này
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Column: Nature, EVs, IVs & Live Stats Chart (5 cols) -->
+        <div class="lg:col-span-5 glass-panel rounded-2xl p-4 sm:p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h2 class="text-sm font-bold text-white" data-i18n="lblStatsTitle">Chỉ số & Phân bổ EVs / IVs</h2>
+              <p class="text-[11px] text-slate-400" data-i18n="lblStatsSub">Tự động tính chỉ số thực tế ở cấp độ 50</p>
+            </div>
+            <div class="text-right">
+              <span class="text-[11px] text-slate-400 block">EVs còn lại</span>
+              <span id="evs-remaining-badge" class="font-mono text-sm font-bold text-emerald-400">508 / 508</span>
+            </div>
+          </div>
+
+          <!-- Nature Selector & Quick EV Presets -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1" data-i18n="lblNature">Tính cách (Nature)</label>
+              <select id="input-nature" onchange="updateActivePokemon('nature', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-sky-500">
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Preset EVs nhanh</label>
+              <select onchange="applyEvPreset(this.value); this.value='';" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-300 focus:outline-none focus:border-sky-500">
+                <option value="">-- Chọn mẫu EVs --</option>
+                <option value="phys_sweeper">252 Atk / 252 Spe / 4 HP (Jolly/Adamant)</option>
+                <option value="spec_sweeper">252 SpA / 252 Spe / 4 HP (Timid/Modest)</option>
+                <option value="bulky_phys">252 HP / 252 Atk / 4 Def (Adamant)</option>
+                <option value="bulky_spec">252 HP / 252 SpA / 4 SpD (Modest)</option>
+                <option value="phys_wall">252 HP / 252 Def / 4 SpD (Impish/Bold)</option>
+                <option value="spec_wall">252 HP / 252 SpD / 4 Def (Careful/Calm)</option>
+                <option value="reset">Reset toàn bộ EVs về 0</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Stats Table Header -->
+          <div class="grid grid-cols-12 gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 pt-1">
+            <div class="col-span-2">Stat</div>
+            <div class="col-span-1 text-center">Base</div>
+            <div class="col-span-5 text-center">EVs (0-252)</div>
+            <div class="col-span-2 text-center">IVs</div>
+            <div class="col-span-2 text-right">Real</div>
+          </div>
+
+          <!-- 6 Stat Rows -->
+          <div id="stats-rows-container" class="space-y-2.5">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: VGC DAMAGE CALCULATOR ==================== -->
+    <section id="view-calc" class="hidden space-y-5">
+      
+      <!-- Top Result Banner -->
+      <div class="glass-panel rounded-2xl p-4 sm:p-6 border-sky-500/30 bg-gradient-to-r from-slate-900 via-slate-900 to-sky-950/40">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div class="space-y-1.5 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[11px] font-bold uppercase tracking-wider">VGC Level 50 Calc</span>
+              <span id="calc-move-badge" class="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[11px] font-semibold">Move Info</span>
+            </div>
+            <h2 id="calc-headline" class="text-base sm:text-xl font-extrabold text-white leading-snug">
+              Chọn Pokémon và chiêu thức để tính sát thương
+            </h2>
+            <p id="calc-subline" class="text-xs sm:text-sm font-mono text-sky-300">
+              Possible damage amounts: (0)
+            </p>
+          </div>
+
+          <!-- Defender Visual HP Bar -->
+          <div class="w-full lg:w-80 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-slate-400">HP Đối thủ còn lại:</span>
+              <span id="calc-hp-range-text" class="font-mono text-emerald-400">100% - 100%</span>
+            </div>
+            <div class="w-full h-4 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 relative">
+              <div id="calc-hp-bar-max" class="h-full bg-emerald-500/40 rounded-full transition-all duration-300 absolute top-0 left-0" style="width: 100%"></div>
+              <div id="calc-hp-bar-min" class="h-full bg-emerald-500 rounded-full transition-all duration-300 relative z-10" style="width: 100%"></div>
+            </div>
+            <div id="calc-ko-verdict" class="text-center text-xs font-extrabold uppercase tracking-wider text-amber-400">
+              -
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3-Column Calculator Workspace: Attacker | Field & Move | Defender -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        <!-- Attacker Panel (4 cols) -->
+        <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <h3 class="text-sm font-extrabold text-sky-400 uppercase tracking-wider">Bên Tấn Công (Attacker)</h3>
+            <select id="calc-atk-team-slot" onchange="loadTeamSlotToCalc('attacker', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
+              <option value="">Nạp từ Team...</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="col-span-2">
+              <label class="text-[11px] text-slate-400 font-semibold">Pokémon</label>
+              <input list="pokemon-species-list" id="calc-atk-species" onchange="updateCalcSide('attacker', 'species', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-bold text-white" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-semibold">Item</label>
+              <input list="items-list" id="calc-atk-item" onchange="updateCalcSide('attacker', 'item', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-semibold">Ability</label>
+              <input list="abilities-list" id="calc-atk-ability" onchange="updateCalcSide('attacker', 'ability', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-semibold">Nature</label>
+              <select id="calc-atk-nature" onchange="updateCalcSide('attacker', 'nature', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-white"></select>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-semibold">Tera Type</label>
+              <div class="flex items-center gap-1.5">
+                <select id="calc-atk-tera" onchange="updateCalcSide('attacker', 'teraType', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-white"></select>
+                <label class="flex items-center gap-1 text-[11px] font-bold text-amber-400 cursor-pointer shrink-0 bg-slate-900 px-2 py-1.5 rounded-xl border border-slate-700">
+                  <input type="checkbox" id="calc-atk-terastallized" onchange="updateCalcSide('attacker', 'isTera', this.checked)" /> Tera
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attacker Offensive EVs & Boosts -->
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800 space-y-2">
+            <div class="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <span class="text-[10px] text-slate-400 block">Atk EV / Stage</span>
+                <div class="flex gap-1">
+                  <input type="number" id="calc-atk-ev-atk" min="0" max="252" step="4" value="252" onchange="updateCalcEv('attacker', 'atk', this.value)" class="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono text-center" />
+                  <select id="calc-atk-boost-atk" onchange="updateCalcBoost('attacker', 'atk', this.value)" class="bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono">
+                    <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
+                    <option value="0" selected>0</option>
+                    <option value="-1">-1</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block">SpA EV / Stage</span>
+                <div class="flex gap-1">
+                  <input type="number" id="calc-atk-ev-spa" min="0" max="252" step="4" value="0" onchange="updateCalcEv('attacker', 'spa', this.value)" class="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono text-center" />
+                  <select id="calc-atk-boost-spa" onchange="updateCalcBoost('attacker', 'spa', this.value)" class="bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono">
+                    <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
+                    <option value="0" selected>0</option>
+                    <option value="-1">-1</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block">Trạng thái</span>
+                <label class="flex items-center gap-1.5 text-xs text-rose-400 font-semibold mt-1 cursor-pointer">
+                  <input type="checkbox" id="calc-atk-burn" onchange="runDamageCalculation()" /> Burned
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Move Selection -->
+          <div class="space-y-2 pt-1">
+            <label class="text-xs font-bold text-slate-300 block">Chiêu thức sử dụng (Move)</label>
+            <input list="moves-list" id="calc-move-name" onchange="selectCalcMove(this.value)" class="w-full bg-slate-900 border border-sky-500/50 rounded-xl px-3 py-2 text-sm font-bold text-sky-300" />
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="text-[10px] text-slate-400">Base Power</label>
+                <input type="number" id="calc-move-bp" value="80" onchange="runDamageCalculation()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-white" />
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Hệ chiêu</label>
+                <select id="calc-move-type" onchange="runDamageCalculation()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white"></select>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Phân loại</label>
+                <select id="calc-move-cat" onchange="runDamageCalculation()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white">
+                  <option value="Physical">Physical</option>
+                  <option value="Special">Special</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center Column: VGC Field Conditions (4 cols) -->
+        <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <h3 class="text-sm font-extrabold text-amber-400 uppercase tracking-wider">Môi trường VGC Doubles</h3>
+            <button onclick="swapCalcSides()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition">
+              ⇄ Đảo bên
+            </button>
+          </div>
+
+          <!-- Format Single vs Doubles -->
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center justify-center gap-2 p-2 rounded-xl bg-slate-900 border border-slate-700 cursor-pointer text-xs font-semibold">
+              <input type="checkbox" id="calc-is-doubles" checked onchange="runDamageCalculation()" />
+              <span>Doubles (Spread 0.75x)</span>
+            </label>
+            <label class="flex items-center justify-center gap-2 p-2 rounded-xl bg-slate-900 border border-slate-700 cursor-pointer text-xs font-semibold text-amber-300">
+              <input type="checkbox" id="calc-is-crit" onchange="runDamageCalculation()" />
+              <span>Critical Hit (1.5x)</span>
+            </label>
+          </div>
+
+          <!-- Weather -->
+          <div>
+            <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">Thời tiết (Weather)</label>
+            <div class="grid grid-cols-5 gap-1 text-[11px]">
+              <button type="button" onclick="setFieldOption('weather', 'None')" data-field-weather="None" class="field-btn py-1.5 rounded-lg bg-sky-500 text-slate-950 font-bold">None</button>
+              <button type="button" onclick="setFieldOption('weather', 'Sun')" data-field-weather="Sun" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Sun</button>
+              <button type="button" onclick="setFieldOption('weather', 'Rain')" data-field-weather="Rain" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Rain</button>
+              <button type="button" onclick="setFieldOption('weather', 'Sand')" data-field-weather="Sand" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Sand</button>
+              <button type="button" onclick="setFieldOption('weather', 'Snow')" data-field-weather="Snow" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Snow</button>
+            </div>
+          </div>
+
+          <!-- Terrain -->
+          <div>
+            <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">Địa hình (Terrain)</label>
+            <div class="grid grid-cols-5 gap-1 text-[11px]">
+              <button type="button" onclick="setFieldOption('terrain', 'None')" data-field-terrain="None" class="field-btn py-1.5 rounded-lg bg-sky-500 text-slate-950 font-bold">None</button>
+              <button type="button" onclick="setFieldOption('terrain', 'Electric')" data-field-terrain="Electric" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Electric</button>
+              <button type="button" onclick="setFieldOption('terrain', 'Grassy')" data-field-terrain="Grassy" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Grassy</button>
+              <button type="button" onclick="setFieldOption('terrain', 'Psychic')" data-field-terrain="Psychic" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Psychic</button>
+              <button type="button" onclick="setFieldOption('terrain', 'Misty')" data-field-terrain="Misty" class="field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700">Misty</button>
+            </div>
+          </div>
+
+          <!-- Treasures of Ruin Auras -->
+          <div>
+            <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">Ruin Auras (Giảm 25% chỉ số toàn sân)</label>
+            <div class="grid grid-cols-2 gap-1.5 text-xs">
+              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer">
+                <input type="checkbox" id="ruin-beads" onchange="runDamageCalculation()" />
+                <span>Beads (-SpD)</span>
+              </label>
+              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer">
+                <input type="checkbox" id="ruin-sword" onchange="runDamageCalculation()" />
+                <span>Sword (-Def)</span>
+              </label>
+              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer">
+                <input type="checkbox" id="ruin-tablets" onchange="runDamageCalculation()" />
+                <span>Tablets (-Atk)</span>
+              </label>
+              <label class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800 cursor-pointer">
+                <input type="checkbox" id="ruin-vessel" onchange="runDamageCalculation()" />
+                <span>Vessel (-SpA)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Screens & Helping Hand -->
+          <div>
+            <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">Hỗ trợ & Tường chắn</label>
+            <div class="grid grid-cols-3 gap-1.5 text-xs">
+              <label class="flex items-center gap-1.5 bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-800 cursor-pointer">
+                <input type="checkbox" id="field-hh" onchange="runDamageCalculation()" />
+                <span>Helping Hand</span>
+              </label>
+              <label class="flex items-center gap-1.5 bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-800 cursor-pointer">
+                <input type="checkbox" id="field-reflect" onchange="runDamageCalculation()" />
+                <span>Reflect</span>
+              </label>
+              <label class="flex items-center gap-1.5 bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-800 cursor-pointer">
+                <input type="checkbox" id="field-lightscreen" onchange="runDamageCalculation()" />
+                <span>Light Screen</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Defender Panel (4 cols) -->
+        <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <h3 class="text-sm font-extrabold text-rose-400 uppercase tracking-wider">Bên Phòng Thủ (Defender)</h3>
+            <select id="calc-def-team-slot" onchange="loadTeamSlotToCalc('defender', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
+              <option value="">Nạp từ Team...</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="col-span-2">
+              <label class="text-[11px] text-slate-400 font-semibold">Pokémon</label>
+              <input list="pokemon-species-list" id="calc-def-species" onchange="updateCalcSide('defender', 'species', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-bold text-white" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-semibold">Item</label>
+              <input list="items-list" id="calc-def-item" onchange="updateCalcSide('defender', 'item', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-semibold">Ability</label>
+              <input list="abilities-list" id="calc-def-ability" onchange="updateCalcSide('defender', 'ability', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-semibold">Nature</label>
+              <select id="calc-def-nature" onchange="updateCalcSide('defender', 'nature', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-white"></select>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-semibold">Tera Type</label>
+              <div class="flex items-center gap-1.5">
+                <select id="calc-def-tera" onchange="updateCalcSide('defender', 'teraType', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-white"></select>
+                <label class="flex items-center gap-1 text-[11px] font-bold text-amber-400 cursor-pointer shrink-0 bg-slate-900 px-2 py-1.5 rounded-xl border border-slate-700">
+                  <input type="checkbox" id="calc-def-terastallized" onchange="updateCalcSide('defender', 'isTera', this.checked)" /> Tera
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Defender Defensive EVs & Boosts -->
+          <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800 space-y-2">
+            <div class="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <span class="text-[10px] text-slate-400 block">HP EV</span>
+                <input type="number" id="calc-def-ev-hp" min="0" max="252" step="4" value="252" onchange="updateCalcEv('defender', 'hp', this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 font-mono text-center" />
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block">Def EV / Stage</span>
+                <div class="flex gap-1">
+                  <input type="number" id="calc-def-ev-def" min="0" max="252" step="4" value="0" onchange="updateCalcEv('defender', 'def', this.value)" class="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono text-center" />
+                  <select id="calc-def-boost-def" onchange="updateCalcBoost('defender', 'def', this.value)" class="bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono">
+                    <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
+                    <option value="0" selected>0</option>
+                    <option value="-1">-1</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block">SpD EV / Stage</span>
+                <div class="flex gap-1">
+                  <input type="number" id="calc-def-ev-spd" min="0" max="252" step="4" value="0" onchange="updateCalcEv('defender', 'spd', this.value)" class="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono text-center" />
+                  <select id="calc-def-boost-spd" onchange="updateCalcBoost('defender', 'spd', this.value)" class="bg-slate-950 border border-slate-700 rounded px-1 py-1 font-mono">
+                    <option value="6">+6</option><option value="5">+5</option><option value="4">+4</option><option value="3">+3</option><option value="2">+2</option><option value="1">+1</option>
+                    <option value="0" selected>0</option>
+                    <option value="-1">-1</option><option value="-2">-2</option><option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Defender Bulk Presets -->
+          <div class="space-y-1.5">
+            <label class="text-[11px] font-semibold text-slate-400">Mẫu phòng thủ nhanh (Defender Spread)</label>
+            <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+              <button type="button" onclick="setDefBulkPreset(0, 0, 0, 'Serious')" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300">0 HP / 0 Def</button>
+              <button type="button" onclick="setDefBulkPreset(252, 4, 0, 'Bold')" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300">252 HP / +Def</button>
+              <button type="button" onclick="setDefBulkPreset(252, 0, 4, 'Calm')" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300">252 HP / +SpD</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: AI TEAM IMAGE SCANNER ==================== -->
+    <section id="view-scanner" class="hidden space-y-5">
+      <div class="glass-panel rounded-2xl p-5 sm:p-6 max-w-4xl mx-auto space-y-6">
+        <div class="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">Gemini Vision AI</span>
+              <h2 class="text-lg sm:text-xl font-extrabold text-white">Quét ảnh đội hình 6 Pokémon ra Showdown</h2>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">
+              Tải lên ảnh chụp màn hình Rental Team, Team Preview từ Scarlet/Violet hoặc Pokémon Home. AI sẽ tự động nhận diện tên Pokémon, Item, Tera Type, Ability và 4 chiêu thức.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Upload Area -->
+          <div class="space-y-4">
+            <label for="ai-image-input" class="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-700 hover:border-sky-500 rounded-2xl bg-slate-900/60 cursor-pointer transition overflow-hidden relative group">
+              <img id="ai-preview-img" class="hidden w-full h-full object-contain z-10 p-2" alt="Preview" />
+              <div id="ai-upload-placeholder" class="flex flex-col items-center justify-center p-6 text-center">
+                <div class="w-12 h-12 rounded-full bg-sky-500/15 text-sky-400 flex items-center justify-center mb-3 group-hover:scale-110 transition">
+                  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <p class="text-sm font-semibold text-slate-200">Nhấn để chọn ảnh hoặc dán ảnh (Ctrl+V)</p>
+                <p class="text-xs text-slate-500 mt-1">Hỗ trợ PNG, JPG, WEBP (Ảnh màn hình Switch / Showdown)</p>
+              </div>
+              <input id="ai-image-input" type="file" accept="image/*" class="hidden" onchange="handleAiImageSelect(event)" />
+            </label>
+
+            <button id="btn-run-ai-scan" onclick="analyzeTeamImageWithAI()" disabled class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-sm text-white shadow-lg shadow-sky-500/20 transition flex items-center justify-center gap-2">
+              <span id="ai-scan-btn-text">✨ Quét ảnh nhận diện đội hình</span>
+            </button>
+          </div>
+
+          <!-- Extracted Showdown Paste Output -->
+          <div class="flex flex-col space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Kết quả Showdown Paste</label>
+              <button onclick="copyTextToClipboard(document.getElementById('ai-output-textarea').value)" class="text-xs font-semibold text-sky-400 hover:text-sky-300">
+                Copy Text
+              </button>
+            </div>
+            <textarea id="ai-output-textarea" rows="11" placeholder="Kết quả đội hình 6 Pokémon chuẩn Showdown sẽ hiển thị tại đây sau khi quét ảnh..." class="w-full flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-slate-200 focus:outline-none focus:border-sky-500"></textarea>
+            <button onclick="loadAiOutputToBuilder()" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs sm:text-sm transition shadow-md shadow-emerald-500/20">
+              ⚡ Nạp thẳng vào Team Builder
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL: EXPORT / IMPORT SHOWDOWN ==================== -->
+  <div id="paste-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel rounded-2xl max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-slate-700">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 id="modal-title" class="text-base sm:text-lg font-extrabold text-white">Xuất Team Showdown</h3>
+          <p id="modal-subtitle" class="text-xs text-slate-400">Định dạng chuẩn Pokémon Showdown</p>
+        </div>
+        <button onclick="closePasteModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">✕</button>
+      </div>
+
+      <!-- Export Mode Switcher inside Modal -->
+      <div id="modal-export-tabs" class="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
+        <button id="modal-tab-ranked" onclick="switchExportModalMode('ranked')" class="flex-1 py-1.5 rounded-lg text-xs font-bold transition bg-sky-500 text-slate-950">
+          Đấu Rank (Đầy đủ EVs / IVs / Nature)
+        </button>
+        <button id="modal-tab-ots" onclick="switchExportModalMode('ots')" class="flex-1 py-1.5 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white">
+          Đánh Giải OTS (Giấu EVs / IVs / Nature)
+        </button>
+      </div>
+
+      <textarea id="modal-paste-textarea" rows="13" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-200 focus:outline-none focus:border-sky-500"></textarea>
+
+      <div class="flex items-center justify-end gap-2.5 pt-1">
+        <button onclick="closePasteModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">Đóng</button>
+        <button id="modal-action-btn" onclick="handleModalPrimaryAction()" class="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-xs font-bold text-slate-950 shadow-lg shadow-sky-500/20">
+          Sao chép vào Clipboard
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase + App Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ==================== 1. CORE POKÉMON VGC DATABASE ====================
+    const TYPE_COLORS = {
+      Normal: 'bg-stone-500 text-white',
+      Fire: 'bg-orange-600 text-white',
+      Water: 'bg-sky-600 text-white',
+      Electric: 'bg-amber-400 text-slate-950',
+      Grass: 'bg-emerald-600 text-white',
+      Ice: 'bg-cyan-400 text-slate-950',
+      Fighting: 'bg-red-700 text-white',
+      Poison: 'bg-purple-600 text-white',
+      Ground: 'bg-amber-700 text-white',
+      Flying: 'bg-indigo-400 text-slate-950',
+      Psychic: 'bg-pink-600 text-white',
+      Bug: 'bg-lime-600 text-white',
+      Rock: 'bg-yellow-700 text-white',
+      Ghost: 'bg-violet-800 text-white',
+      Dragon: 'bg-indigo-700 text-white',
+      Dark: 'bg-zinc-800 text-slate-100 border border-slate-600',
+      Steel: 'bg-slate-400 text-slate-950',
+      Fairy: 'bg-pink-400 text-slate-950',
+      Stellar: 'bg-gradient-to-r from-sky-400 via-fuchsia-400 to-amber-300 text-slate-950'
+    };
+
+    const ALL_TYPES = Object.keys(TYPE_COLORS);
+
+    // Gen 9 Type Effectiveness Chart (Attacking Type -> Defending Type -> Multiplier)
+    const TYPE_CHART = {
+      Normal: { Rock: 0.5, Ghost: 0, Steel: 0.5 },
+      Fire: { Fire: 0.5, Water: 0.5, Grass: 2, Ice: 2, Bug: 2, Rock: 0.5, Dragon: 0.5, Steel: 2 },
+      Water: { Fire: 2, Water: 0.5, Grass: 0.5, Ground: 2, Rock: 2, Dragon: 0.5 },
+      Electric: { Water: 2, Electric: 0.5, Grass: 0.5, Ground: 0, Flying: 2, Dragon: 0.5 },
+      Grass: { Fire: 0.5, Water: 2, Grass: 0.5, Poison: 0.5, Ground: 2, Flying: 0.5, Bug: 0.5, Rock: 2, Dragon: 0.5, Steel: 0.5 },
+      Ice: { Fire: 0.5, Water: 0.5, Grass: 2, Ice: 0.5, Ground: 2, Flying: 2, Dragon: 2, Steel: 0.5 },
+      Fighting: { Normal: 2, Ice: 2, Poison: 0.5, Flying: 0.5, Psychic: 0.5, Bug: 0.5, Rock: 2, Ghost: 0, Dark: 2, Steel: 2, Fairy: 0.5 },
+      Poison: { Grass: 2, Poison: 0.5, Ground: 0.5, Rock: 0.5, Ghost: 0.5, Steel: 0, Fairy: 2 },
+      Ground: { Fire: 2, Electric: 2, Grass: 0.5, Poison: 2, Flying: 0, Bug: 0.5, Rock: 2, Steel: 2 },
+      Flying: { Electric: 0.5, Grass: 2, Fighting: 2, Bug: 2, Rock: 0.5, Steel: 0.5 },
+      Psychic: { Fighting: 2, Poison: 2, Psychic: 0.5, Dark: 0, Steel: 0.5 },
+      Bug: { Fire: 0.5, Grass: 2, Fighting: 0.5, Poison: 0.5, Flying: 0.5, Psychic: 2, Ghost: 0.5, Dark: 2, Steel: 0.5, Fairy: 0.5 },
+      Rock: { Fire: 2, Ice: 2, Fighting: 0.5, Ground: 0.5, Flying: 2, Bug: 2, Steel: 0.5 },
+      Ghost: { Normal: 0, Psychic: 2, Ghost: 2, Dark: 0.5 },
+      Dragon: { Dragon: 2, Steel: 0.5, Fairy: 0 },
+      Dark: { Fighting: 0.5, Psychic: 2, Ghost: 2, Dark: 0.5, Fairy: 0.5 },
+      Steel: { Fire: 0.5, Water: 0.5, Electric: 0.5, Ice: 2, Rock: 2, Steel: 0.5, Fairy: 2 },
+      Fairy: { Fire: 0.5, Fighting: 2, Poison: 0.5, Dragon: 2, Dark: 2, Steel: 0.5 },
+      Stellar: {} // Special handling for Terastallized defenders
+    };
+
+    const NATURES = {
+      Adamant: { plus: 'atk', minus: 'spa' },
+      Bashful: { plus: null, minus: null },
+      Bold: { plus: 'def', minus: 'atk' },
+      Brave: { plus: 'atk', minus: 'spe' },
+      Calm: { plus: 'spd', minus: 'atk' },
+      Careful: { plus: 'spd', minus: 'spa' },
+      Docile: { plus: null, minus: null },
+      Gentle: { plus: 'spd', minus: 'def' },
+      Hardy: { plus: null, minus: null },
+      Hasty: { plus: 'spe', minus: 'def' },
+      Impish: { plus: 'def', minus: 'spa' },
+      Jolly: { plus: 'spe', minus: 'spa' },
+      Lax: { plus: 'def', minus: 'spd' },
+      Lonely: { plus: 'atk', minus: 'def' },
+      Mild: { plus: 'spa', minus: 'def' },
+      Modest: { plus: 'spa', minus: 'atk' },
+      Naive: { plus: 'spe', minus: 'spd' },
+      Naughty: { plus: 'atk', minus: 'spd' },
+      Quiet: { plus: 'spa', minus: 'spe' },
+      Quirky: { plus: null, minus: null },
+      Rash: { plus: 'spa', minus: 'spd' },
+      Relaxed: { plus: 'def', minus: 'spe' },
+      Sassy: { plus: 'spd', minus: 'spe' },
+      Serious: { plus: null, minus: null },
+      Timid: { plus: 'spe', minus: 'atk' }
+    };
+
+    // Curated VGC Meta Pokédex
+    const POKEDEX = {
+      "Incineroar": { num: 727, types: ["Fire", "Dark"], base: { hp: 95, atk: 115, def: 90, spa: 80, spd: 90, spe: 60 }, abilities: ["Intimidate", "Blaze"] },
+      "Rillaboom": { num: 812, types: ["Grass"], base: { hp: 100, atk: 125, def: 90, spa: 60, spd: 70, spe: 85 }, abilities: ["Grassy Surge", "Overgrow"] },
+      "Flutter Mane": { num: 987, types: ["Ghost", "Fairy"], base: { hp: 55, atk: 55, def: 55, spa: 135, spd: 135, spe: 135 }, abilities: ["Protosynthesis"] },
+      "Urshifu-Rapid-Strike": { num: 892, types: ["Fighting", "Water"], base: { hp: 100, atk: 130, def: 100, spa: 63, spd: 60, spe: 97 }, abilities: ["Unseen Fist"] },
+      "Urshifu": { num: 892, types: ["Fighting", "Dark"], base: { hp: 100, atk: 130, def: 100, spa: 63, spd: 60, spe: 97 }, abilities: ["Unseen Fist"] },
+      "Miraidon": { num: 1008, types: ["Electric", "Dragon"], base: { hp: 100, atk: 85, def: 100, spa: 135, spd: 115, spe: 135 }, abilities: ["Hadron Engine"] },
+      "Koraidon": { num: 1007, types: ["Fighting", "Dragon"], base: { hp: 100, atk: 135, def: 115, spa: 85, spd: 100, spe: 135 }, abilities: ["Orichalcum Pulse"] },
+      "Calyrex-Shadow": { num: 898, types: ["Psychic", "Ghost"], base: { hp: 100, atk: 85, def: 80, spa: 165, spd: 100, spe: 150 }, abilities: ["As One (Spectrier)"] },
+      "Calyrex-Ice": { num: 898, types: ["Psychic", "Ice"], base: { hp: 100, atk: 165, def: 150, spa: 85, spd: 130, spe: 50 }, abilities: ["As One (Glastrier)"] },
+      "Kingambit": { num: 983, types: ["Dark", "Steel"], base: { hp: 100, atk: 135, def: 120, spa: 60, spd: 85, spe: 50 }, abilities: ["Defiant", "Supreme Overlord"] },
+      "Pelipper": { num: 279, types: ["Water", "Flying"], base: { hp: 60, atk: 50, def: 100, spa: 95, spd: 70, spe: 65 }, abilities: ["Drizzle", "Keen Eye"] },
+      "Archaludon": { num: 1018, types: ["Steel", "Dragon"], base: { hp: 90, atk: 105, def: 130, spa: 125, spd: 65, spe: 85 }, abilities: ["Stamina", "Stalwart"] },
+      "Raging Bolt": { num: 1021, types: ["Electric", "Dragon"], base: { hp: 125, atk: 73, def: 91, spa: 137, spd: 89, spe: 75 }, abilities: ["Protosynthesis"] },
+      "Ogerpon-Wellspring": { num: 1017, types: ["Grass", "Water"], base: { hp: 80, atk: 120, def: 84, spa: 60, spd: 96, spe: 110 }, abilities: ["Water Absorb"] },
+      "Ogerpon-Hearthflame": { num: 1017, types: ["Grass", "Fire"], base: { hp: 80, atk: 120, def: 84, spa: 60, spd: 96, spe: 110 }, abilities: ["Mold Breaker"] },
+      "Amoonguss": { num: 591, types: ["Grass", "Poison"], base: { hp: 114, atk: 85, def: 70, spa: 85, spd: 80, spe: 30 }, abilities: ["Regenerator", "Effect Spore"] },
+      "Tornadus": { num: 641, types: ["Flying"], base: { hp: 79, atk: 115, def: 70, spa: 125, spd: 80, spe: 111 }, abilities: ["Prankster", "Defiant"] },
+      "Chi-Yu": { num: 1004, types: ["Dark", "Fire"], base: { hp: 55, atk: 80, def: 80, spa: 135, spd: 120, spe: 100 }, abilities: ["Beads of Ruin"] },
+      "Chien-Pao": { num: 1002, types: ["Dark", "Ice"], base: { hp: 80, atk: 120, def: 80, spa: 90, spd: 65, spe: 135 }, abilities: ["Sword of Ruin"] },
+      "Gholdengo": { num: 1000, types: ["Steel", "Ghost"], base: { hp: 87, atk: 60, def: 95, spa: 133, spd: 91, spe: 84 }, abilities: ["Good as Gold"] },
+      "Dondozo": { num: 977, types: ["Water"], base: { hp: 150, atk: 100, def: 115, spa: 65, spd: 65, spe: 35 }, abilities: ["Unaware", "Oblivious"] },
+      "Tatsugiri": { num: 978, types: ["Dragon", "Water"], base: { hp: 68, atk: 50, def: 60, spa: 120, spd: 95, spe: 82 }, abilities: ["Commander", "Storm Drain"] },
+      "Farigiraf": { num: 981, types: ["Normal", "Psychic"], base: { hp: 120, atk: 90, def: 70, spa: 110, spd: 70, spe: 60 }, abilities: ["Armor Tail", "Cud Chew"] },
+      "Whimsicott": { num: 547, types: ["Grass", "Fairy"], base: { hp: 60, atk: 67, def: 85, spa: 77, spd: 75, spe: 116 }, abilities: ["Prankster", "Infiltrator"] },
+      "Ursaluna-Bloodmoon": { num: 901, types: ["Ground", "Normal"], base: { hp: 113, atk: 70, def: 120, spa: 135, spd: 65, spe: 52 }, abilities: ["Mind's Eye"] },
+      "Grimmsnarl": { num: 861, types: ["Dark", "Fairy"], base: { hp: 95, atk: 120, def: 65, spa: 95, spd: 75, spe: 60 }, abilities: ["Prankster", "Frisk"] },
+      "Iron Hands": { num: 992, types: ["Fighting", "Electric"], base: { hp: 154, atk: 140, def: 108, spa: 50, spd: 68, spe: 50 }, abilities: ["Quark Drive"] },
+      "Landorus": { num: 645, types: ["Ground", "Flying"], base: { hp: 89, atk: 125, def: 90, spa: 115, spd: 80, spe: 101 }, abilities: ["Sheer Force", "Sand Force"] },
+      "Terapagos": { num: 1024, types: ["Normal"], base: { hp: 95, atk: 95, def: 110, spa: 105, spd: 110, spe: 85 }, abilities: ["Tera Shift", "Teraform Zero"] },
+      "Zamazenta-Crowned": { num: 889, types: ["Fighting", "Steel"], base: { hp: 92, atk: 120, def: 140, spa: 80, spd: 140, spe: 128 }, abilities: ["Dauntless Shield"] },
+      "Kyogre": { num: 382, types: ["Water"], base: { hp: 100, atk: 100, def: 90, spa: 150, spd: 140, spe: 90 }, abilities: ["Drizzle"] },
+      "Groudon": { num: 383, types: ["Ground"], base: { hp: 100, atk: 150, def: 140, spa: 100, spd: 90, spe: 90 }, abilities: ["Drought"] }
+    };
+
+    // VGC Move Database (with power, type, category, spread flag)
+    const MOVES_DB = {
+      "Fake Out": { bp: 40, type: "Normal", cat: "Physical", spread: false },
+      "Flare Blitz": { bp: 120, type: "Fire", cat: "Physical", spread: false },
+      "Knock Off": { bp: 65, type: "Dark", cat: "Physical", spread: false },
+      "Parting Shot": { bp: 0, type: "Dark", cat: "Status", spread: false },
+      "U-turn": { bp: 70, type: "Bug", cat: "Physical", spread: false },
+      "Grassy Glide": { bp: 55, type: "Grass", cat: "Physical", spread: false },
+      "Wood Hammer": { bp: 120, type: "Grass", cat: "Physical", spread: false },
+      "High Horsepower": { bp: 95, type: "Ground", cat: "Physical", spread: false },
+      "Moonblast": { bp: 95, type: "Fairy", cat: "Special", spread: false },
+      "Shadow Ball": { bp: 80, type: "Ghost", cat: "Special", spread: false },
+      "Dazzling Gleam": { bp: 80, type: "Fairy", cat: "Special", spread: true },
+      "Icy Wind": { bp: 55, type: "Ice", cat: "Special", spread: true },
+      "Surging Strikes": { bp: 75, type: "Water", cat: "Physical", spread: false }, // 25 x 3 always crit
+      "Close Combat": { bp: 120, type: "Fighting", cat: "Physical", spread: false },
+      "Aqua Jet": { bp: 40, type: "Water", cat: "Physical", spread: false },
+      "Wicked Blow": { bp: 75, type: "Dark", cat: "Physical", spread: false },
+      "Electro Drift": { bp: 100, type: "Electric", cat: "Special", spread: false },
+      "Draco Meteor": { bp: 130, type: "Dragon", cat: "Special", spread: false },
+      "Volt Switch": { bp: 70, type: "Electric", cat: "Special", spread: false },
+      "Collision Course": { bp: 100, type: "Fighting", cat: "Physical", spread: false },
+      "Astral Barrage": { bp: 120, type: "Ghost", cat: "Special", spread: true },
+      "Expanding Force": { bp: 80, type: "Psychic", cat: "Special", spread: true },
+      "Glacial Lance": { bp: 120, type: "Ice", cat: "Physical", spread: true },
+      "Kowtow Cleave": { bp: 85, type: "Dark", cat: "Physical", spread: false },
+      "Iron Head": { bp: 80, type: "Steel", cat: "Physical", spread: false },
+      "Sucker Punch": { bp: 70, type: "Dark", cat: "Physical", spread: false },
+      "Weather Ball": { bp: 100, type: "Water", cat: "Special", spread: false },
+      "Hurricane": { bp: 110, type: "Flying", cat: "Special", spread: false },
+      "Electro Shot": { bp: 130, type: "Electric", cat: "Special", spread: false },
+      "Flash Cannon": { bp: 80, type: "Steel", cat: "Special", spread: false },
+      "Body Press": { bp: 80, type: "Fighting", cat: "Physical", spread: false },
+      "Thunderclap": { bp: 70, type: "Electric", cat: "Special", spread: false },
+      "Dragon Pulse": { bp: 85, type: "Dragon", cat: "Special", spread: false },
+      "Ivy Cudgel": { bp: 100, type: "Water", cat: "Physical", spread: false },
+      "Horn Leech": { bp: 75, type: "Grass", cat: "Physical", spread: false },
+      "Spore": { bp: 0, type: "Grass", cat: "Status", spread: false },
+      "Rage Powder": { bp: 0, type: "Bug", cat: "Status", spread: false },
+      "Pollen Puff": { bp: 90, type: "Bug", cat: "Special", spread: false },
+      "Bleakwind Storm": { bp: 100, type: "Flying", cat: "Special", spread: true },
+      "Tailwind": { bp: 0, type: "Flying", cat: "Status", spread: false },
+      "Heat Wave": { bp: 95, type: "Fire", cat: "Special", spread: true },
+      "Overheat": { bp: 130, type: "Fire", cat: "Special", spread: false },
+      "Dark Pulse": { bp: 80, type: "Dark", cat: "Special", spread: false },
+      "Icicle Crash": { bp: 85, type: "Ice", cat: "Physical", spread: false },
+      "Ice Spinner": { bp: 80, type: "Ice", cat: "Physical", spread: false },
+      "Make It Rain": { bp: 120, type: "Steel", cat: "Special", spread: true },
+      "Wave Crash": { bp: 120, type: "Water", cat: "Physical", spread: false },
+      "Earthquake": { bp: 100, type: "Ground", cat: "Physical", spread: true },
+      "Psychic": { bp: 90, type: "Psychic", cat: "Special", spread: false },
+      "Trick Room": { bp: 0, type: "Psychic", cat: "Status", spread: false },
+      "Blood Moon": { bp: 140, type: "Normal", cat: "Special", spread: false },
+      "Earth Power": { bp: 90, type: "Ground", cat: "Special", spread: false },
+      "Hyper Voice": { bp: 90, type: "Normal", cat: "Special", spread: true },
+      "Spirit Break": { bp: 75, type: "Fairy", cat: "Physical", spread: false },
+      "Drain Punch": { bp: 75, type: "Fighting", cat: "Physical", spread: false },
+      "Wild Charge": { bp: 90, type: "Electric", cat: "Physical", spread: false },
+      "Sludge Bomb": { bp: 90, type: "Poison", cat: "Special", spread: false },
+      "Tera Starstorm": { bp: 120, type: "Normal", cat: "Special", spread: true },
+      "Water Spout": { bp: 150, type: "Water", cat: "Special", spread: true },
+      "Origin Pulse": { bp: 110, type: "Water", cat: "Special", spread: true },
+      "Precipice Blades": { bp: 120, type: "Ground", cat: "Physical", spread: true },
+      "Protect": { bp: 0, type: "Normal", cat: "Status", spread: false },
+      "Follow Me": { bp: 0, type: "Normal", cat: "Status", spread: false }
+    };
+
+    const COMMON_ITEMS = [
+      "Safety Goggles", "Sitrus Berry", "Assault Vest", "Booster Energy", "Focus Sash",
+      "Choice Specs", "Choice Band", "Choice Scarf", "Life Orb", "Leftovers",
+      "Rocky Helmet", "Covert Cloak", "Clear Amulet", "Wellspring Mask", "Hearthflame Mask",
+      "Mystic Water", "Miracle Seed", "Charcoal", "Black Glasses", "Magnet",
+      "Fairy Feather", "Never-Melt Ice", "Spell Tag", "Sharp Beak", "Damp Rock",
+      "Light Clay", "Mental Herb", "Throat Spray", "Electric Seed", "Grassy Seed",
+      "Psychic Seed", "Eviolite", "Rusted Shield"
+    ];
+
+    const COMMON_ABILITIES = [
+      "Intimidate", "Grassy Surge", "Protosynthesis", "Quark Drive", "Unseen Fist",
+      "Hadron Engine", "Orichalcum Pulse", "As One (Spectrier)", "As One (Glastrier)",
+      "Defiant", "Supreme Overlord", "Drizzle", "Drought", "Stamina", "Water Absorb",
+      "Mold Breaker", "Regenerator", "Prankster", "Beads of Ruin", "Sword of Ruin",
+      "Tablets of Ruin", "Vessel of Ruin", "Good as Gold", "Unaware", "Commander",
+      "Armor Tail", "Mind's Eye", "Sheer Force", "Tera Shift", "Dauntless Shield",
+      "Inner Focus", "Vital Spirit", "Levitate", "Multiscale"
+    ];
+
+    // ==================== 2. DEFAULT SAMPLE VGC TEAM ====================
+    function createEmptySlot() {
+      return {
+        species: "",
+        nickname: "",
+        level: 50,
+        gender: "",
+        shiny: false,
+        item: "",
+        ability: "",
+        teraType: "Normal",
+        nature: "Serious",
+        evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+        ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+        moves: ["", "", "", ""]
+      };
+    }
+
+    const SAMPLE_TEAM = {
+      id: "default-vgc-team-1",
+      name: "VGC Reg G Meta Core",
+      updatedAt: Date.now(),
+      slots: [
+        {
+          species: "Incineroar",
+          nickname: "",
+          level: 50,
+          gender: "M",
+          shiny: false,
+          item: "Safety Goggles",
+          ability: "Intimidate",
+          teraType: "Ghost",
+          nature: "Careful",
+          evs: { hp: 244, atk: 4, def: 188, spa: 0, spd: 60, spe: 12 },
+          ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+          moves: ["Fake Out", "Flare Blitz", "Knock Off", "Parting Shot"]
+        },
+        {
+          species: "Rillaboom",
+          nickname: "",
+          level: 50,
+          gender: "M",
+          shiny: false,
+          item: "Assault Vest",
+          ability: "Grassy Surge",
+          teraType: "Fire",
+          nature: "Adamant",
+          evs: { hp: 236, atk: 116, def: 4, spa: 0, spd: 140, spe: 12 },
+          ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+          moves: ["Fake Out", "Grassy Glide", "Wood Hammer", "U-turn"]
+        },
+        {
+          species: "Flutter Mane",
+          nickname: "",
+          level: 50,
+          gender: "",
+          shiny: false,
+          item: "Booster Energy",
+          ability: "Protosynthesis",
+          teraType: "Fairy",
+          nature: "Timid",
+          evs: { hp: 116, atk: 0, def: 132, spa: 116, spd: 4, spe: 140 },
+          ivs: { hp: 31, atk: 0, def: 31, spa: 31, spd: 31, spe: 31 },
+          moves: ["Moonblast", "Shadow Ball", "Icy Wind", "Protect"]
+        },
+        {
+          species: "Urshifu-Rapid-Strike",
+          nickname: "",
+          level: 50,
+          gender: "M",
+          shiny: false,
+          item: "Focus Sash",
+          ability: "Unseen Fist",
+          teraType: "Water",
+          nature: "Adamant",
+          evs: { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 },
+          ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+          moves: ["Surging Strikes", "Close Combat", "Aqua Jet", "Protect"]
+        },
+        {
+          species: "Calyrex-Shadow",
+          nickname: "",
+          level: 50,
+          gender: "",
+          shiny: false,
+          item: "Life Orb",
+          ability: "As One (Spectrier)",
+          teraType: "Fairy",
+          nature: "Timid",
+          evs: { hp: 4, atk: 0, def: 0, spa: 252, spd: 0, spe: 252 },
+          ivs: { hp: 31, atk: 0, def: 31, spa: 31, spd: 31, spe: 31 },
+          moves: ["Astral Barrage", "Expanding Force", "Draining Kiss", "Protect"]
+        },
+        {
+          species: "Amoonguss",
+          nickname: "",
+          level: 50,
+          gender: "F",
+          shiny: false,
+          item: "Rocky Helmet",
+          ability: "Regenerator",
+          teraType: "Water",
+          nature: "Bold",
+          evs: { hp: 236, atk: 0, def: 156, spa: 0, spd: 116, spe: 0 },
+          ivs: { hp: 31, atk: 0, def: 31, spa: 31, spd: 31, spe: 0 },
+          moves: ["Spore", "Rage Powder", "Pollen Puff", "Protect"]
+        }
+      ]
+    };
+
+    // ==================== 3. APPLICATION STATE & FIREBASE ====================
+    let state = {
+      lang: 'vi',
+      teams: [],
+      activeTeamId: null,
+      activeSlotIdx: 0,
+      modalMode: 'ranked', // 'ranked' | 'ots' | 'import'
+      aiImageBase64: null,
+      aiImageMime: 'image/png',
+      calc: {
+        attacker: {
+          species: "Calyrex-Shadow",
+          item: "Life Orb",
+          ability: "As One (Spectrier)",
+          nature: "Timid",
+          teraType: "Fairy",
+          isTera: false,
+          evs: { hp: 4, atk: 0, def: 0, spa: 252, spd: 0, spe: 252 },
+          boosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
+        },
+        defender: {
+          species: "Incineroar",
+          item: "Safety Goggles",
+          ability: "Intimidate",
+          nature: "Careful",
+          teraType: "Ghost",
+          isTera: false,
+          evs: { hp: 244, atk: 4, def: 188, spa: 0, spd: 60, spe: 12 },
+          boosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
+        },
+        move: {
+          name: "Astral Barrage",
+          bp: 120,
+          type: "Ghost",
+          cat: "Special"
+        },
+        field: {
+          weather: "None",
+          terrain: "None"
+        }
+      }
+    };
+
+    // Firebase Setup (Optional seamless cloud sync when environment config is available)
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'vgc-tactics-studio';
+
+    async function initFirebaseSync() {
+      try {
+        if (typeof __firebase_config === 'undefined') return;
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        onAuthStateChanged(auth, (user) => {
+          currentUser = user;
+          if (user) {
+            const badge = document.getElementById('cloud-badge');
+            const text = document.getElementById('cloud-status-text');
+            if (badge && text) {
+              badge.classList.remove('hidden');
+              text.textContent = 'Cloud Synced';
+            }
+            listenToCloudTeams(user.uid);
+          }
+        });
+      } catch (err) {
+        // Fallback silently to localStorage if offline or unconfigured
+      }
+    }
+
+    function listenToCloudTeams(uid) {
+      if (!db || !uid) return;
+      const teamsCol = collection(db, 'artifacts', appId, 'users', uid, 'vgc_teams');
+      onSnapshot(teamsCol, (snapshot) => {
+        if (snapshot.empty) {
+          // Upload local teams to cloud on first visit
+          state.teams.forEach(t => saveTeamToCloud(t));
+          return;
+        }
+        const cloudTeams = [];
+        snapshot.forEach(docSnap => {
+          cloudTeams.push(docSnap.data());
+        });
+        if (cloudTeams.length > 0) {
+          cloudTeams.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+          state.teams = cloudTeams;
+          if (!state.teams.find(t => t.id === state.activeTeamId)) {
+            state.activeTeamId = state.teams[0].id;
+          }
+          localStorage.setItem('vgc_studio_teams_v1', JSON.stringify(state.teams));
+          renderAllBuilderUI();
+        }
+      }, () => {
+        // Ignore snapshot errors gracefully
+      });
+    }
+
+    async function saveTeamToCloud(team) {
+      if (!db || !currentUser) return;
+      try {
+        const teamDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'vgc_teams', team.id);
+        await setDoc(teamDocRef, team);
+      } catch (e) {
+        // LocalStorage remains intact
+      }
+    }
+
+    function loadTeamsFromLocal() {
+      try {
+        const raw = localStorage.getItem('vgc_studio_teams_v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            state.teams = parsed;
+            state.activeTeamId = parsed[0].id;
+            return;
+          }
+        }
+      } catch (e) {}
+      state.teams = [JSON.parse(JSON.stringify(SAMPLE_TEAM))];
+      state.activeTeamId = state.teams[0].id;
+      persistTeams();
+    }
+
+    function persistTeams() {
+      const team = getActiveTeam();
+      if (team) {
+        team.updatedAt = Date.now();
+        saveTeamToCloud(team);
+      }
+      localStorage.setItem('vgc_studio_teams_v1', JSON.stringify(state.teams));
+    }
+
+    function getActiveTeam() {
+      return state.teams.find(t => t.id === state.activeTeamId) || state.teams[0];
+    }
+
+    function getActivePokemon() {
+      const team = getActiveTeam();
+      return team.slots[state.activeSlotIdx];
+    }
+
+    // ==================== 4. STAT CALCULATION FORMULA (GEN 3-9 LEVEL 50) ====================
+    function calculateStat(statKey, base, iv, ev, level, natureName) {
+      const b = Number(base) || 80;
+      const i = Math.min(31, Math.max(0, Number(iv) ?? 31));
+      const e = Math.min(252, Math.max(0, Number(ev) || 0));
+      const lv = Math.min(100, Math.max(1, Number(level) || 50));
+
+      if (statKey === 'hp') {
+        if (b === 1) return 1; // Shedinja edge case
+        return Math.floor(((2 * b + i + Math.floor(e / 4)) * lv) / 100) + lv + 10;
+      }
+
+      let raw = Math.floor(((2 * b + i + Math.floor(e / 4)) * lv) / 100) + 5;
+      const nat = NATURES[natureName] || { plus: null, minus: null };
+      if (nat.plus === statKey) raw = Math.floor(raw * 1.1);
+      if (nat.minus === statKey) raw = Math.floor(raw * 0.9);
+      return raw;
+    }
+
+    function getPokemonSpriteUrl(species, shiny = false) {
+      if (!species) return '';
+      const clean = species.toLowerCase().replace(/[^a-z0-9-]/g, '');
+      const folder = shiny ? 'ani-shiny' : 'ani';
+      return `https://play.pokemonshowdown.com/sprites/${folder}/${clean}.gif`;
+    }
+
+    // ==================== 5. SHOWDOWN PASTE EXPORT (RANKED VS TOURNAMENT OTS) ====================
+    function formatPokemonShowdown(pkmn, mode = 'ranked') {
+      if (!pkmn || !pkmn.species || !pkmn.species.trim()) return '';
+      const lines = [];
+
+      // Header line: Nickname (Species) (Gender) @ Item
+      let header = '';
+      if (pkmn.nickname && pkmn.nickname.trim() && pkmn.nickname.trim() !== pkmn.species.trim()) {
+        header += `${pkmn.nickname.trim()} (${pkmn.species.trim()})`;
+      } else {
+        header += pkmn.species.trim();
+      }
+      if (pkmn.gender === 'M' || pkmn.gender === 'F') {
+        header += ` (${pkmn.gender})`;
+      }
+      if (pkmn.item && pkmn.item.trim()) {
+        header += ` @ ${pkmn.item.trim()}`;
+      }
+      lines.push(header);
+
+      // Ability
+      if (pkmn.ability && pkmn.ability.trim()) {
+        lines.push(`Ability: ${pkmn.ability.trim()}`);
+      }
+
+      // Level
+      if (pkmn.level && pkmn.level !== 100) {
+        lines.push(`Level: ${pkmn.level}`);
+      }
+
+      // Shiny (only in ranked mode or cosmetic)
+      if (pkmn.shiny && mode === 'ranked') {
+        lines.push(`Shiny: Yes`);
+      }
+
+      // Tera Type (Required in both Ranked & VGC Official Open Team Sheet)
+      if (pkmn.teraType && pkmn.teraType.trim()) {
+        lines.push(`Tera Type: ${pkmn.teraType.trim()}`);
+      }
+
+      // RANKED MODE ONLY: EVs, Nature, IVs (Hidden in Tournament OTS Mode!)
+      if (mode === 'ranked') {
+        const statLabels = [
+          { key: 'hp', label: 'HP' },
+          { key: 'atk', label: 'Atk' },
+          { key: 'def', label: 'Def' },
+          { key: 'spa', label: 'SpA' },
+          { key: 'spd', label: 'SpD' },
+          { key: 'spe', label: 'Spe' }
+        ];
+
+        const evParts = statLabels
+          .filter(s => (pkmn.evs?.[s.key] || 0) > 0)
+          .map(s => `${pkmn.evs[s.key]} ${s.label}`);
+        if (evParts.length > 0) {
+          lines.push(`EVs: ${evParts.join(' / ')}`);
+        }
+
+        if (pkmn.nature && pkmn.nature.trim()) {
+          lines.push(`${pkmn.nature.trim()} Nature`);
+        }
+
+        const ivParts = statLabels
+          .filter(s => (pkmn.ivs?.[s.key] ?? 31) < 31)
+          .map(s => `${pkmn.ivs[s.key]} ${s.label}`);
+        if (ivParts.length > 0) {
+          lines.push(`IVs: ${ivParts.join(' / ')}`);
+        }
+      }
+
+      // Moves
+      (pkmn.moves || []).forEach(m => {
+        if (m && m.trim()) {
+          lines.push(`- ${m.trim()}`);
+        }
+      });
+
+      return lines.join('\n');
+    }
+
+    function exportTeamToShowdown(mode = 'ranked') {
+      const team = getActiveTeam();
+      return team.slots
+        .map(slot => formatPokemonShowdown(slot, mode))
+        .filter(block => block.length > 0)
+        .join('\n\n');
+    }
+
+    // Parse Showdown Paste Text back into 6 slots
+    function parseShowdownPaste(pasteText) {
+      const blocks = pasteText.trim().split(/\n\s*\n/).filter(b => b.trim().length > 0);
+      const parsedSlots = [];
+
+      for (let i = 0; i < 6; i++) {
+        if (i >= blocks.length) {
+          parsedSlots.push(createEmptySlot());
+          continue;
+        }
+        const lines = blocks[i].split('\n').map(l => l.trim()).filter(Boolean);
+        const slot = createEmptySlot();
+
+        // Line 0: Header
+        let header = lines[0];
+        if (header.includes(' @ ')) {
+          const [left, item] = header.split(' @ ');
+          header = left.trim();
+          slot.item = item.trim();
+        }
+        if (header.endsWith(' (M)')) {
+          slot.gender = 'M';
+          header = header.slice(0, -4).trim();
+        } else if (header.endsWith(' (F)')) {
+          slot.gender = 'F';
+          header = header.slice(0, -4).trim();
+        }
+        const nickMatch = header.match(/^(.+?)\s*\(([^()]+)\)$/);
+        if (nickMatch) {
+          slot.nickname = nickMatch[1].trim();
+          slot.species = nickMatch[2].trim();
+        } else {
+          slot.species = header.trim();
+        }
+
+        // Remaining lines
+        let moveIdx = 0;
+        for (let j = 1; j < lines.length; j++) {
+          const line = lines[j];
+          if (line.startsWith('Ability:')) {
+            slot.ability = line.replace('Ability:', '').trim();
+          } else if (line.startsWith('Level:')) {
+            slot.level = parseInt(line.replace('Level:', '').trim()) || 50;
+          } else if (line.startsWith('Shiny:')) {
+            slot.shiny = line.toLowerCase().includes('yes');
+          } else if (line.startsWith('Tera Type:')) {
+            slot.teraType = line.replace('Tera Type:', '').trim();
+          } else if (line.startsWith('EVs:')) {
+            const parts = line.replace('EVs:', '').split('/');
+            parts.forEach(p => {
+              const m = p.trim().match(/^(\d+)\s+(HP|Atk|Def|SpA|SpD|Spe)$/i);
+              if (m) slot.evs[m[2].toLowerCase()] = parseInt(m[1]);
+            });
+          } else if (line.startsWith('IVs:')) {
+            const parts = line.replace('IVs:', '').split('/');
+            parts.forEach(p => {
+              const m = p.trim().match(/^(\d+)\s+(HP|Atk|Def|SpA|SpD|Spe)$/i);
+              if (m) slot.ivs[m[2].toLowerCase()] = parseInt(m[1]);
+            });
+          } else if (line.endsWith(' Nature')) {
+            slot.nature = line.replace(' Nature', '').trim();
+          } else if (line.startsWith('-')) {
+            if (moveIdx < 4) {
+              slot.moves[moveIdx++] = line.replace(/^-\s*/, '').trim();
+            }
+          }
+        }
+        parsedSlots.push(slot);
+      }
+
+      return parsedSlots;
+    }
+
+    // ==================== 6. VGC DAMAGE CALCULATOR ENGINE (GEN 9) ====================
+    function getTypeEffectiveness(moveType, defTypes, isDefTera, defTeraType) {
+      if (moveType === 'Stellar') {
+        return isDefTera ? 2 : 1;
+      }
+      const activeDefTypes = (isDefTera && defTeraType && defTeraType !== 'Stellar')
+        ? [defTeraType]
+        : defTypes;
+
+      let mult = 1;
+      const chart = TYPE_CHART[moveType] || {};
+      activeDefTypes.forEach(dt => {
+        if (chart[dt] !== undefined) {
+          mult *= chart[dt];
+        }
+      });
+      return mult;
+    }
+
+    function getStageMultiplier(stage) {
+      const s = Number(stage) || 0;
+      if (s >= 0) return (2 + s) / 2;
+      return 2 / (2 - s);
+    }
+
+    window.runDamageCalculation = function () {
+      const atkSide = state.calc.attacker;
+      const defSide = state.calc.defender;
+      const moveName = document.getElementById('calc-move-name').value.trim();
+      const basePower = Number(document.getElementById('calc-move-bp').value) || 0;
+      const moveType = document.getElementById('calc-move-type').value;
+      const moveCat = document.getElementById('calc-move-cat').value;
+
+      const isDoubles = document.getElementById('calc-is-doubles').checked;
+      const isCrit = document.getElementById('calc-is-crit').checked;
+      const isBurned = document.getElementById('calc-atk-burn').checked;
+
+      const weather = state.calc.field.weather;
+      const terrain = state.calc.field.terrain;
+
+      const ruinBeads = document.getElementById('ruin-beads').checked || atkSide.ability === 'Beads of Ruin' || defSide.ability === 'Beads of Ruin';
+      const ruinSword = document.getElementById('ruin-sword').checked || atkSide.ability === 'Sword of Ruin' || defSide.ability === 'Sword of Ruin';
+      const ruinTablets = document.getElementById('ruin-tablets').checked || atkSide.ability === 'Tablets of Ruin' || defSide.ability === 'Tablets of Ruin';
+      const ruinVessel = document.getElementById('ruin-vessel').checked || atkSide.ability === 'Vessel of Ruin' || defSide.ability === 'Vessel of Ruin';
+
+      const hasHelpingHand = document.getElementById('field-hh').checked;
+      const hasReflect = document.getElementById('field-reflect').checked;
+      const hasLightScreen = document.getElementById('field-lightscreen').checked;
+
+      const atkDex = POKEDEX[atkSide.species] || { types: ["Normal"], base: { hp: 80, atk: 80, def: 80, spa: 80, spd: 80, spe: 80 } };
+      const defDex = POKEDEX[defSide.species] || { types: ["Normal"], base: { hp: 80, atk: 80, def: 80, spa: 80, spd: 80, spe: 80 } };
+
+      const defMaxHP = calculateStat('hp', defDex.base.hp, 31, defSide.evs.hp, 50, defSide.nature);
+
+      if (basePower <= 0) {
+        document.getElementById('calc-headline').textContent = `${atkSide.species} ${moveName} vs. ${defSide.species}: 0 - 0 (0% - 0%)`;
+        document.getElementById('calc-subline').textContent = `Status / 0 BP move deals no direct damage.`;
+        document.getElementById('calc-ko-verdict').textContent = `NO DAMAGE`;
+        return;
+      }
+
+      // 1. Offensive & Defensive Stats at Lv 50
+      const isPhysical = moveCat === 'Physical';
+      const atkStatKey = isPhysical ? 'atk' : 'spa';
+      const defStatKey = isPhysical ? 'def' : 'spd';
+
+      let atkStat = calculateStat(atkStatKey, atkDex.base[atkStatKey], 31, atkSide.evs[atkStatKey], 50, atkSide.nature);
+      let defStat = calculateStat(defStatKey, defDex.base[defStatKey], 31, defSide.evs[defStatKey], 50, defSide.nature);
+
+      // Apply Stat Stages (Crits ignore negative attack stages and positive defense stages)
+      let atkStage = Number(atkSide.boosts[atkStatKey]) || 0;
+      let defStage = Number(defSide.boosts[defStatKey]) || 0;
+      if (isCrit && atkStage < 0) atkStage = 0;
+      if (isCrit && defStage > 0) defStage = 0;
+
+      atkStat = Math.floor(atkStat * getStageMultiplier(atkStage));
+      defStat = Math.floor(defStat * getStageMultiplier(defStage));
+
+      // Ruin Abilities (25% reduction unless holder has that same Ruin ability)
+      if (isPhysical && ruinTablets && atkSide.ability !== 'Tablets of Ruin') atkStat = Math.floor(atkStat * 0.75);
+      if (!isPhysical && ruinVessel && atkSide.ability !== 'Vessel of Ruin') atkStat = Math.floor(atkStat * 0.75);
+      if (isPhysical && ruinSword && defSide.ability !== 'Sword of Ruin') defStat = Math.floor(defStat * 0.75);
+      if (!isPhysical && ruinBeads && defSide.ability !== 'Beads of Ruin') defStat = Math.floor(defStat * 0.75);
+
+      // Protosynthesis / Quark Drive / Hadron Engine / Orichalcum Pulse / Item Stat Modifiers
+      if (atkSide.item === 'Choice Band' && isPhysical) atkStat = Math.floor(atkStat * 1.5);
+      if (atkSide.item === 'Choice Specs' && !isPhysical) atkStat = Math.floor(atkStat * 1.5);
+      if (atkSide.ability === 'Hadron Engine' && !isPhysical && terrain === 'Electric') atkStat = Math.floor(atkStat * 1.3333);
+      if (atkSide.ability === 'Orichalcum Pulse' && isPhysical && weather === 'Sun') atkStat = Math.floor(atkStat * 1.3333);
+
+      if (defSide.item === 'Assault Vest' && !isPhysical) defStat = Math.floor(defStat * 1.5);
+      if (defSide.item === 'Eviolite') defStat = Math.floor(defStat * 1.5);
+      if (weather === 'Sand' && defDex.types.includes('Rock') && !isPhysical) defStat = Math.floor(defStat * 1.5);
+      if (weather === 'Snow' && defDex.types.includes('Ice') && isPhysical) defStat = Math.floor(defStat * 1.5);
+
+      // 2. Effective Base Power Modifiers
+      let effectiveBP = basePower;
+      if (hasHelpingHand) effectiveBP = Math.floor(effectiveBP * 1.5);
+      if (terrain === 'Electric' && moveType === 'Electric') effectiveBP = Math.floor(effectiveBP * 1.3);
+      if (terrain === 'Grassy' && moveType === 'Grass') effectiveBP = Math.floor(effectiveBP * 1.3);
+      if (terrain === 'Psychic' && moveType === 'Psychic') effectiveBP = Math.floor(effectiveBP * 1.3);
+      if (terrain === 'Misty' && moveType === 'Dragon') effectiveBP = Math.floor(effectiveBP * 0.5);
+
+      // Type-boosting items (1.2x)
+      const typeBoostItems = {
+        "Mystic Water": "Water", "Wellspring Mask": "Water",
+        "Miracle Seed": "Grass", "Charcoal": "Fire", "Hearthflame Mask": "Fire",
+        "Black Glasses": "Dark", "Magnet": "Electric", "Fairy Feather": "Fairy",
+        "Never-Melt Ice": "Ice", "Spell Tag": "Ghost", "Sharp Beak": "Flying"
+      };
+      if (typeBoostItems[atkSide.item] === moveType) {
+        effectiveBP = Math.floor(effectiveBP * 1.2);
+      }
+
+      // 3. Base Damage Formula at Level 50: floor(floor(floor(2*50/5 + 2) * BP * A / D) / 50) + 2
+      const baseDamage = Math.floor(Math.floor(Math.floor(22 * effectiveBP * atkStat / Math.max(1, defStat)) / 50) + 2);
+
+      // 4. Multipliers: Spread, Weather, Crit, STAB, Type Effectiveness, Burn, Screens, Life Orb
+      const moveInfo = MOVES_DB[moveName] || { spread: false };
+      const spreadMult = (isDoubles && moveInfo.spread) ? 0.75 : 1.0;
+
+      let weatherMult = 1.0;
+      if (weather === 'Sun') {
+        if (moveType === 'Fire') weatherMult = 1.5;
+        if (moveType === 'Water') weatherMult = 0.5;
+      } else if (weather === 'Rain') {
+        if (moveType === 'Water') weatherMult = 1.5;
+        if (moveType === 'Fire') weatherMult = 0.5;
+      }
+
+      const critMult = isCrit ? 1.5 : 1.0;
+
+      // STAB & Tera STAB Logic
+      const hasBaseStab = atkDex.types.includes(moveType);
+      const hasTeraStab = atkSide.isTera && (atkSide.teraType === moveType || atkSide.teraType === 'Stellar');
+      let stabMult = 1.0;
+      if (hasBaseStab && hasTeraStab) {
+        stabMult = 2.0; // Double STAB when Tera matches original type
+      } else if (hasBaseStab || hasTeraStab) {
+        stabMult = 1.5;
+      }
+
+      // Type Effectiveness
+      const typeEff = getTypeEffectiveness(moveType, defDex.types, defSide.isTera, defSide.teraType);
+
+      // Burn (0.5x on Physical unless Guts)
+      const burnMult = (isBurned && isPhysical && atkSide.ability !== 'Guts') ? 0.5 : 1.0;
+
+      // Screens in Doubles (2/3 = ~0.6667x if not crit)
+      let screenMult = 1.0;
+      if (!isCrit) {
+        if (isPhysical && hasReflect) screenMult = isDoubles ? (2732 / 4096) : 0.5;
+        if (!isPhysical && hasLightScreen) screenMult = isDoubles ? (2732 / 4096) : 0.5;
+      }
+
+      // Life Orb (1.3x)
+      const lifeOrbMult = atkSide.item === 'Life Orb' ? 1.3 : 1.0;
+
+      // Compute all 16 damage rolls (85% to 100%)
+      const rolls = [];
+      for (let r = 85; r <= 100; r++) {
+        let d = baseDamage;
+        d = Math.floor(d * spreadMult);
+        d = Math.floor(d * weatherMult);
+        d = Math.floor(d * critMult);
+        d = Math.floor(d * (r / 100));
+        d = Math.floor(d * stabMult);
+        d = Math.floor(d * typeEff);
+        d = Math.floor(d * burnMult);
+        d = Math.floor(d * screenMult);
+        d = Math.floor(d * lifeOrbMult);
+        if (typeEff > 0 && d < 1) d = 1;
+        rolls.push(d);
+      }
+
+      const minDmg = rolls[0];
+      const maxDmg = rolls[15];
+      const minPct = ((minDmg / defMaxHP) * 100).toFixed(1);
+      const maxPct = ((maxDmg / defMaxHP) * 100).toFixed(1);
+
+      // KO Verdict Calculation
+      const ohkoCount = rolls.filter(d => d >= defMaxHP).length;
+      let verdict = '';
+      if (typeEff === 0) {
+        verdict = 'IMMUNE (0x - Vô hiệu)';
+      } else if (ohkoCount === 16) {
+        verdict = 'GUARANTEED OHKO (100% 1-Hit KO)';
+      } else if (ohkoCount > 0) {
+        verdict = `${((ohkoCount / 16) * 100).toFixed(1)}% CHANCE TO OHKO`;
+      } else if (minDmg * 2 >= defMaxHP) {
+        verdict = 'GUARANTEED 2HKO';
+      } else if (maxDmg * 2 >= defMaxHP) {
+        verdict = 'POSSIBLE 2HKO';
+      } else if (minDmg * 3 >= defMaxHP) {
+        verdict = 'GUARANTEED 3HKO';
+      } else if (maxDmg * 3 >= defMaxHP) {
+        verdict = 'POSSIBLE 3HKO';
+      } else {
+        const hits = Math.ceil(defMaxHP / Math.max(1, maxDmg));
+        verdict = `APPROX. ${hits}HKO`;
+      }
+
+      // Update UI
+      const atkTeraTag = atkSide.isTera ? `Tera ${atkSide.teraType} ` : '';
+      const defTeraTag = defSide.isTera ? `Tera ${defSide.teraType} ` : '';
+      document.getElementById('calc-move-badge').textContent = `${moveType} • ${moveCat} • ${effectiveBP} BP • ${typeEff}x Eff`;
+      document.getElementById('calc-headline').textContent =
+        `${atkTeraTag}${atkSide.species} ${moveName} vs. ${defTeraTag}${defSide.species}: ${minDmg} - ${maxDmg} (${minPct}% - ${maxPct}%)`;
+      document.getElementById('calc-subline').textContent =
+        `Defender HP: ${defMaxHP} | Rolls: (${rolls.join(', ')})`;
+      document.getElementById('calc-ko-verdict').textContent = verdict;
+
+      // Update Defender HP Bar
+      const remMinPct = Math.max(0, 100 - parseFloat(maxPct));
+      const remMaxPct = Math.max(0, 100 - parseFloat(minPct));
+      document.getElementById('calc-hp-range-text').textContent = `${remMinPct.toFixed(1)}% - ${remMaxPct.toFixed(1)}%`;
+
+      const barMin = document.getElementById('calc-hp-bar-min');
+      const barMax = document.getElementById('calc-hp-bar-max');
+      barMin.style.width = `${remMinPct}%`;
+      barMax.style.width = `${remMaxPct}%`;
+
+      barMin.className = `h-full rounded-full transition-all duration-300 relative z-10 ${
+        remMinPct > 50 ? 'bg-emerald-500' : remMinPct > 20 ? 'bg-amber-400' : 'bg-rose-500'
+      }`;
+    };
+
+    // ==================== 7. UI RENDERING & INTERACTIONS ====================
+    function showToast(msg, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      const colors = type === 'error'
+        ? 'bg-rose-950/95 border-rose-500/50 text-rose-200'
+        : 'bg-slate-900/95 border-sky-500/50 text-sky-200';
+      el.className = `px-4 py-2.5 rounded-xl border shadow-xl text-xs font-semibold backdrop-blur-md transition-all transform translate-y-0 ${colors}`;
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 300);
+      }, 2800);
+    }
+
+    window.copyTextToClipboard = function (text) {
+      if (!text) return;
+      const temp = document.createElement('textarea');
+      temp.value = text;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      showToast('Đã sao chép vào Clipboard!');
+    };
+
+    window.switchMainTab = function (tabName) {
+      ['builder', 'calc', 'scanner'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tabName);
+        const btn = document.getElementById(`nav-${t}`);
+        if (t === tabName) {
+          btn.className = 'nav-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-sky-500 text-slate-950 shadow flex items-center gap-1.5';
+        } else {
+          btn.className = 'nav-tab px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition-all flex items-center gap-1.5';
+        }
+      });
+      if (tabName === 'calc') {
+        populateCalcTeamDropdowns();
+        runDamageCalculation();
+      }
+    };
+
+    window.toggleLanguage = function () {
+      state.lang = state.lang === 'vi' ? 'en' : 'vi';
+      const dict = {
+        vi: {
+          tabBuilder: 'Team Builder',
+          tabCalc: 'Damage Calc',
+          tabScanner: 'AI Quét Ảnh',
+          currentTeam: 'Đội hình:',
+          btnNewTeam: 'Tạo mới',
+          btnClone: 'Nhân bản',
+          btnImport: 'Nhập Showdown',
+          btnExportRank: 'Xuất Rank (Full EVs)',
+          btnExportOTS: 'Xuất Giải OTS (Giấu EVs)',
+          lblItem: 'Vật phẩm (Item)',
+          lblAbility: 'Đặc tính (Ability)',
+          lblTera: 'Hệ Tera (Tera Type)',
+          lblMoves: 'Bộ chiêu thức (4 Moves)',
+          moveHint: 'Gợi ý chiêu chuẩn VGC hoặc tự nhập',
+          btnSendAtk: 'Đưa sang Damage Calc (Bên Tấn Công)',
+          btnClearSlot: 'Xóa trống Slot này',
+          lblStatsTitle: 'Chỉ số & Phân bổ EVs / IVs',
+          lblStatsSub: 'Tự động tính chỉ số thực tế ở cấp độ 50',
+          lblNature: 'Tính cách (Nature)'
+        },
+        en: {
+          tabBuilder: 'Team Builder',
+          tabCalc: 'Damage Calc',
+          tabScanner: 'AI Image Scan',
+          currentTeam: 'Active Team:',
+          btnNewTeam: 'New Team',
+          btnClone: 'Duplicate',
+          btnImport: 'Import Paste',
+          btnExportRank: 'Export Ranked (Full)',
+          btnExportOTS: 'Export OTS (No EVs)',
+          lblItem: 'Held Item',
+          lblAbility: 'Ability',
+          lblTera: 'Tera Type',
+          lblMoves: 'Moveset (4 Moves)',
+          moveHint: 'Pick VGC meta moves or type custom',
+          btnSendAtk: 'Send to Damage Calc (Attacker)',
+          btnClearSlot: 'Clear Slot',
+          lblStatsTitle: 'Stats & EV / IV Spread',
+          lblStatsSub: 'Auto-calculated Level 50 stats',
+          lblNature: 'Nature'
+        }
+      };
+      const strings = dict[state.lang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (strings[key]) el.textContent = strings[key];
+      });
+      showToast(state.lang === 'vi' ? 'Đã chuyển sang Tiếng Việt' : 'Switched to English');
+    };
+
+    // Populate Datalists & Static Dropdowns
+    function initStaticDropdowns() {
+      const speciesList = document.getElementById('pokemon-species-list');
+      speciesList.innerHTML = Object.keys(POKEDEX).map(name => `<option value="${name}">`).join('');
+
+      const itemsList = document.getElementById('items-list');
+      itemsList.innerHTML = COMMON_ITEMS.map(item => `<option value="${item}">`).join('');
+
+      const abilitiesList = document.getElementById('abilities-list');
+      abilitiesList.innerHTML = COMMON_ABILITIES.map(ab => `<option value="${ab}">`).join('');
+
+      const movesList = document.getElementById('moves-list');
+      movesList.innerHTML = Object.keys(MOVES_DB).map(mv => `<option value="${mv}">`).join('');
+
+      const teraSelects = ['input-tera', 'calc-atk-tera', 'calc-def-tera', 'calc-move-type'];
+      teraSelects.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          const typesToUse = id === 'calc-move-type' ? ALL_TYPES.filter(t => t !== 'Stellar') : ALL_TYPES;
+          el.innerHTML = typesToUse.map(t => `<option value="${t}">${t}</option>`).join('');
+        }
+      });
+
+      const natureSelects = ['input-nature', 'calc-atk-nature', 'calc-def-nature'];
+      natureSelects.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.innerHTML = Object.entries(NATURES).map(([name, mod]) => {
+            const label = mod.plus ? `${name} (+${mod.plus.toUpperCase()}, -${mod.minus.toUpperCase()})` : `${name} (Neutral)`;
+            return `<option value="${name}">${label}</option>`;
+          }).join('');
+        }
+      });
+    }
+
+    function renderTeamSelector() {
+      const sel = document.getElementById('team-selector');
+      sel.innerHTML = state.teams.map(t =>
+        `<option value="${t.id}" ${t.id === state.activeTeamId ? 'selected' : ''}>${t.name}</option>`
+      ).join('');
+      const activeTeam = getActiveTeam();
+      document.getElementById('team-name-input').value = activeTeam ? activeTeam.name : '';
+    }
+
+    function renderTeamSlotsRibbon() {
+      const team = getActiveTeam();
+      const container = document.getElementById('team-slots-ribbon');
+      container.innerHTML = team.slots.map((slot, idx) => {
+        const isSelected = idx === state.activeSlotIdx;
+        const borderClass = isSelected
+          ? 'border-sky-400 bg-slate-900 shadow-lg shadow-sky-500/15 ring-1 ring-sky-400/50'
+          : 'border-slate-800 bg-slate-900/50 hover:border-slate-700';
+
+        if (!slot.species) {
+          return `
+            <button onclick="selectSlot(${idx})" class="p-3 rounded-2xl border ${borderClass} flex flex-col items-center justify-center h-24 transition text-slate-500 hover:text-slate-300">
+              <span class="text-lg font-bold">+</span>
+              <span class="text-[11px] font-medium">Slot ${idx + 1}</span>
+            </button>
+          `;
+        }
+
+        const sprite = getPokemonSpriteUrl(slot.species, slot.shiny);
+        return `
+          <button onclick="selectSlot(${idx})" class="p-2.5 rounded-2xl border ${borderClass} flex items-center gap-2.5 h-24 text-left transition relative overflow-hidden">
+            <img src="${sprite}" alt="${slot.species}" class="w-12 h-12 object-contain shrink-0" onerror="this.src='https://placehold.co/48x48/0f172a/38bdf8?text=${slot.species.slice(0,3)}'" />
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-extrabold text-white truncate">${slot.species}</div>
+              <div class="text-[10px] text-sky-400 truncate">${slot.item || 'No Item'}</div>
+              <div class="flex items-center gap-1 mt-1">
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${TYPE_COLORS[slot.teraType] || 'bg-slate-700 text-white'}">
+                  Tera ${slot.teraType}
+                </span>
+              </div>
+            </div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderActivePokemonEditor() {
+      const pkmn = getActivePokemon();
+      const dexInfo = POKEDEX[pkmn.species] || {
+        types: ["Normal"],
+        base: { hp: 80, atk: 80, def: 80, spa: 80, spd: 80, spe: 80 }
+      };
+
+      document.getElementById('editor-slot-num').textContent = state.activeSlotIdx + 1;
+      document.getElementById('input-species').value = pkmn.species || '';
+      document.getElementById('input-nickname').value = pkmn.nickname || '';
+      document.getElementById('input-level').value = pkmn.level || 50;
+      document.getElementById('input-gender').value = pkmn.gender || '';
+      document.getElementById('input-item').value = pkmn.item || '';
+      document.getElementById('input-ability').value = pkmn.ability || '';
+      document.getElementById('input-tera').value = pkmn.teraType || 'Normal';
+      document.getElementById('input-nature').value = pkmn.nature || 'Serious';
+
+      // Shiny Button Styling
+      const shinyBtn = document.getElementById('btn-shiny');
+      shinyBtn.className = pkmn.shiny
+        ? 'px-2.5 py-1.5 rounded-xl border border-amber-400 bg-amber-500/20 text-amber-300 text-xs font-bold transition'
+        : 'px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-500 text-xs font-bold transition';
+
+      // Sprite & Type Badges
+      const spriteEl = document.getElementById('editor-sprite');
+      spriteEl.src = pkmn.species
+        ? getPokemonSpriteUrl(pkmn.species, pkmn.shiny)
+        : 'https://placehold.co/80x80/0f172a/38bdf8?text=VGC';
+
+      const typesContainer = document.getElementById('editor-types');
+      typesContainer.innerHTML = (dexInfo.types || []).map(t =>
+        `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${TYPE_COLORS[t] || 'bg-slate-700'}">${t}</span>`
+      ).join('');
+
+      // 4 Moves Inputs
+      const movesContainer = document.getElementById('moves-inputs-container');
+      movesContainer.innerHTML = [0, 1, 2, 3].map(mIdx => {
+        const mvVal = pkmn.moves[mIdx] || '';
+        const mvData = MOVES_DB[mvVal];
+        const badge = mvData
+          ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${TYPE_COLORS[mvData.type] || 'bg-slate-700'}">${mvData.type}</span>`
+          : '';
+        return `
+          <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 focus-within:border-sky-500">
+            <span class="text-[11px] font-mono text-slate-500">${mIdx + 1}.</span>
+            <input list="moves-list" value="${mvVal}" onchange="updateActiveMove(${mIdx}, this.value)" placeholder="Chiêu thức ${mIdx + 1}..." class="w-full bg-transparent text-xs sm:text-sm font-medium text-white focus:outline-none" />
+            ${badge}
+          </div>
+        `;
+      }).join('');
+
+      renderStatsRows(pkmn, dexInfo.base);
+    }
+
+    function renderStatsRows(pkmn, baseStats) {
+      const statDefs = [
+        { key: 'hp', label: 'HP' },
+        { key: 'atk', label: 'Atk' },
+        { key: 'def', label: 'Def' },
+        { key: 'spa', label: 'SpA' },
+        { key: 'spd', label: 'SpD' },
+        { key: 'spe', label: 'Spe' }
+      ];
+
+      const nat = NATURES[pkmn.nature] || { plus: null, minus: null };
+      const totalEvs = Object.values(pkmn.evs).reduce((a, b) => a + (Number(b) || 0), 0);
+      const remEvs = 508 - totalEvs;
+
+      const remBadge = document.getElementById('evs-remaining-badge');
+      remBadge.textContent = `${remEvs} / 508`;
+      remBadge.className = `font-mono text-sm font-bold ${remEvs < 0 ? 'text-rose-400' : remEvs === 0 ? 'text-sky-400' : 'text-emerald-400'}`;
+
+      const container = document.getElementById('stats-rows-container');
+      container.innerHTML = statDefs.map(s => {
+        const base = baseStats[s.key] || 80;
+        const ev = pkmn.evs[s.key] || 0;
+        const iv = pkmn.ivs[s.key] ?? 31;
+        const real = calculateStat(s.key, base, iv, ev, pkmn.level || 50, pkmn.nature);
+
+        let modSymbol = '';
+        let labelColor = 'text-slate-300';
+        if (nat.plus === s.key) {
+          modSymbol = '<span class="text-rose-400 font-bold">+</span>';
+          labelColor = 'text-rose-300';
+        } else if (nat.minus === s.key) {
+          modSymbol = '<span class="text-sky-400 font-bold">-</span>';
+          labelColor = 'text-sky-300';
+        }
+
+        const barPct = Math.min(100, Math.round((real / 250) * 100));
+        const barColor = real >= 160 ? 'bg-emerald-400' : real >= 110 ? 'bg-sky-400' : 'bg-amber-400';
+
+        return `
+          <div class="grid grid-cols-12 gap-1.5 items-center text-xs">
+            <div class="col-span-2 font-bold ${labelColor}">${s.label}${modSymbol}</div>
+            <div class="col-span-1 text-center font-mono text-[11px] text-slate-400">${base}</div>
+            <div class="col-span-5 flex items-center gap-1.5">
+              <input type="range" min="0" max="252" step="4" value="${ev}" oninput="updateActiveEv('${s.key}', this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer" />
+              <input type="number" min="0" max="252" step="4" value="${ev}" onchange="updateActiveEv('${s.key}', this.value)" class="w-11 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-center font-mono text-[11px] text-white" />
+            </div>
+            <div class="col-span-2 flex justify-center">
+              <input type="number" min="0" max="31" value="${iv}" onchange="updateActiveIv('${s.key}', this.value)" class="w-10 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-center font-mono text-[11px] text-slate-300" />
+            </div>
+            <div class="col-span-2 flex flex-col items-end">
+              <span class="font-mono font-extrabold text-white">${real}</span>
+              <div class="w-full h-1 bg-slate-800 rounded-full overflow-hidden mt-0.5">
+                <div class="h-full ${barColor}" style="width: ${barPct}%"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAllBuilderUI() {
+      renderTeamSelector();
+      renderTeamSlotsRibbon();
+      renderActivePokemonEditor();
+    }
+
+    // ==================== 8. BUILDER EVENT HANDLERS ====================
+    window.selectSlot = function (idx) {
+      state.activeSlotIdx = idx;
+      renderTeamSlotsRibbon();
+      renderActivePokemonEditor();
+    };
+
+    window.updateActivePokemon = function (field, value) {
+      const pkmn = getActivePokemon();
+      pkmn[field] = value;
+
+      // Auto-fill default ability if species matched in Pokédex and ability is empty
+      if (field === 'species' && POKEDEX[value]) {
+        if (!pkmn.ability) {
+          pkmn.ability = POKEDEX[value].abilities[0] || '';
+        }
+      }
+      persistTeams();
+      renderTeamSlotsRibbon();
+      renderActivePokemonEditor();
+    };
+
+    window.toggleShiny = function () {
+      const pkmn = getActivePokemon();
+      pkmn.shiny = !pkmn.shiny;
+      persistTeams();
+      renderTeamSlotsRibbon();
+      renderActivePokemonEditor();
+    };
+
+    window.updateActiveMove = function (moveIdx, moveName) {
+      const pkmn = getActivePokemon();
+      pkmn.moves[moveIdx] = moveName;
+      persistTeams();
+      renderActivePokemonEditor();
+    };
+
+    window.updateActiveEv = function (statKey, rawVal) {
+      const pkmn = getActivePokemon();
+      let val = Math.min(252, Math.max(0, parseInt(rawVal) || 0));
+      // Snap to multiple of 4
+      val = Math.floor(val / 4) * 4;
+
+      const otherSum = Object.entries(pkmn.evs)
+        .filter(([k]) => k !== statKey)
+        .reduce((acc, [, v]) => acc + (Number(v) || 0), 0);
+
+      if (otherSum + val > 508) {
+        val = Math.max(0, Math.floor((508 - otherSum) / 4) * 4);
+      }
+
+      pkmn.evs[statKey] = val;
+      persistTeams();
+      const dexInfo = POKEDEX[pkmn.species] || { base: { hp: 80, atk: 80, def: 80, spa: 80, spd: 80, spe: 80 } };
+      renderStatsRows(pkmn, dexInfo.base);
+    };
+
+    window.updateActiveIv = function (statKey, rawVal) {
+      const pkmn = getActivePokemon();
+      const val = Math.min(31, Math.max(0, parseInt(rawVal) ?? 31));
+      pkmn.ivs[statKey] = val;
+      persistTeams();
+      const dexInfo = POKEDEX[pkmn.species] || { base: { hp: 80, atk: 80, def: 80, spa: 80, spd: 80, spe: 80 } };
+      renderStatsRows(pkmn, dexInfo.base);
+    };
+
+    window.applyEvPreset = function (preset) {
+      const pkmn = getActivePokemon();
+      if (!preset) return;
+      const presets = {
+        phys_sweeper: { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 },
+        spec_sweeper: { hp: 4, atk: 0, def: 0, spa: 252, spd: 0, spe: 252 },
+        bulky_phys: { hp: 252, atk: 252, def: 4, spa: 0, spd: 0, spe: 0 },
+        bulky_spec: { hp: 252, atk: 0, def: 0, spa: 252, spd: 4, spe: 0 },
+        phys_wall: { hp: 252, atk: 0, def: 252, spa: 0, spd: 4, spe: 0 },
+        spec_wall: { hp: 252, atk: 0, def: 4, spa: 0, spd: 252, spe: 0 },
+        reset: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
+      };
+      if (presets[preset]) {
+        pkmn.evs = { ...presets[preset] };
+        persistTeams();
+        renderActivePokemonEditor();
+      }
+    };
+
+    window.clearCurrentSlot = function () {
+      const team = getActiveTeam();
+      team.slots[state.activeSlotIdx] = createEmptySlot();
+      persistTeams();
+      renderTeamSlotsRibbon();
+      renderActivePokemonEditor();
+    };
+
+    // ==================== 9. MULTI-TEAM MANAGEMENT ====================
+    window.selectTeam = function (teamId) {
+      state.activeTeamId = teamId;
+      state.activeSlotIdx = 0;
+      renderAllBuilderUI();
+    };
+
+    window.renameCurrentTeam = function (newName) {
+      const team = getActiveTeam();
+      if (team && newName.trim()) {
+        team.name = newName.trim();
+        persistTeams();
+        renderTeamSelector();
+      }
+    };
+
+    window.createNewTeam = function () {
+      const newTeam = {
+        id: 'team-' + Date.now(),
+        name: `VGC Team #${state.teams.length + 1}`,
+        updatedAt: Date.now(),
+        slots: [createEmptySlot(), createEmptySlot(), createEmptySlot(), createEmptySlot(), createEmptySlot(), createEmptySlot()]
+      };
+      state.teams.unshift(newTeam);
+      state.activeTeamId = newTeam.id;
+      state.activeSlotIdx = 0;
+      persistTeams();
+      renderAllBuilderUI();
+      showToast('Đã tạo đội hình mới!');
+    };
+
+    window.duplicateCurrentTeam = function () {
+      const current = getActiveTeam();
+      const clone = JSON.parse(JSON.stringify(current));
+      clone.id = 'team-' + Date.now();
+      clone.name = `${current.name} (Copy)`;
+      clone.updatedAt = Date.now();
+      state.teams.unshift(clone);
+      state.activeTeamId = clone.id;
+      persistTeams();
+      renderAllBuilderUI();
+      showToast('Đã nhân bản đội hình!');
+    };
+
+    window.deleteCurrentTeam = function () {
+      if (state.teams.length <= 1) {
+        showToast('Cần giữ lại ít nhất 1 đội hình!', 'error');
+        return;
+      }
+      state.teams = state.teams.filter(t => t.id !== state.activeTeamId);
+      state.activeTeamId = state.teams[0].id;
+      state.activeSlotIdx = 0;
+      persistTeams();
+      renderAllBuilderUI();
+      showToast('Đã xóa đội hình.');
+    };
+
+    // ==================== 10. EXPORT / IMPORT MODAL HANDLERS ====================
+    window.openExportModal = function (mode) {
+      state.modalMode = mode;
+      document.getElementById('paste-modal').classList.remove('hidden');
+      document.getElementById('modal-export-tabs').classList.remove('hidden');
+      document.getElementById('modal-action-btn').textContent = 'Sao chép vào Clipboard';
+      switchExportModalMode(mode);
+    };
+
+    window.switchExportModalMode = function (mode) {
+      state.modalMode = mode;
+      const isRanked = mode === 'ranked';
+      document.getElementById('modal-title').textContent = isRanked
+        ? 'Xuất Team Đấu Rank (Full EVs / IVs / Nature)'
+        : 'Xuất Team Đánh Giải OTS (Open Team Sheet — Giấu EVs)';
+      document.getElementById('modal-subtitle').textContent = isRanked
+        ? 'Đầy đủ thông số để dán trực tiếp vào Pokémon Showdown'
+        : 'Đã ẩn toàn bộ EVs, IVs và Nature theo đúng luật giải đấu VGC Official';
+
+      document.getElementById('modal-tab-ranked').className = isRanked
+        ? 'flex-1 py-1.5 rounded-lg text-xs font-bold transition bg-sky-500 text-slate-950'
+        : 'flex-1 py-1.5 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white';
+
+      document.getElementById('modal-tab-ots').className = !isRanked
+        ? 'flex-1 py-1.5 rounded-lg text-xs font-bold transition bg-amber-500 text-slate-950'
+        : 'flex-1 py-1.5 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white';
+
+      document.getElementById('modal-paste-textarea').value = exportTeamToShowdown(mode);
+    };
+
+    window.openImportModal = function () {
+      state.modalMode = 'import';
+      document.getElementById('paste-modal').classList.remove('hidden');
+      document.getElementById('modal-export-tabs').classList.add('hidden');
+      document.getElementById('modal-title').textContent = 'Nhập Team từ Pokémon Showdown Paste';
+      document.getElementById('modal-subtitle').textContent = 'Dán văn bản đội hình chuẩn Showdown vào khung bên dưới để nạp vào team hiện tại';
+      document.getElementById('modal-paste-textarea').value = '';
+      document.getElementById('modal-action-btn').textContent = 'Nạp vào Đội hình hiện tại';
+    };
+
+    window.closePasteModal = function () {
+      document.getElementById('paste-modal').classList.add('hidden');
+    };
+
+    window.handleModalPrimaryAction = function () {
+      const text = document.getElementById('modal-paste-textarea').value;
+      if (state.modalMode === 'import') {
+        if (!text.trim()) {
+          showToast('Vui lòng dán nội dung Showdown Paste!', 'error');
+          return;
+        }
+        const team = getActiveTeam();
+        team.slots = parseShowdownPaste(text);
+        persistTeams();
+        renderAllBuilderUI();
+        closePasteModal();
+        showToast('Đã nhập đội hình thành công!');
+      } else {
+        copyTextToClipboard(text);
+      }
+    };
+
+    // ==================== 11. DAMAGE CALCULATOR UI SYNC ====================
+    function populateCalcTeamDropdowns() {
+      const team = getActiveTeam();
+      const opts = `<option value="">-- Nạp từ Team (${team.name}) --</option>` +
+        team.slots
+          .map((s, idx) => s.species ? `<option value="${idx}">Slot ${idx + 1}: ${s.species}</option>` : '')
+          .join('');
+      document.getElementById('calc-atk-team-slot').innerHTML = opts;
+      document.getElementById('calc-def-team-slot').innerHTML = opts;
+    }
+
+    function syncCalcInputsFromState() {
+      const atk = state.calc.attacker;
+      const def = state.calc.defender;
+      const mv = state.calc.move;
+
+      document.getElementById('calc-atk-species').value = atk.species;
+      document.getElementById('calc-atk-item').value = atk.item;
+      document.getElementById('calc-atk-ability').value = atk.ability;
+      document.getElementById('calc-atk-nature').value = atk.nature;
+      document.getElementById('calc-atk-tera').value = atk.teraType;
+      document.getElementById('calc-atk-terastallized').checked = atk.isTera;
+      document.getElementById('calc-atk-ev-atk').value = atk.evs.atk || 0;
+      document.getElementById('calc-atk-ev-spa').value = atk.evs.spa || 0;
+
+      document.getElementById('calc-def-species').value = def.species;
+      document.getElementById('calc-def-item').value = def.item;
+      document.getElementById('calc-def-ability').value = def.ability;
+      document.getElementById('calc-def-nature').value = def.nature;
+      document.getElementById('calc-def-tera').value = def.teraType;
+      document.getElementById('calc-def-terastallized').checked = def.isTera;
+      document.getElementById('calc-def-ev-hp').value = def.evs.hp || 0;
+      document.getElementById('calc-def-ev-def').value = def.evs.def || 0;
+      document.getElementById('calc-def-ev-spd').value = def.evs.spd || 0;
+
+      document.getElementById('calc-move-name').value = mv.name;
+      document.getElementById('calc-move-bp').value = mv.bp;
+      document.getElementById('calc-move-type').value = mv.type;
+      document.getElementById('calc-move-cat').value = mv.cat;
+    }
+
+    window.sendCurrentToCalc = function (side) {
+      const pkmn = getActivePokemon();
+      if (!pkmn || !pkmn.species) {
+        showToast('Slot hiện tại đang trống!', 'error');
+        return;
+      }
+      state.calc[side] = {
+        species: pkmn.species,
+        item: pkmn.item || '',
+        ability: pkmn.ability || '',
+        nature: pkmn.nature || 'Serious',
+        teraType: pkmn.teraType || 'Normal',
+        isTera: false,
+        evs: { ...pkmn.evs },
+        boosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
+      };
+      // Pick first damaging move if available
+      const firstMove = pkmn.moves.find(m => MOVES_DB[m] && MOVES_DB[m].bp > 0) || pkmn.moves[0];
+      if (firstMove && MOVES_DB[firstMove]) {
+        state.calc.move = {
+          name: firstMove,
+          bp: MOVES_DB[firstMove].bp,
+          type: MOVES_DB[firstMove].type,
+          cat: MOVES_DB[firstMove].cat
+        };
+      }
+      switchMainTab('calc');
+      syncCalcInputsFromState();
+      runDamageCalculation();
+      showToast(`Đã đưa ${pkmn.species} sang Damage Calculator!`);
+    };
+
+    window.loadTeamSlotToCalc = function (side, slotIdxStr) {
+      if (slotIdxStr === '') return;
+      const idx = parseInt(slotIdxStr);
+      const pkmn = getActiveTeam().slots[idx];
+      if (!pkmn || !pkmn.species) return;
+      state.calc[side] = {
+        species: pkmn.species,
+        item: pkmn.item || '',
+        ability: pkmn.ability || '',
+        nature: pkmn.nature || 'Serious',
+        teraType: pkmn.teraType || 'Normal',
+        isTera: false,
+        evs: { ...pkmn.evs },
+        boosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
+      };
+      if (side === 'attacker') {
+        const firstMove = pkmn.moves.find(m => MOVES_DB[m] && MOVES_DB[m].bp > 0) || pkmn.moves[0];
+        if (firstMove && MOVES_DB[firstMove]) {
+          state.calc.move = {
+            name: firstMove,
+            bp: MOVES_DB[firstMove].bp,
+            type: MOVES_DB[firstMove].type,
+            cat: MOVES_DB[firstMove].cat
+          };
+        }
+      }
+      syncCalcInputsFromState();
+      runDamageCalculation();
+    };
+
+    window.updateCalcSide = function (side, key, val) {
+      state.calc[side][key] = val;
+      if (key === 'species' && POKEDEX[val]) {
+        state.calc[side].ability = POKEDEX[val].abilities[0] || '';
+        syncCalcInputsFromState();
+      }
+      runDamageCalculation();
+    };
+
+    window.updateCalcEv = function (side, stat, val) {
+      state.calc[side].evs[stat] = Math.min(252, Math.max(0, parseInt(val) || 0));
+      runDamageCalculation();
+    };
+
+    window.updateCalcBoost = function (side, stat, val) {
+      state.calc[side].boosts[stat] = parseInt(val) || 0;
+      runDamageCalculation();
+    };
+
+    window.selectCalcMove = function (moveName) {
+      const mv = MOVES_DB[moveName];
+      state.calc.move.name = moveName;
+      if (mv) {
+        state.calc.move.bp = mv.bp;
+        state.calc.move.type = mv.type;
+        state.calc.move.cat = mv.cat;
+        document.getElementById('calc-move-bp').value = mv.bp;
+        document.getElementById('calc-move-type').value = mv.type;
+        document.getElementById('calc-move-cat').value = mv.cat;
+      }
+      runDamageCalculation();
+    };
+
+    window.setFieldOption = function (fieldType, val) {
+      state.calc.field[fieldType] = val;
+      document.querySelectorAll(`[data-field-${fieldType}]`).forEach(btn => {
+        const active = btn.getAttribute(`data-field-${fieldType}`) === val;
+        btn.className = active
+          ? 'field-btn py-1.5 rounded-lg bg-sky-500 text-slate-950 font-bold'
+          : 'field-btn py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-700';
+      });
+      runDamageCalculation();
+    };
+
+    window.swapCalcSides = function () {
+      const temp = state.calc.attacker;
+      state.calc.attacker = state.calc.defender;
+      state.calc.defender = temp;
+      syncCalcInputsFromState();
+      runDamageCalculation();
+    };
+
+    window.setDefBulkPreset = function (hp, def, spd, nature) {
+      state.calc.defender.evs.hp = hp;
+      state.calc.defender.evs.def = def;
+      state.calc.defender.evs.spd = spd;
+      state.calc.defender.nature = nature;
+      syncCalcInputsFromState();
+      runDamageCalculation();
+    };
+
+    // ==================== 12. AI IMAGE SCANNER (GEMINI VISION API) ====================
+    window.handleAiImageSelect = function (event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      processImageFileForAI(file);
+    };
+
+    function processImageFileForAI(file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const dataUrl = e.target.result;
+        const previewImg = document.getElementById('ai-preview-img');
+        previewImg.src = dataUrl;
+        previewImg.classList.remove('hidden');
+        document.getElementById('ai-upload-placeholder').classList.add('hidden');
+
+        const [meta, base64] = dataUrl.split(',');
+        const mimeMatch = meta.match(/data:(.*?);base64/);
+        state.aiImageMime = mimeMatch ? mimeMatch[1] : 'image/png';
+        state.aiImageBase64 = base64;
+        document.getElementById('btn-run-ai-scan').disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Support Ctrl+V pasting screenshot directly on Scanner view
+    window.addEventListener('paste', (e) => {
+      if (document.getElementById('view-scanner').classList.contains('hidden')) return;
+      const items = e.clipboardData?.items || [];
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) processImageFileForAI(file);
+        }
+      }
+    });
+
+    window.analyzeTeamImageWithAI = async function () {
+      if (!state.aiImageBase64) return;
+      const btn = document.getElementById('btn-run-ai-scan');
+      const btnText = document.getElementById('ai-scan-btn-text');
+      const outputArea = document.getElementById('ai-output-textarea');
+
+      btn.disabled = true;
+      btnText.textContent = '⏳ Đang phân tích đội hình bằng Gemini Vision AI...';
+
+      const prompt = `You are a competitive Pokémon VGC expert. Analyze this image of a Pokémon team (up to 6 Pokémon from Scarlet/Violet, Pokémon Home, or Pokémon Showdown).
+Identify every Pokémon visible in the image (up to 6). For each Pokémon, extract:
+- English Showdown Species Name (e.g., Incineroar, Flutter Mane, Urshifu-Rapid-Strike, Calyrex-Shadow, Ogerpon-Wellspring)
+- Held Item (if visible; omit "@ Item" if not visible)
+- Ability (if visible or infer standard VGC ability)
+- Level: 50
+- Tera Type (if visible; otherwise infer common VGC Tera Type)
+- Up to 4 Moves (if visible; otherwise suggest standard VGC moves for that species)
+
+Output ONLY valid Pokémon Showdown Paste format (plain text, no markdown code blocks, no extra commentary).`;
+
+      const apiKey = "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      const payload = {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: state.aiImageMime,
+                  data: state.aiImageBase64
+                }
+              }
+            ]
+          }
+        ]
+      };
+
+      // Exponential backoff fetch
+      let attempt = 0;
+      const delays = [1000, 2000, 4000];
+      let successText = null;
+
+      while (attempt <= delays.length) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const result = await response.json();
+          const candidateText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (candidateText) {
+            successText = candidateText.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
+            break;
+          }
+        } catch (err) {
+          if (attempt === delays.length) break;
+          await new Promise(res => setTimeout(res, delays[attempt]));
+        }
+        attempt++;
+      }
+
+      if (successText) {
+        outputArea.value = successText;
+        showToast('AI đã nhận diện xong đội hình 6 Pokémon!');
+      } else {
+        showToast('Không thể kết nối AI Vision lúc này, vui lòng thử lại.', 'error');
+      }
+
+      btn.disabled = false;
+      btnText.textContent = '✨ Quét ảnh nhận diện đội hình';
+    };
+
+    window.loadAiOutputToBuilder = function () {
+      const text = document.getElementById('ai-output-textarea').value.trim();
+      if (!text) {
+        showToast('Chưa có dữ liệu Showdown Paste để nạp!', 'error');
+        return;
+      }
+      const team = getActiveTeam();
+      team.slots = parseShowdownPaste(text);
+      persistTeams();
+      renderAllBuilderUI();
+      switchMainTab('builder');
+      showToast('Đã nạp toàn bộ 6 Pokémon vào Team Builder!');
+    };
+
+    // ==================== 13. BOOTSTRAP APPLICATION ====================
+    window.addEventListener('DOMContentLoaded', () => {
+      initStaticDropdowns();
+      loadTeamsFromLocal();
+      renderAllBuilderUI();
+      syncCalcInputsFromState();
+      runDamageCalculation();
+      initFirebaseSync();
+    });
+  </script>
+</body>
+</html>
