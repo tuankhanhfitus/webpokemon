@@ -1,29 +1,136 @@
-/* Custom scrollbar for sleek dark tactical look */
+/* Glassmorphism & Base Surfaces */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(51, 65, 85, 0.65);
+  box-shadow: 0 10px 30px -10px rgba(2, 6, 23, 0.75);
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #060911;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #1e293b;
   border-radius: 9999px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #38bdf8;
 }
 
-input[type="range"] {
-  accent-color: #38bdf8;
+/* Range Input (SP 0-32 Sliders) */
+input[type="range"].sp-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  background: #1e293b;
+  outline: none;
+  cursor: pointer;
 }
 
-.glass-panel {
-  background: rgba(15, 23, 42, 0.78);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(51, 65, 85, 0.7);
+input[type="range"].sp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #38bdf8;
+  border: 2px solid #0f172a;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.55);
+  transition: transform 0.12s ease, background-color 0.12s ease;
+}
+
+input[type="range"].sp-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.18);
+  background: #7dd3fc;
+}
+
+/* Pokémon Type Badges */
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.type-Normal   { background: #94a3b8; }
+.type-Fire     { background: #ea580c; }
+.type-Water    { background: #0284c7; }
+.type-Electric { background: #eab308; color: #0f172a; text-shadow: none; }
+.type-Grass    { background: #16a34a; }
+.type-Ice      { background: #06b6d4; color: #0f172a; text-shadow: none; }
+.type-Fighting { background: #dc2626; }
+.type-Poison   { background: #9333ea; }
+.type-Ground   { background: #b45309; }
+.type-Flying   { background: #6366f1; }
+.type-Psychic  { background: #ec4899; }
+.type-Bug      { background: #65a30d; }
+.type-Rock     { background: #78716c; }
+.type-Ghost    { background: #581c87; }
+.type-Dragon   { background: #4f46e5; }
+.type-Dark     { background: #334155; border: 1px solid #475569; }
+.type-Steel    { background: #64748b; }
+.type-Fairy    { background: #f472b6; color: #0f172a; text-shadow: none; }
+
+/* Slot Ribbon Card */
+.slot-card {
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slot-card:hover {
+  transform: translateY(-2px);
+}
+.slot-card.active-slot {
+  border-color: #38bdf8;
+  background: linear-gradient(145deg, rgba(14, 165, 233, 0.16), rgba(15, 23, 42, 0.92));
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45), 0 10px 20px -8px rgba(14, 165, 233, 0.35);
+}
+
+/* Mega Button States */
+.mega-btn-active {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6, #06b6d4);
+  color: #ffffff;
+  border-color: rgba(244, 114, 182, 0.75);
+  box-shadow: 0 0 14px rgba(236, 72, 153, 0.45);
+}
+.mega-btn-ready {
+  background: rgba(236, 72, 153, 0.14);
+  color: #f472b6;
+  border-color: rgba(236, 72, 153, 0.4);
+}
+.mega-btn-ready:hover {
+  background: rgba(236, 72, 153, 0.25);
+}
+.mega-btn-disabled {
+  background: rgba(15, 23, 42, 0.5);
+  color: #475569;
+  border-color: #1e293b;
+  cursor: not-allowed;
+}
+
+/* Toast Animation */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.toast-enter {
+  animation: slideInRight 0.22s ease-out forwards;
 }
