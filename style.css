@@ -143,3 +143,14 @@ input[type="range"].sp-slider::-webkit-slider-thumb:hover {
 .toast-enter {
   animation: slideInRight 0.22s ease-out forwards;
 }
+
+select option {
+  background-color: #0f172a; /* bg-slate-900 */
+  color: #f8fafc;            /* text-slate-50 */
+}
+
+select option:checked,
+select option:hover {
+  background-color: #0284c7; /* bg-sky-600 */
+  color: #ffffff;
+}
