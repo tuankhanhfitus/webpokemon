@@ -23,6 +23,7 @@ let activeSlotIndex = 0;
 let modalMode = "ranked"; // 'ranked' | 'ots' | 'import'
 let aiSelectedImageBase64 = null;
 let aiSelectedImageMime = "image/png";
+let activeMoveDropdownId = null;
 
 // Visual Pokémon Picker State
 let pickerTarget = null; // { mode: 'builder' } | { mode: 'calc', side: 'p1'|'p2' } | { mode: 'speed', slotIdx: 0|1|2 }
@@ -99,9 +100,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (keyInput) keyInput.value = savedKey;
   }
 
+  // Close custom move dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!activeMoveDropdownId) return;
+    if (!e.target.closest("[data-move-picker]")) {
+      const prevSide = activeMoveDropdownId.split("-")[0];
+      activeMoveDropdownId = null;
+      if (prevSide === "p1" || prevSide === "p2") {
+        renderCalcSideUI(prevSide);
+      }
+    }
+  });
+
   // Keyboard shortcuts (Escape closes modals, Ctrl+V pastes image on AI Scanner)
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
+      activeMoveDropdownId = null;
       closePokemonPicker();
       closePasteModal();
     }
@@ -438,6 +452,7 @@ function selectPokemonFromPicker(species, isMega, megaStone) {
 // ============================================================================
 
 function switchMainTab(tabName) {
+  activeMoveDropdownId = null;
   const tabs = ["builder", "calc", "speed", "scanner"];
   tabs.forEach((t) => {
     const view = document.getElementById(`view-${t}`);
@@ -1213,6 +1228,71 @@ function copyTextToClipboard(text) {
 }
 
 // ============================================================================
+// CUSTOM DARK MOVE DROPDOWN (PREVENTS NATIVE WHITE POPUP MENU)
+// ============================================================================
+
+function toggleMoveDropdown(side, mIdx, event) {
+  event.stopPropagation();
+  const id = `${side}-${mIdx}`;
+  activeMoveDropdownId = activeMoveDropdownId === id ? null : id;
+  renderCalcSideUI(side);
+  if (activeMoveDropdownId === id) {
+    setTimeout(() => {
+      const searchEl = document.getElementById(`move-search-${id}`);
+      searchEl?.focus();
+    }, 20);
+  }
+}
+
+function filterMoveDropdownList(side, mIdx, query) {
+  const q = (query || "").trim().toLowerCase();
+  const listEl = document.getElementById(`move-options-${side}-${mIdx}`);
+  if (!listEl) return;
+
+  const currentMoveName = calcState[side]?.moves?.[mIdx]?.name || "";
+  const filteredMoves = Object.keys(MOVES_DB)
+    .sort()
+    .filter((mv) => {
+      const meta = MOVES_DB[mv];
+      return (
+        mv.toLowerCase().includes(q) ||
+        meta.type.toLowerCase().includes(q) ||
+        meta.cat.toLowerCase().includes(q)
+      );
+    });
+
+  if (filteredMoves.length === 0) {
+    listEl.innerHTML = `<div class="px-2.5 py-3 text-center text-xs text-slate-400">Không tìm thấy chiêu "${escapeHtml(query)}".</div>`;
+    return;
+  }
+
+  listEl.innerHTML = filteredMoves
+    .map((mv) => {
+      const meta = MOVES_DB[mv];
+      const isCur = mv === currentMoveName;
+      return `
+        <button type="button"
+          onclick="pickMoveFromDropdown('${side}', ${mIdx}, '${mv.replace(/'/g, "\\'")}')"
+          class="move-dropdown-item w-full px-2.5 py-1.5 text-left flex items-center justify-between gap-2 text-xs ${
+            isCur ? "bg-sky-500/20 text-sky-300 font-bold" : "text-slate-200"
+          } transition">
+          <span class="truncate">${escapeHtml(mv)}</span>
+          <span class="flex items-center gap-1.5 shrink-0">
+            <span class="font-mono text-[10px] text-slate-400">${meta.bp || "-"}</span>
+            <span class="type-badge type-${meta.type}">${meta.type}</span>
+          </span>
+        </button>
+      `;
+    })
+    .join("");
+}
+
+function pickMoveFromDropdown(side, mIdx, moveName) {
+  activeMoveDropdownId = null;
+  updateCalcMove(side, mIdx, moveName);
+}
+
+// ============================================================================
 // SHOWDOWN-STYLE DAMAGE CALCULATOR ENGINE
 // ============================================================================
 
@@ -1406,19 +1486,56 @@ function renderCalcSideUI(side) {
     .map((mIdx) => {
       const mObj = st.moves[mIdx];
       const meta = MOVES_DB[mObj.name] || { bp: 0, type: "Normal", cat: "Status" };
-      const opts = allMoves
-        .map((mv) => `<option value="${mv}" ${mv === mObj.name ? "selected" : ""}>${mv}</option>`)
-        .join("");
+      const dropdownId = `${side}-${mIdx}`;
+      const isOpen = activeMoveDropdownId === dropdownId;
+
       return `
-        <div class="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs">
-          <select onchange="updateCalcMove('${side}', ${mIdx}, this.value)" class="flex-1 bg-transparent font-semibold text-white focus:outline-none min-w-0">
-            ${opts}
-          </select>
+        <div data-move-picker class="relative flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs">
+          <button type="button" onclick="toggleMoveDropdown('${side}', ${mIdx}, event)"
+            class="flex-1 flex items-center justify-between gap-1 text-left font-semibold text-white hover:text-sky-300 truncate min-w-0">
+            <span class="truncate">${escapeHtml(mObj.name)}</span>
+            <span class="text-slate-400 text-[10px] shrink-0">▾</span>
+          </button>
           <span class="font-mono text-[11px] text-slate-400 w-7 text-right">${meta.bp || "-"}</span>
           <span class="type-badge type-${meta.type} w-14 text-center">${meta.type}</span>
           <label class="flex items-center gap-0.5 text-[10px] text-amber-300 cursor-pointer shrink-0" title="Critical Hit">
             <input type="checkbox" ${mObj.crit ? "checked" : ""} onchange="toggleCalcMoveCrit('${side}', ${mIdx}, this.checked)" /> Crit
           </label>
+
+          ${
+            isOpen
+              ? `
+            <div onclick="event.stopPropagation()" class="move-dropdown-menu absolute left-0 right-0 top-full mt-1 z-40 rounded-xl overflow-hidden">
+              <div class="p-1.5 border-b border-slate-800 bg-slate-900">
+                <input id="move-search-${dropdownId}" type="text"
+                  oninput="filterMoveDropdownList('${side}', ${mIdx}, this.value)"
+                  placeholder="Gõ tên chiêu hoặc hệ..."
+                  class="w-full bg-slate-950 border border-slate-700 focus:border-sky-500 rounded-lg px-2 py-1 text-xs text-white focus:outline-none" />
+              </div>
+              <div id="move-options-${dropdownId}" class="max-h-52 overflow-y-auto divide-y divide-slate-800/50">
+                ${allMoves
+                  .map((mv) => {
+                    const mInfo = MOVES_DB[mv];
+                    return `
+                      <button type="button"
+                        onclick="pickMoveFromDropdown('${side}', ${mIdx}, '${mv.replace(/'/g, "\\'")}')"
+                        class="move-dropdown-item w-full px-2.5 py-1.5 text-left flex items-center justify-between gap-2 text-xs ${
+                          mv === mObj.name ? "bg-sky-500/20 text-sky-300 font-bold" : "text-slate-200"
+                        } transition">
+                        <span class="truncate">${escapeHtml(mv)}</span>
+                        <span class="flex items-center gap-1.5 shrink-0">
+                          <span class="font-mono text-[10px] text-slate-400">${mInfo.bp || "-"}</span>
+                          <span class="type-badge type-${mInfo.type}">${mInfo.type}</span>
+                        </span>
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </div>
+          `
+              : ""
+          }
         </div>
       `;
     })
@@ -1426,6 +1543,7 @@ function renderCalcSideUI(side) {
 }
 
 function swapCalcSides() {
+  activeMoveDropdownId = null;
   const temp = cloneDeep(calcState.p1);
   calcState.p1 = cloneDeep(calcState.p2);
   calcState.p2 = temp;
@@ -1556,7 +1674,7 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
 
   if (isPhys && atk.item === "Choice Band") A = Math.floor(A * 1.5);
   if (!isPhys && atk.item === "Choice Specs") A = Math.floor(A * 1.5);
-  if (isPhys && (atk.ability === "Huge Power" || def.ability === "Huge Power" && false)) A = Math.floor(A * 2);
+  if (isPhys && atk.ability === "Huge Power") A = Math.floor(A * 2);
   if (!isPhys && def.item === "Assault Vest") D = Math.floor(D * 1.5);
   if (def.item === "Eviolite") D = Math.floor(D * 1.5);
   if (calcState.field.weather === "Sand" && defForm.types.includes("Rock") && !isPhys) {
@@ -1905,7 +2023,6 @@ function renderSpeedComparisonCards() {
 
   grid.innerHTML = computedSlots
     .map(({ slotIdx, card, finalSpe, form }) => {
-      // Empty Slot ("+ Chọn Pokémon" dashed card matching Screenshot 1)
       if (!card) {
         return `
           <button type="button" onclick="openPokemonPicker({ mode: 'speed', slotIdx: ${slotIdx} })"
@@ -1944,7 +2061,6 @@ function renderSpeedComparisonCards() {
             ? "border-2 border-emerald-500 shadow-lg shadow-emerald-500/15"
             : "border border-slate-800"
         }">
-          <!-- Top Bar: Winner Badge + Change Pokémon + Close Button -->
           <div class="flex items-center justify-between gap-2 min-h-[28px]">
             <div>
               ${
@@ -1966,7 +2082,6 @@ function renderSpeedComparisonCards() {
             </div>
           </div>
 
-          <!-- Center Avatar (Click to change Pokémon), Mega Toggle, Types & Base Speed -->
           <div class="flex flex-col items-center text-center space-y-2">
             <button type="button" onclick="openPokemonPicker({ mode: 'speed', slotIdx: ${slotIdx} })"
               title="Nhấn để đổi Pokémon khác"
@@ -2002,7 +2117,6 @@ function renderSpeedComparisonCards() {
             </div>
           </div>
 
-          <!-- Stat Points (SP) Slider -->
           <div class="space-y-1.5">
             <div class="flex items-center justify-between text-xs">
               <span class="font-bold text-slate-200">Stat Points (SP) vào Speed</span>
@@ -2013,7 +2127,6 @@ function renderSpeedComparisonCards() {
               class="sp-slider w-full" />
           </div>
 
-          <!-- Nature Speed Segmented Control -->
           <div class="space-y-1.5">
             <label class="block text-xs font-bold text-slate-200">Nature ảnh hưởng Speed</label>
             <div class="grid grid-cols-3 gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-xs">
@@ -2044,7 +2157,6 @@ function renderSpeedComparisonCards() {
             </div>
           </div>
 
-          <!-- Speed Stage (-6 to +6) -->
           <div class="space-y-1.5">
             <div class="flex items-center justify-between text-xs">
               <span class="font-bold text-slate-200">Thang bậc Speed trong trận (tăng / giảm)</span>
@@ -2058,7 +2170,6 @@ function renderSpeedComparisonCards() {
             </p>
           </div>
 
-          <!-- Extra Multipliers Checkboxes -->
           <div class="space-y-2 pt-1">
             <div class="text-xs font-bold text-slate-200">Chọn thêm yếu tố ảnh hưởng tốc độ khác</div>
 
@@ -2084,7 +2195,6 @@ function renderSpeedComparisonCards() {
             </label>
           </div>
 
-          <!-- Final Speed Readout Box -->
           <div class="rounded-xl p-3 text-center border ${
             isWinner
               ? "bg-emerald-500/10 border-emerald-500/40"

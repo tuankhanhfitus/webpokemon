@@ -194,3 +194,13 @@ input[type="range"].sp-slider::-moz-range-thumb {
 .toast-enter {
   animation: toastIn 0.2s ease forwards;
 }
+.move-dropdown-menu {
+  background-color: #090d16;
+  border: 1px solid #334155;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.75);
+}
+
+.move-dropdown-item:hover {
+  background-color: #0284c7;
+  color: #ffffff;
+}
