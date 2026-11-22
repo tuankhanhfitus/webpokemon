@@ -3,224 +3,357 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Champions VGC Studio — Regulation M-C</title>
+  <title>VGC Tactics Studio — Champions Regulation M-C</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="badge-reg">REGULATION M-C</span>
-      <h1>Pokémon Champions VGC Studio</h1>
-      <span class="sub">Hệ thống 66 SP (Tối đa 32/chỉ số) · Mega Evolution · Lv.50</span>
+  <!-- TOP HEADER & NAVIGATION -->
+  <header class="studio-header">
+    <div class="brand-group">
+      <div class="brand-logo">VGC</div>
+      <div>
+        <div class="brand-title-row">
+          <h1>VGC Tactics Studio</h1>
+          <span class="reg-badge">CHAMPIONS · REG M-C</span>
+        </div>
+        <p class="brand-subtitle">66 Stat Points (Max 32/Stat) · Mega Evolution · Lv.50 Doubles</p>
+      </div>
     </div>
-    <div class="top-actions">
-      <button id="btn-open-ai" class="btn btn-accent">✨ AI Quét Ảnh Team</button>
-      <button id="btn-open-io" class="btn btn-primary">📋 Xuất / Nhập Showdown</button>
-      <button id="btn-reset-team" class="btn btn-danger">Xóa Team</button>
+
+    <nav class="studio-tabs">
+      <button class="nav-tab active" data-tab="builder">🛡️ Team Builder</button>
+      <button class="nav-tab" data-tab="calculator">⚔️ Damage Calc</button>
+      <button class="nav-tab" data-tab="export">📋 Showdown & OTS</button>
+      <button class="nav-tab" data-tab="aiscan">✨ AI Quét Ảnh</button>
+    </nav>
+
+    <div class="team-manager-bar">
+      <select id="team-selector" class="studio-select compact" title="Chọn đội hình đã lưu"></select>
+      <button id="btn-new-team" class="btn btn-ghost" title="Tạo đội hình mới">+ Team</button>
+      <button id="btn-rename-team" class="btn btn-ghost" title="Đổi tên đội hình">✏️</button>
+      <button id="btn-delete-team" class="btn btn-danger-ghost" title="Xóa đội hình hiện tại">🗑️</button>
     </div>
   </header>
 
-  <main class="workspace">
-    <!-- CỘT 1: DANH SÁCH 6 POKÉMON & CHỈNH SỬA SP -->
-    <section class="panel team-panel">
-      <div class="team-slots" id="team-slots"></div>
+  <!-- 6-SLOT POKÉMON ROSTER BAR (LUÔN HIỂN THỊ) -->
+  <section class="roster-strip" id="roster-strip"></section>
 
-      <div class="editor-card" id="editor-card">
-        <div class="editor-header">
-          <div class="mon-identity">
-            <img id="mon-sprite" src="" alt="Sprite" />
-            <div>
-              <select id="sel-species" class="input-select large"></select>
-              <div class="type-badges" id="mon-types"></div>
-            </div>
-          </div>
-          <div class="mega-toggle-wrap">
-            <label class="checkbox-pill">
+  <!-- MAIN WORKSPACE -->
+  <main class="studio-container">
+    <!-- TAB 1: TEAM BUILDER -->
+    <section id="tab-builder" class="tab-view active">
+      <div class="builder-grid">
+        <!-- CỘT TRÁI: THÔNG TIN POKÉMON & MEGA -->
+        <div class="studio-card">
+          <div class="card-header">
+            <h2>Cấu hình Pokémon #<span id="slot-number">1</span></h2>
+            <label class="mega-switch" id="mega-switch-wrap">
               <input type="checkbox" id="chk-mega" />
-              <span>Kích hoạt Mega Form</span>
+              <span class="mega-slider"></span>
+              <span class="mega-label">MEGA EVOLUTION</span>
             </label>
           </div>
+
+          <div class="mon-hero">
+            <div class="sprite-stage">
+              <img id="editor-sprite" src="" alt="Pokemon Sprite" />
+            </div>
+            <div class="mon-meta">
+              <label class="field-label">Loài Pokémon (Reg M-C)</label>
+              <select id="sel-species" class="studio-select hero-select"></select>
+              <div class="type-row" id="editor-types"></div>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="field-label">Vật phẩm (Held Item)</label>
+              <select id="sel-item" class="studio-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Đặc tính (Ability)</label>
+              <select id="sel-ability" class="studio-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Tính cách (Nature)</label>
+              <select id="sel-nature" class="studio-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Mẫu phân bổ SP nhanh</label>
+              <select id="sel-preset" class="studio-select">
+                <option value="">-- Chọn Preset SP (Max 66) --</option>
+                <option value="2,32,0,0,0,32">Sweeper Vật Lý (32 Atk / 32 Spe / 2 HP)</option>
+                <option value="2,0,0,32,0,32">Sweeper Đặc Biệt (32 SpA / 32 Spe / 2 HP)</option>
+                <option value="32,32,2,0,0,0">Bulky Attacker Vật Lý (32 HP / 32 Atk / 2 Def)</option>
+                <option value="32,0,0,32,2,0">Bulky / Trick Room SpA (32 HP / 32 SpA / 2 SpD)</option>
+                <option value="32,0,20,0,14,0">Support Phòng Thủ Cân Bằng (32 HP / 20 Def / 14 SpD)</option>
+                <option value="32,0,12,0,22,0">Support Kháng Đặc Biệt (32 HP / 12 Def / 22 SpD)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- BỘ 4 CHIÊU THỨC -->
+          <div class="moves-box">
+            <div class="section-subhead">
+              <span>Bộ 4 Chiêu Thức (Moveset)</span>
+              <button id="btn-send-to-calc" class="btn btn-sm btn-accent">Đưa vào Damage Calc →</button>
+            </div>
+            <div class="moves-grid" id="moves-grid"></div>
+          </div>
         </div>
 
-        <div class="grid-2">
-          <div class="field">
-            <label>Vật phẩm (Held Item)</label>
-            <select id="sel-item" class="input-select"></select>
+        <!-- CỘT PHẢI: PHÂN BỔ STAT POINTS (0 - 32 SP, TỔNG 66 SP) -->
+        <div class="studio-card">
+          <div class="card-header">
+            <h2>Phân bổ Stat Points (Champions SP)</h2>
+            <button id="btn-clear-sp" class="btn btn-sm btn-ghost">Đặt lại 0 SP</button>
           </div>
-          <div class="field">
-            <label>Đặc tính (Ability)</label>
-            <select id="sel-ability" class="input-select"></select>
-          </div>
-          <div class="field">
-            <label>Tính cách (Nature)</label>
-            <select id="sel-nature" class="input-select"></select>
-          </div>
-          <div class="field">
-            <label>Mẫu phân bổ SP nhanh</label>
-            <select id="sel-preset" class="input-select">
-              <option value="">-- Chọn mẫu SP --</option>
-              <option value="32,0,0,0,2,32">Tấn công vật lý nhanh (32 Atk / 32 Spe / 2 HP)</option>
-              <option value="2,0,0,32,0,32">Tấn công đặc biệt nhanh (32 SpA / 32 Spe / 2 HP)</option>
-              <option value="32,32,2,0,0,0">Đấu sĩ vật lý trâu (32 HP / 32 Atk / 2 Def)</option>
-              <option value="32,0,20,0,14,0">Hỗ trợ phòng thủ (32 HP / 20 Def / 14 SpD)</option>
-              <option value="32,0,0,32,2,0">Đánh Trick Room đặc biệt (32 HP / 32 SpA / 2 SpD)</option>
-            </select>
-          </div>
-        </div>
 
-        <!-- 4 CHIÊU THỨC -->
-        <div class="moves-section">
-          <label>Bộ 4 Chiêu Thức (Moveset)</label>
-          <div class="grid-2">
-            <select class="input-select move-select" data-move="0"></select>
-            <select class="input-select move-select" data-move="1"></select>
-            <select class="input-select move-select" data-move="2"></select>
-            <select class="input-select move-select" data-move="3"></select>
+          <div class="sp-budget-bar">
+            <div class="sp-budget-info">
+              <span>Tổng điểm đã dùng: <strong id="sp-used-text">0</strong> / 66 SP</span>
+              <span id="sp-rem-badge" class="sp-rem-badge">Còn lại: 66 SP</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="sp-budget-fill"></div>
+            </div>
+            <p class="sp-note">
+              Quy tắc Champions: Mỗi chỉ số tối đa <strong>32 SP</strong> (tương đương 252 EV), tổng 6 chỉ số tối đa <strong>66 SP</strong> (tương đương 508 EV). Cố định 31 IVs ở Lv.50.
+            </p>
           </div>
-        </div>
 
-        <!-- THANH ĐIỀU CHỈNH STAT POINTS (MAX 32 / TỔNG 66) -->
-        <div class="sp-section">
-          <div class="sp-header">
-            <span>Phân bổ Stat Points (Champions SP)</span>
-            <span id="sp-counter" class="sp-counter">Đã dùng: 0 / 66 SP (Còn lại: 66)</span>
+          <div class="stat-table-header">
+            <span>Chỉ số</span>
+            <span>Base</span>
+            <span>Thanh điều chỉnh SP (0–32)</span>
+            <span>SP</span>
+            <span>EV ~</span>
+            <span>Lv.50</span>
           </div>
-          <div class="sp-table" id="sp-rows"></div>
+          <div id="sp-rows-container" class="sp-rows-container"></div>
         </div>
       </div>
     </section>
 
-    <!-- CỘT 2: MÁY TÍNH SÁT THƯƠNG DOUBLES REG M-C -->
-    <section class="panel calc-panel">
-      <div class="panel-title">
-        <h2>Tính Sát Thương VGC Doubles (Lv.50)</h2>
-        <button id="btn-sync-attacker" class="btn btn-sm">Lấy Pokémon đang chọn làm Phe Công</button>
+    <!-- TAB 2: VGC DOUBLES DAMAGE CALCULATOR -->
+    <section id="tab-calculator" class="tab-view">
+      <div class="calc-conditions-bar studio-card">
+        <div class="cond-group">
+          <label>Thời tiết</label>
+          <select id="calc-weather" class="studio-select compact">
+            <option value="None">Bình thường</option>
+            <option value="Sun">Nắng gắt (Sun)</option>
+            <option value="Rain">Mưa lớn (Rain)</option>
+            <option value="Sand">Bão cát (Sandstorm)</option>
+            <option value="Snow">Tuyết rơi (Snow)</option>
+          </select>
+        </div>
+        <div class="cond-group">
+          <label>Địa hình</label>
+          <select id="calc-terrain" class="studio-select compact">
+            <option value="None">Không có</option>
+            <option value="Electric">Electric Terrain</option>
+            <option value="Grassy">Grassy Terrain</option>
+            <option value="Psychic">Psychic Terrain</option>
+            <option value="Misty">Misty Terrain</option>
+          </select>
+        </div>
+        <label class="toggle-chip"><input type="checkbox" id="calc-hh" /> Helping Hand (1.5x)</label>
+        <label class="toggle-chip"><input type="checkbox" id="calc-screen" /> Reflect / Light Screen</label>
+        <label class="toggle-chip"><input type="checkbox" id="calc-crit" /> Chí mạng (Crit 1.5x)</label>
+        <label class="toggle-chip"><input type="checkbox" id="calc-doubles" checked /> Doubles Spread (0.75x)</label>
       </div>
 
-      <div class="field-conditions">
-        <select id="calc-weather" class="input-select">
-          <option value="None">Thời tiết: Bình thường</option>
-          <option value="Sun">Nắng gắt (Harsh Sunlight)</option>
-          <option value="Rain">Mưa lớn (Rain)</option>
-          <option value="Sand">Bão cát (Sandstorm)</option>
-          <option value="Snow">Tuyết rơi (Snow)</option>
-        </select>
-        <select id="calc-terrain" class="input-select">
-          <option value="None">Địa hình: Không</option>
-          <option value="Electric">Electric Terrain</option>
-          <option value="Grassy">Grassy Terrain</option>
-          <option value="Psychic">Psychic Terrain</option>
-          <option value="Misty">Misty Terrain</option>
-        </select>
-        <label class="checkbox-pill"><input type="checkbox" id="calc-helping-hand" /> Helping Hand</label>
-        <label class="checkbox-pill"><input type="checkbox" id="calc-screen" /> Reflect / Light Screen</label>
-        <label class="checkbox-pill"><input type="checkbox" id="calc-crit" /> Chí mạng (Crit)</label>
-      </div>
-
-      <div class="calc-matchup">
+      <div class="calc-arena">
         <!-- PHE TẤN CÔNG -->
-        <div class="calc-box">
-          <h3>Phe Tấn Công (Attacker)</h3>
-          <select id="atk-species" class="input-select"></select>
-          <div class="grid-2">
-            <select id="atk-item" class="input-select"></select>
-            <select id="atk-nature" class="input-select"></select>
+        <div class="studio-card fighter-card">
+          <div class="card-header">
+            <h3>⚔️ Phe Tấn Công (Attacker)</h3>
+            <select id="sync-atk-slot" class="studio-select compact">
+              <option value="">-- Nạp từ Team --</option>
+              <option value="0">Slot 1</option>
+              <option value="1">Slot 2</option>
+              <option value="2">Slot 3</option>
+              <option value="3">Slot 4</option>
+              <option value="4">Slot 5</option>
+              <option value="5">Slot 6</option>
+            </select>
           </div>
-          <div class="calc-sp-inline">
-            <label>SP Công (Atk/SpA): <input type="number" id="atk-sp" min="0" max="32" value="32" /></label>
-            <label>Bậc Buff:
-              <select id="atk-stage">
-                <option value="0">0</option>
+
+          <div class="fighter-top">
+            <img id="atk-sprite" src="" alt="Attacker" />
+            <div class="fighter-id">
+              <select id="atk-species" class="studio-select"></select>
+              <label class="inline-check"><input type="checkbox" id="atk-mega" /> Mega Form</label>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="field-label">Vật phẩm</label>
+              <select id="atk-item" class="studio-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Đặc tính</label>
+              <select id="atk-ability" class="studio-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Tính cách</label>
+              <select id="atk-nature" class="studio-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Bậc Buff Công (Stage)</label>
+              <select id="atk-stage" class="studio-select">
+                <option value="0">0 (Bình thường)</option>
                 <option value="1">+1 (1.5x)</option>
                 <option value="2">+2 (2.0x)</option>
+                <option value="3">+3 (2.5x)</option>
                 <option value="-1">-1 (Intimidate)</option>
                 <option value="-2">-2 (0.5x)</option>
               </select>
-            </label>
+            </div>
           </div>
-          <select id="atk-move" class="input-select"></select>
+
+          <div class="sp-mini-row">
+            <label>SP Tấn Công (Atk/SpA): <strong id="atk-sp-val">32</strong> / 32</label>
+            <input type="range" id="atk-sp" min="0" max="32" value="32" />
+          </div>
+
+          <div class="form-group">
+            <label class="field-label">Chiêu thức sử dụng</label>
+            <select id="atk-move" class="studio-select hero-select"></select>
+          </div>
         </div>
 
         <!-- PHE PHÒNG THỦ -->
-        <div class="calc-box">
-          <h3>Phe Phòng Thủ (Defender)</h3>
-          <select id="def-species" class="input-select"></select>
-          <div class="grid-2">
-            <select id="def-item" class="input-select"></select>
-            <select id="def-nature" class="input-select"></select>
+        <div class="studio-card fighter-card">
+          <div class="card-header">
+            <h3>🛡️ Phe Phòng Thủ (Defender)</h3>
+            <select id="sync-def-slot" class="studio-select compact">
+              <option value="">-- Nạp từ Team --</option>
+              <option value="0">Slot 1</option>
+              <option value="1">Slot 2</option>
+              <option value="2">Slot 3</option>
+              <option value="3">Slot 4</option>
+              <option value="4">Slot 5</option>
+              <option value="5">Slot 6</option>
+            </select>
           </div>
-          <div class="calc-sp-inline">
-            <label>SP HP: <input type="number" id="def-hp-sp" min="0" max="32" value="32" /></label>
-            <label>SP Thủ: <input type="number" id="def-def-sp" min="0" max="32" value="0" /></label>
-            <label>Bậc Thủ:
-              <select id="def-stage">
-                <option value="0">0</option>
-                <option value="1">+1</option>
-                <option value="2">+2</option>
-                <option value="-1">-1</option>
-                <option value="-2">-2</option>
+
+          <div class="fighter-top">
+            <img id="def-sprite" src="" alt="Defender" />
+            <div class="fighter-id">
+              <select id="def-species" class="studio-select"></select>
+              <label class="inline-check"><input type="checkbox" id="def-mega" /> Mega Form</label>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="field-label">Vật phẩm</label>
+              <select id="def-item" class="studio-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Đặc tính</label>
+              <select id="def-ability" class="studio-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Tính cách</label>
+              <select id="def-nature" class="studio-select"></select>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Bậc Buff Thủ (Stage)</label>
+              <select id="def-stage" class="studio-select">
+                <option value="0">0 (Bình thường)</option>
+                <option value="1">+1 (1.5x)</option>
+                <option value="2">+2 (2.0x)</option>
+                <option value="-1">-1 (0.67x)</option>
+                <option value="-2">-2 (0.5x)</option>
               </select>
-            </label>
+            </div>
+          </div>
+
+          <div class="sp-mini-row">
+            <label>SP HP: <strong id="def-hp-sp-val">32</strong> / 32</label>
+            <input type="range" id="def-hp-sp" min="0" max="32" value="32" />
+          </div>
+          <div class="sp-mini-row">
+            <label>SP Phòng Thủ (Def/SpD): <strong id="def-def-sp-val">0</strong> / 32</label>
+            <input type="range" id="def-def-sp" min="0" max="32" value="0" />
           </div>
         </div>
       </div>
 
-      <!-- KẾT QUẢ TÍNH DAMAGE -->
-      <div class="damage-result-box" id="damage-result">
-        <div class="dmg-headline" id="dmg-headline">Chọn chiêu thức để tính sát thương</div>
-        <div class="hp-bar-wrap">
-          <div class="hp-bar-fill" id="hp-bar-fill"></div>
+      <!-- KẾT QUẢ SÁT THƯƠNG & 16 ROLLS -->
+      <div class="studio-card dmg-output-card">
+        <div class="dmg-top-row">
+          <div class="dmg-verdict" id="dmg-headline">Chọn chiêu thức để tính sát thương</div>
+          <span class="ko-pill" id="dmg-ko-badge">--</span>
         </div>
-        <div class="dmg-details" id="dmg-details"></div>
-        <div class="dmg-rolls" id="dmg-rolls"></div>
+        <div class="hp-visualizer">
+          <div class="hp-bar-bg">
+            <div class="hp-bar-max" id="hp-bar-max"></div>
+            <div class="hp-bar-min" id="hp-bar-min"></div>
+          </div>
+          <div class="hp-numbers" id="dmg-subtext">0 - 0 / 0 HP</div>
+        </div>
+        <div class="rolls-grid" id="dmg-rolls-grid"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: XUẤT / NHẬP SHOWDOWN (RANKED VS TOURNAMENT OTS) -->
+    <section id="tab-export" class="tab-view">
+      <div class="studio-card export-card">
+        <div class="card-header">
+          <h2>Xuất & Nhập Đội Hình (Showdown Format)</h2>
+          <div class="mode-switch-group">
+            <button id="btn-mode-ranked" class="mode-btn active">🏆 Đấu Rank (Đầy đủ SP / EVs & Nature)</button>
+            <button id="btn-mode-ots" class="mode-btn">🛡️ Đánh Giải OTS (Giấu SP / EVs & Nature)</button>
+          </div>
+        </div>
+
+        <p id="export-desc" class="helper-banner">
+          <strong>Chế độ Đấu Rank:</strong> Hiển thị đầy đủ phân bổ Stat Points (0–32 SP), thông số EV quy đổi tương đương và Nature để luyện tập hoặc lưu trữ.
+        </p>
+
+        <textarea id="showdown-io-box" rows="16" placeholder="Dán Showdown Paste vào đây để nhập vào đội hình..."></textarea>
+
+        <div class="export-actions">
+          <button id="btn-copy-showdown" class="btn btn-primary">📋 Sao chép vào Clipboard</button>
+          <button id="btn-import-showdown" class="btn btn-accent">📥 Nhập từ khung Text vào Team</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: AI NHẬN DẠNG ẢNH 6 POKÉMON -->
+    <section id="tab-aiscan" class="tab-view">
+      <div class="studio-card ai-card">
+        <div class="card-header">
+          <h2>AI Nhận Dạng Ảnh Đội Hình 6 Pokémon</h2>
+          <span class="reg-badge">Gemini 2.5 Flash Vision</span>
+        </div>
+
+        <div class="form-group">
+          <label class="field-label">Gemini API Key (Chỉ lưu trong localStorage trình duyệt của bạn)</label>
+          <input type="password" id="gemini-api-key" class="studio-input" placeholder="Nhập khóa AIzaSy... của bạn" />
+        </div>
+
+        <div class="dropzone" id="ai-dropzone">
+          <input type="file" id="ai-file-input" accept="image/*" />
+          <div class="dropzone-prompt">
+            <span class="drop-icon">📸</span>
+            <p>Kéo thả ảnh đội hình vào đây, bấm để chọn file, hoặc nhấn <strong>Ctrl + V</strong> để dán trực tiếp</p>
+          </div>
+          <img id="ai-image-preview" class="hidden" alt="Team Screenshot" />
+        </div>
+
+        <div class="export-actions">
+          <button id="btn-analyze-ai" class="btn btn-accent">✨ Phân tích ảnh & Nạp vào Team Builder</button>
+        </div>
+        <div id="ai-log" class="ai-log"></div>
       </div>
     </section>
   </main>
-
-  <!-- MODAL XUẤT / NHẬP SHOWDOWN (RANKED VS TOURNAMENT OTS) -->
-  <div class="modal hidden" id="modal-io">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Xuất / Nhập Đội Hình Showdown (Reg M-C)</h3>
-        <button class="btn-close" data-close="modal-io">✕</button>
-      </div>
-      <div class="mode-tabs">
-        <button id="tab-ranked" class="tab-btn active">🏆 Đấu Rank (Đầy đủ SP / EVs & Nature)</button>
-        <button id="tab-ots" class="tab-btn">🛡️ Đánh Giải OTS (Giấu toàn bộ SP / EVs & Nature)</button>
-      </div>
-      <p class="hint-text" id="export-hint">
-        Chế độ Đấu Rank xuất đầy đủ thông số SP (kèm quy đổi EV chuẩn Showdown) để lưu trữ hoặc luyện tập.
-      </p>
-      <textarea id="io-textarea" rows="14" placeholder="Dán nội dung Showdown Paste vào đây để nhập team..."></textarea>
-      <div class="modal-footer">
-        <button id="btn-copy-paste" class="btn btn-primary">Sao chép vào Clipboard</button>
-        <button id="btn-import-paste" class="btn btn-accent">Nhập từ Text vào Team</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL AI NHẬN DẠNG ẢNH TEAM -->
-  <div class="modal hidden" id="modal-ai">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>AI Nhận Dạng Ảnh 6 Pokémon (Champions Reg M-C)</h3>
-        <button class="btn-close" data-close="modal-ai">✕</button>
-      </div>
-      <div class="field">
-        <label>Gemini API Key (Lưu cục bộ trên trình duyệt của bạn, không gửi đi đâu khác)</label>
-        <input type="password" id="gemini-key" class="input-text" placeholder="AIzaSy..." />
-      </div>
-      <div class="upload-zone" id="upload-zone">
-        <input type="file" id="ai-image-input" accept="image/*" />
-        <p>Chọn ảnh chụp màn hình đội hình 6 Pokémon hoặc nhấn <strong>Ctrl + V</strong> để dán ảnh trực tiếp</p>
-        <img id="ai-preview" class="hidden" alt="Preview" />
-      </div>
-      <div id="ai-status" class="hint-text"></div>
-      <div class="modal-footer">
-        <button id="btn-run-ai" class="btn btn-accent">Phân tích ảnh & Nạp vào Team</button>
-      </div>
-    </div>
-  </div>
 
   <script src="data.js"></script>
   <script src="app.js"></script>
