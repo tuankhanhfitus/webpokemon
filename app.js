@@ -2,26 +2,15 @@ const STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"];
 const STAT_LABELS = { hp: "HP", atk: "Atk", def: "Def", spa: "SpA", spd: "SpD", spe: "Spe" };
 const MAX_STAT_SP = 32;
 const MAX_TOTAL_SP = 66;
-const STORAGE_KEY = "vgc_champions_mc_workspaces_v1";
+const STORAGE_KEY = "vgc_champions_mc_workspaces_v2";
 
 let activeSlot = 0;
-let exportMode = "ranked"; // "ranked" | "ots"
-
-// QUẢN LÝ NHIỀU ĐỘI HÌNH TRONG LOCALSTORAGE
-let store = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
-  currentId: "team-1",
-  teams: {
-    "team-1": {
-      name: "Reg M-C Rain + Mega Garchomp",
-      roster: createDefaultRoster()
-    }
-  }
-};
+let exportMode = "ranked";
 
 function createMon(speciesName = "Incineroar") {
   const data = POKEDEX_MC[speciesName] || POKEDEX_MC["Incineroar"];
   return {
-    species: speciesName,
+    species: POKEDEX_MC[speciesName] ? speciesName : "Incineroar",
     isMega: false,
     item: data.mega ? data.mega.stone : "Sitrus Berry",
     ability: data.abilities[0],
@@ -41,6 +30,26 @@ function createDefaultRoster() {
     { ...createMon("Amoonguss"), item: "Rocky Helmet", nature: "Bold", sp: { hp: 32, atk: 0, def: 22, spa: 0, spd: 12, spe: 0 } }
   ];
 }
+
+function loadInitialStore() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (raw && raw.teams && raw.currentId && raw.teams[raw.currentId] && Array.isArray(raw.teams[raw.currentId].roster)) {
+      return raw;
+    }
+  } catch (e) {}
+  return {
+    currentId: "team-1",
+    teams: {
+      "team-1": {
+        name: "Reg M-C Rain + Mega Garchomp",
+        roster: createDefaultRoster()
+      }
+    }
+  };
+}
+
+let store = loadInitialStore();
 
 function getCurrentTeam() {
   return store.teams[store.currentId];
@@ -69,7 +78,7 @@ function evToSp(ev) {
 }
 
 function getTotalSP(spObj) {
-  return STAT_KEYS.reduce((acc, k) => acc + (Number(spObj[k]) || 0), 0);
+  return STAT_KEYS.reduce((acc, k) => acc + (Number(spObj?.[k]) || 0), 0);
 }
 
 function getSpriteUrl(slug) {
@@ -77,7 +86,7 @@ function getSpriteUrl(slug) {
 }
 
 function getEffectiveForm(mon) {
-  const baseData = POKEDEX_MC[mon.species];
+  const baseData = POKEDEX_MC[mon.species] || POKEDEX_MC["Incineroar"];
   if (mon.isMega && baseData.mega) {
     return {
       name: baseData.mega.name,
@@ -112,7 +121,7 @@ function renderRosterStrip() {
     const totalSp = getTotalSP(mon.sp);
     return `
       <button class="roster-card ${idx === activeSlot ? "active" : ""}" onclick="selectSlot(${idx})">
-        <img src="${getSpriteUrl(form.slug)}" alt="${form.name}" />
+        <img src="${getSpriteUrl(form.slug)}" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png'" alt="${form.name}" />
         <div class="roster-info">
           <div class="roster-name">${form.name}</div>
           <div class="roster-item">${mon.item}</div>
@@ -132,13 +141,15 @@ function selectSlot(idx) {
 // RENDER TEAM BUILDER EDITOR
 function renderBuilderEditor() {
   const mon = getCurrentTeam().roster[activeSlot];
-  const baseData = POKEDEX_MC[mon.species];
+  const baseData = POKEDEX_MC[mon.species] || POKEDEX_MC["Incineroar"];
   const form = getEffectiveForm(mon);
 
   document.getElementById("slot-number").textContent = activeSlot + 1;
-  document.getElementById("editor-sprite").src = getSpriteUrl(form.slug);
-  document.getElementById("sel-species").value = mon.species;
+  const spriteImg = document.getElementById("editor-sprite");
+  spriteImg.onerror = () => { spriteImg.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png"; };
+  spriteImg.src = getSpriteUrl(form.slug);
 
+  document.getElementById("sel-species").value = mon.species;
   document.getElementById("editor-types").innerHTML = form.types
     .map(t => `<span class="type-badge type-${t}">${t}</span>`)
     .join("");
@@ -168,7 +179,6 @@ function renderBuilderEditor() {
   document.getElementById("sel-nature").value = mon.nature;
   document.getElementById("sel-preset").value = "";
 
-  // Render 4 Move Slots
   const allMoves = Object.keys(MOVES_DB);
   const movesGrid = document.getElementById("moves-grid");
   movesGrid.innerHTML = [0, 1, 2, 3].map(i => {
@@ -253,7 +263,7 @@ function getTypeEffectiveness(moveType, defTypes) {
 function syncFighterFromSlot(side, slotIdx) {
   if (slotIdx === "") return;
   const mon = getCurrentTeam().roster[Number(slotIdx)];
-  const baseData = POKEDEX_MC[mon.species];
+  const baseData = POKEDEX_MC[mon.species] || POKEDEX_MC["Incineroar"];
   document.getElementById(`${side}-species`).value = mon.species;
   document.getElementById(`${side}-mega`).checked = Boolean(mon.isMega && baseData.mega);
   populateFighterAbility(side);
@@ -277,7 +287,7 @@ function syncFighterFromSlot(side, slotIdx) {
 function populateFighterAbility(side) {
   const spName = document.getElementById(`${side}-species`).value;
   const isMega = document.getElementById(`${side}-mega`).checked;
-  const data = POKEDEX_MC[spName];
+  const data = POKEDEX_MC[spName] || POKEDEX_MC["Incineroar"];
   const sel = document.getElementById(`${side}-ability`);
   if (isMega && data.mega) {
     sel.innerHTML = `<option value="${data.mega.ability}">${data.mega.ability}</option>`;
@@ -293,8 +303,8 @@ function calculateDamage() {
   const move = MOVES_DB[moveName];
   if (!move) return;
 
-  const atkData = POKEDEX_MC[atkName];
-  const defData = POKEDEX_MC[defName];
+  const atkData = POKEDEX_MC[atkName] || POKEDEX_MC["Incineroar"];
+  const defData = POKEDEX_MC[defName] || POKEDEX_MC["Incineroar"];
   const atkIsMega = document.getElementById("atk-mega").checked && Boolean(atkData.mega);
   const defIsMega = document.getElementById("def-mega").checked && Boolean(defData.mega);
 
@@ -334,7 +344,6 @@ function calculateDamage() {
   if (!crit || atkStage > 0) A = Math.floor(A * (atkStage >= 0 ? (2 + atkStage) / 2 : 2 / (2 - atkStage)));
   if (!crit || defStage < 0) D = Math.floor(D * (defStage >= 0 ? (2 + defStage) / 2 : 2 / (2 - defStage)));
 
-  // Ability & Item Stat Modifiers
   if (atkAbility === "Huge Power" && isPhys) A = Math.floor(A * 2);
   if (atkAbility === "Guts" && isPhys) A = Math.floor(A * 1.5);
   if (atkItem === "Choice Band" && isPhys) A = Math.floor(A * 1.5);
@@ -346,7 +355,6 @@ function calculateDamage() {
   if (weather === "Sand" && defForm.types.includes("Rock") && !isPhys) D = Math.floor(D * 1.5);
   if (weather === "Snow" && defForm.types.includes("Ice") && isPhys) D = Math.floor(D * 1.5);
 
-  // Move Type & Power Modifiers (Aerilate / Pixilate)
   let moveType = move.type;
   let power = move.power;
   if ((atkAbility === "Aerilate" || atkAbility === "Pixilate") && move.type === "Normal") {
@@ -609,12 +617,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedKey = localStorage.getItem("gemini_api_key");
   if (savedKey) document.getElementById("gemini-api-key").value = savedKey;
 
-  // Navigation Tabs
   document.querySelectorAll(".nav-tab").forEach(btn => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
   });
 
-  // Multi-team management
   document.getElementById("team-selector").addEventListener("change", e => {
     store.currentId = e.target.value;
     saveStore();
@@ -655,7 +661,6 @@ document.addEventListener("DOMContentLoaded", () => {
     selectSlot(0);
   });
 
-  // Team Builder Controls
   document.getElementById("sel-species").addEventListener("change", e => {
     getCurrentTeam().roster[activeSlot] = createMon(e.target.value);
     saveStore();
@@ -711,7 +716,6 @@ document.addEventListener("DOMContentLoaded", () => {
     switchTab("calculator");
   });
 
-  // Damage Calc Controls
   document.getElementById("sync-atk-slot").addEventListener("change", e => syncFighterFromSlot("atk", e.target.value));
   document.getElementById("sync-def-slot").addEventListener("change", e => syncFighterFromSlot("def", e.target.value));
 
@@ -732,7 +736,6 @@ document.addEventListener("DOMContentLoaded", () => {
     el.addEventListener("change", calculateDamage);
   });
 
-  // Showdown Export / Import
   document.getElementById("btn-mode-ranked").addEventListener("click", () => {
     exportMode = "ranked";
     document.getElementById("btn-mode-ranked").classList.add("active");
@@ -761,7 +764,6 @@ document.addEventListener("DOMContentLoaded", () => {
     switchTab("builder");
   });
 
-  // AI Image Scan
   document.getElementById("ai-file-input").addEventListener("change", e => handleImageFile(e.target.files[0]));
   window.addEventListener("paste", e => {
     const item = [...e.clipboardData.items].find(i => i.type.startsWith("image/"));
@@ -769,7 +771,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("btn-analyze-ai").addEventListener("click", runGeminiTeamScan);
 
-  // Initial Render
+  populateFighterAbility("atk");
+  populateFighterAbility("def");
   renderTeamSelector();
   renderRosterStrip();
   renderBuilderEditor();
