@@ -24,6 +24,10 @@ let modalMode = "ranked"; // 'ranked' | 'ots' | 'import'
 let aiSelectedImageBase64 = null;
 let aiSelectedImageMime = "image/png";
 
+// Visual Pokémon Picker State
+let pickerTarget = null; // { mode: 'builder' } | { mode: 'calc', side: 'p1'|'p2' } | { mode: 'speed', slotIdx: 0|1|2 }
+let pickerFilterTab = "all"; // 'all' | 'mega' | 'team'
+
 // Damage Calculator State
 let calcState = {
   activeSide: "p1",
@@ -68,9 +72,8 @@ let calcState = {
   }
 };
 
-// Multi-Card Speed Comparison State
-let speedCards = [];
-let speedCardCounter = 1;
+// 3-Slot Speed Comparison State (Starts empty with 3 "+ Chọn Pokémon" slots)
+let speedSlots = [null, null, null];
 
 // ============================================================================
 // INITIALIZATION
@@ -86,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize Damage Calc UI
   initCalcWorkspace();
 
-  // Initialize Multi-Card Speed Workspace
+  // Initialize 3-Slot Speed Workspace
   initSpeedWorkspace();
 
   // Load saved Gemini API Key
@@ -96,7 +99,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (keyInput) keyInput.value = savedKey;
   }
 
-  // Support Ctrl+V image paste on AI Scanner tab
+  // Keyboard shortcuts (Escape closes modals, Ctrl+V pastes image on AI Scanner)
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closePokemonPicker();
+      closePasteModal();
+    }
+  });
+
   document.addEventListener("paste", (e) => {
     const scannerView = document.getElementById("view-scanner");
     if (!scannerView || scannerView.classList.contains("hidden")) return;
@@ -250,6 +260,177 @@ function showToast(message, type = "info") {
     el.style.transition = "opacity 0.25s ease";
     setTimeout(() => el.remove(), 260);
   }, 2600);
+}
+
+// ============================================================================
+// VISUAL POKÉMON GRID PICKER MODAL (SHARED BY SPEED, DAMAGE CALC & BUILDER)
+// ============================================================================
+
+function openPokemonPicker(target) {
+  pickerTarget = target;
+  pickerFilterTab = "all";
+  updatePickerFilterButtons();
+
+  const modal = document.getElementById("pokemon-picker-modal");
+  const searchInput = document.getElementById("picker-search-input");
+  const showMegaChk = document.getElementById("picker-show-mega-forms");
+
+  if (searchInput) searchInput.value = "";
+  if (showMegaChk) showMegaChk.checked = false;
+
+  const countAllEl = document.getElementById("picker-count-all");
+  if (countAllEl) countAllEl.textContent = Object.keys(POKEDEX_MC).length;
+
+  renderPokemonPickerGrid();
+  modal.classList.remove("hidden");
+  setTimeout(() => searchInput?.focus(), 40);
+}
+
+function closePokemonPicker() {
+  const modal = document.getElementById("pokemon-picker-modal");
+  if (modal) modal.classList.add("hidden");
+  pickerTarget = null;
+}
+
+function setPickerFilter(tab) {
+  pickerFilterTab = tab;
+  updatePickerFilterButtons();
+  renderPokemonPickerGrid();
+}
+
+function updatePickerFilterButtons() {
+  ["all", "mega", "team"].forEach((t) => {
+    const btn = document.getElementById(`picker-tab-${t}`);
+    if (!btn) return;
+    if (t === pickerFilterTab) {
+      btn.className = "px-3 py-1 rounded-full font-bold bg-sky-500 text-slate-950 transition";
+    } else {
+      btn.className = "px-3 py-1 rounded-full font-bold bg-slate-800 text-slate-300 hover:text-white transition";
+    }
+  });
+}
+
+function renderPokemonPickerGrid() {
+  const grid = document.getElementById("picker-grid-container");
+  if (!grid) return;
+
+  const query = (document.getElementById("picker-search-input")?.value || "").trim().toLowerCase();
+  const showMegaForms = document.getElementById("picker-show-mega-forms")?.checked || false;
+  const teamSpeciesSet = new Set((getCurrentTeam()?.slots || []).map((s) => s.species));
+
+  let entries = [];
+  Object.keys(POKEDEX_MC)
+    .sort()
+    .forEach((species) => {
+      const data = POKEDEX_MC[species];
+      if (pickerFilterTab === "mega" && !data.megas) return;
+      if (pickerFilterTab === "team" && !teamSpeciesSet.has(species)) return;
+
+      entries.push({
+        species,
+        isMega: false,
+        megaStone: null,
+        displayName: species,
+        sprite: data.sprite,
+        fallbackSprite: data.sprite,
+        baseSprite: data.sprite,
+        types: data.types,
+        hasMega: Boolean(data.megas)
+      });
+
+      if ((showMegaForms || pickerFilterTab === "mega" || query.includes("mega")) && data.megas) {
+        Object.entries(data.megas).forEach(([stoneName, mObj]) => {
+          entries.push({
+            species,
+            isMega: true,
+            megaStone: stoneName,
+            displayName: mObj.name,
+            sprite: mObj.sprite,
+            fallbackSprite: mObj.fallbackSprite || data.sprite,
+            baseSprite: data.sprite,
+            types: mObj.types,
+            hasMega: true
+          });
+        });
+      }
+    });
+
+  if (query) {
+    entries = entries.filter(
+      (e) =>
+        e.displayName.toLowerCase().includes(query) ||
+        e.species.toLowerCase().includes(query) ||
+        e.types.some((t) => t.toLowerCase().includes(query))
+    );
+  }
+
+  if (entries.length === 0) {
+    grid.innerHTML = `<div class="col-span-full py-12 text-center text-sm text-slate-400">Không tìm thấy Pokémon phù hợp với từ khóa "${escapeHtml(query)}".</div>`;
+    return;
+  }
+
+  grid.innerHTML = entries
+    .map((item) => {
+      const stoneArg = item.megaStone ? `'${item.megaStone.replace(/'/g, "\\'")}'` : "null";
+      return `
+        <button type="button"
+          onclick="selectPokemonFromPicker('${item.species.replace(/'/g, "\\'")}', ${item.isMega}, ${stoneArg})"
+          class="group bg-slate-950/85 hover:bg-slate-800/95 border border-slate-800 hover:border-sky-400 rounded-2xl p-2.5 flex flex-col items-center text-center transition relative">
+          ${
+            item.isMega
+              ? `<span class="absolute top-1.5 right-1.5 px-1.5 py-0.2 rounded bg-pink-500/20 border border-pink-500/40 text-[9px] font-extrabold text-pink-300">MEGA</span>`
+              : item.hasMega
+                ? `<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-pink-400/70" title="Có dạng Mega"></span>`
+                : ""
+          }
+          <div class="w-16 h-16 flex items-center justify-center mb-1">
+            ${buildSpriteImgHtml(item, "w-14 h-14", "group-hover:scale-110 transition-transform")}
+          </div>
+          <div class="text-xs font-bold text-slate-100 group-hover:text-white truncate w-full" title="${escapeHtml(item.displayName)}">
+            ${escapeHtml(item.displayName)}
+          </div>
+        </button>
+      `;
+    })
+    .join("");
+}
+
+function selectPokemonFromPicker(species, isMega, megaStone) {
+  if (!pickerTarget) return;
+  const target = { ...pickerTarget };
+  closePokemonPicker();
+
+  if (target.mode === "builder") {
+    changeActiveSpecies(species);
+    const mon = getCurrentPokemon();
+    if (mon) {
+      mon.isMega = Boolean(isMega);
+      if (isMega && megaStone) mon.item = megaStone;
+      saveTeamsToStorage();
+      renderTeamRibbon();
+      renderActiveSlotEditor();
+    }
+  } else if (target.mode === "calc") {
+    const side = target.side || "p1";
+    updateCalcSide(side, "species", species);
+    if (isMega) {
+      updateCalcSide(side, "isMega", true);
+      if (megaStone) updateCalcSide(side, "item", megaStone);
+    } else {
+      updateCalcSide(side, "isMega", false);
+    }
+  } else if (target.mode === "speed") {
+    const slotIdx = target.slotIdx ?? 0;
+    const dexData = POKEDEX_MC[species] || POKEDEX_MC["Arcanine"];
+    speedSlots[slotIdx] = createSpeedCardObj(species, {
+      isMega: Boolean(isMega && dexData.megas),
+      megaStone: megaStone || dexData.defaultMegaStone || null,
+      sp: 0,
+      natureMode: "neutral",
+      stage: 0
+    });
+    renderSpeedComparisonCards();
+  }
 }
 
 // ============================================================================
@@ -409,16 +590,6 @@ function getCurrentPokemon() {
 }
 
 function populateStaticDropdowns() {
-  const speciesList = Object.keys(POKEDEX_MC).sort();
-  const speciesHtml = speciesList
-    .map((sp) => `<option value="${sp}">${sp}</option>`)
-    .join("");
-
-  ["sel-species", "calc-p1-species", "calc-p2-species"].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = speciesHtml;
-  });
-
   const itemsHtml = ITEMS_MC.map((it) => `<option value="${it}">${it}</option>`).join("");
   ["sel-item", "calc-p1-item", "calc-p2-item"].forEach((id) => {
     const el = document.getElementById(id);
@@ -566,7 +737,9 @@ function renderActiveSlotEditor() {
   setImgElementForm(document.getElementById("editor-sprite"), form);
   document.getElementById("editor-types").innerHTML = renderTypeBadgesHtml(form.types);
 
-  document.getElementById("sel-species").value = mon.species;
+  const speciesLabelEl = document.getElementById("builder-species-label");
+  if (speciesLabelEl) speciesLabelEl.textContent = mon.species;
+
   document.getElementById("input-nickname").value = mon.nickname || "";
   document.getElementById("input-gender").value = mon.gender || "";
   document.getElementById("sel-item").value = mon.item || "None";
@@ -781,10 +954,15 @@ function sendCurrentToCalc(side = "p1") {
 function sendCurrentToSpeed() {
   const mon = getCurrentPokemon();
   if (!mon) return;
-  const newCard = createSpeedCardFromMon(mon);
-  speedCards.unshift(newCard);
+  const card = createSpeedCardFromMon(mon);
+  const emptyIdx = speedSlots.findIndex((s) => s === null);
+  if (emptyIdx !== -1) {
+    speedSlots[emptyIdx] = card;
+  } else {
+    speedSlots[0] = card;
+  }
   switchMainTab("speed");
-  showToast(`Đã thêm ${mon.species} vào trang Đo Speed!`, "success");
+  showToast(`Đã nạp ${mon.species} vào ô so sánh Speed!`, "success");
 }
 
 // ============================================================================
@@ -816,7 +994,6 @@ function formatTeamToShowdown(team, mode = "ranked") {
         }
       }
 
-      // Open Team Sheet (OTS) KEEPS Nature and HIDES EVs/SP
       if (mon.nature) {
         lines.push(`${mon.nature} Nature`);
       }
@@ -1170,7 +1347,8 @@ function renderCalcSideUI(side) {
   const form = getEffectiveForm(st.species, st.isMega, st.item);
 
   setImgElementForm(document.getElementById(`calc-${side}-sprite`), form);
-  document.getElementById(`calc-${side}-species`).value = st.species;
+  const spLabel = document.getElementById(`calc-${side}-species-label`);
+  if (spLabel) spLabel.textContent = st.species;
 
   const megaChk = document.getElementById(`calc-${side}-mega`);
   megaChk.checked = form.isMegaActive;
@@ -1334,8 +1512,8 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   let bp = moveMeta.bp;
   let abilityBoost = 1.0;
 
-  if (effType === "Normal" && (atk.ability === "Pixilate" || atk.ability === "Aerilate")) {
-    effType = atk.ability === "Pixilate" ? "Fairy" : "Flying";
+  if (effType === "Normal" && (atk.ability === "Pixilate" || atk.ability === "Aerilate" || atk.ability === "Refrigerate")) {
+    effType = atk.ability === "Pixilate" ? "Fairy" : atk.ability === "Aerilate" ? "Flying" : "Ice";
     abilityBoost *= 1.2;
   }
   if (moveObj.name === "Weather Ball" && calcState.field.weather !== "None") {
@@ -1378,6 +1556,7 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
 
   if (isPhys && atk.item === "Choice Band") A = Math.floor(A * 1.5);
   if (!isPhys && atk.item === "Choice Specs") A = Math.floor(A * 1.5);
+  if (isPhys && (atk.ability === "Huge Power" || def.ability === "Huge Power" && false)) A = Math.floor(A * 2);
   if (!isPhys && def.item === "Assault Vest") D = Math.floor(D * 1.5);
   if (def.item === "Eviolite") D = Math.floor(D * 1.5);
   if (calcState.field.weather === "Sand" && defForm.types.includes("Rock") && !isPhys) {
@@ -1389,6 +1568,11 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
 
   if (atk.ability === "Tough Claws" && moveMeta.contact) abilityBoost *= 1.3;
   if (atk.ability === "Sharpness" && moveMeta.slicing) abilityBoost *= 1.5;
+  if (atk.ability === "Water Bubble" && effType === "Water") abilityBoost *= 2.0;
+  if (atk.ability === "Technician" && bp <= 60) abilityBoost *= 1.5;
+  if (atk.ability === "Mega Launcher" && ["Aura Sphere", "Water Pulse", "Dark Pulse", "Dragon Pulse"].includes(moveObj.name)) {
+    abilityBoost *= 1.5;
+  }
   if (atk.ability === "Solar Power" && calcState.field.weather === "Sun" && !isPhys) {
     A = Math.floor(A * 1.5);
   }
@@ -1400,6 +1584,9 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   }
   if (def.ability === "Multiscale") {
     abilityBoost *= 0.5;
+  }
+  if (def.ability === "Filter" && typeMult > 1) {
+    abilityBoost *= 0.75;
   }
 
   bp = Math.max(1, Math.floor(bp * abilityBoost));
@@ -1592,13 +1779,12 @@ function runDamageCalculation() {
 }
 
 // ============================================================================
-// MULTI-CARD VISUAL SPEED COMPARISON (MATCHING SCREENSHOT WORKFLOW)
+// 3-SLOT VISUAL SPEED COMPARISON (WITH "+ Chọn Pokémon" EMPTY SLOTS)
 // ============================================================================
 
 function createSpeedCardObj(species = "Arcanine", overrides = {}) {
   const dexData = POKEDEX_MC[species] || POKEDEX_MC["Arcanine"];
   return {
-    id: speedCardCounter++,
     species,
     isMega: Boolean(overrides.isMega && dexData.megas),
     megaStone: overrides.megaStone || dexData.defaultMegaStone || null,
@@ -1625,75 +1811,36 @@ function createSpeedCardFromMon(mon) {
 }
 
 function initSpeedWorkspace() {
-  resetDefaultSpeedCards(false);
-}
-
-function resetDefaultSpeedCards(notify = true) {
-  speedCards = [
-    createSpeedCardObj("Arcanine", { sp: 0, natureMode: "neutral", stage: 0 }),
-    createSpeedCardObj("Basculegion", { sp: 0, natureMode: "neutral", stage: 0 }),
-    createSpeedCardObj("Bellibolt", { sp: 0, natureMode: "neutral", stage: 0 })
-  ];
-  renderSpeedComparisonCards();
-  if (notify) showToast("Đã đặt lại 3 thẻ so sánh Speed mặc định!");
-}
-
-function addSpeedComparisonCard() {
-  const pool = ["Garchomp", "Sneasler", "Lucario", "Absol", "Rillaboom", "Incineroar", "Gholdengo"];
-  const pick = pool[speedCards.length % pool.length];
-  const dexData = POKEDEX_MC[pick];
-  speedCards.push(
-    createSpeedCardObj(pick, {
-      isMega: Boolean(dexData?.megas),
-      sp: 32,
-      natureMode: "plus"
-    })
-  );
+  speedSlots = [null, null, null];
   renderSpeedComparisonCards();
 }
 
-function loadAllTeamToSpeedCards() {
+function clearAllSpeedSlots() {
+  speedSlots = [null, null, null];
+  renderSpeedComparisonCards();
+  showToast("Đã xóa toàn bộ ô so sánh Speed.");
+}
+
+function loadTop3TeamToSpeedCards() {
   const team = getCurrentTeam();
   if (!team) return;
-  speedCards = team.slots.map((mon) => createSpeedCardFromMon(mon));
+  speedSlots = [0, 1, 2].map((idx) =>
+    team.slots[idx] ? createSpeedCardFromMon(team.slots[idx]) : null
+  );
   renderSpeedComparisonCards();
-  showToast("Đã nạp toàn bộ 6 Pokémon từ Team sang Đo Speed!", "success");
+  showToast("Đã nạp 3 Pokémon đầu từ Team sang Đo Speed!", "success");
 }
 
-function removeSpeedCard(cardId) {
-  if (speedCards.length <= 1) {
-    showToast("Cần giữ lại ít nhất 1 thẻ Pokémon để so sánh!", "warn");
-    return;
-  }
-  speedCards = speedCards.filter((c) => c.id !== cardId);
+function removeSpeedSlot(slotIdx) {
+  speedSlots[slotIdx] = null;
   renderSpeedComparisonCards();
 }
 
-function loadSlotIntoSpeedCard(cardId, slotIdxStr) {
-  if (slotIdxStr === "") return;
-  const idx = parseInt(slotIdxStr, 10);
-  const team = getCurrentTeam();
-  if (!team || !team.slots[idx]) return;
-
-  const cardIdx = speedCards.findIndex((c) => c.id === cardId);
-  if (cardIdx === -1) return;
-
-  const replacement = createSpeedCardFromMon(team.slots[idx]);
-  replacement.id = cardId;
-  speedCards[cardIdx] = replacement;
-  renderSpeedComparisonCards();
-}
-
-function updateSpeedCard(cardId, field, value) {
-  const card = speedCards.find((c) => c.id === cardId);
+function updateSpeedSlot(slotIdx, field, value) {
+  const card = speedSlots[slotIdx];
   if (!card) return;
 
-  if (field === "species") {
-    const dexData = POKEDEX_MC[value];
-    card.species = value;
-    card.isMega = Boolean(dexData?.megas);
-    card.megaStone = dexData?.defaultMegaStone || null;
-  } else if (field === "isMega") {
+  if (field === "isMega") {
     const dexData = POKEDEX_MC[card.species];
     card.isMega = Boolean(value && dexData?.megas);
   } else if (field === "sp") {
@@ -1712,20 +1859,14 @@ function computeSpeedCardFinalValue(card) {
   const natName = card.natureMode === "plus" ? "Timid" : card.natureMode === "minus" ? "Brave" : "Serious";
   let spe = calculateLv50Stat("spe", form.base.spe, card.sp, natName);
 
-  // Stat stage (-6 to +6)
   spe = Math.floor(spe * getStageMultiplier(card.stage));
 
-  // Weather / Ability 2x (Swift Swim, Chlorophyll, Sand Rush, Unburden)
   if (card.weatherAbilityDouble) {
     spe = Math.floor(spe * 2);
   }
-
-  // Choice Scarf 1.5x
   if (card.choiceScarf) {
     spe = Math.floor(spe * 1.5);
   }
-
-  // Tailwind 2x
   if (card.tailwind) {
     spe = Math.floor(spe * 2);
   }
@@ -1735,49 +1876,57 @@ function computeSpeedCardFinalValue(card) {
 
 function renderSpeedComparisonCards() {
   const grid = document.getElementById("speed-cards-grid");
+  const emptyHint = document.getElementById("speed-empty-hint");
   if (!grid) return;
 
   const isTrickRoom = document.getElementById("speed-trick-room")?.checked || false;
-  const speciesList = Object.keys(POKEDEX_MC).sort();
-  const team = getCurrentTeam();
 
-  // Compute all final speeds first to determine the winner badge
-  const computedList = speedCards.map((card) => {
+  const computedSlots = speedSlots.map((card, slotIdx) => {
+    if (!card) return { slotIdx, card: null };
     const res = computeSpeedCardFinalValue(card);
-    return { card, finalSpe: res.finalSpe, form: res.form };
+    return { slotIdx, card, finalSpe: res.finalSpe, form: res.form };
   });
 
-  const bestSpe = computedList.reduce((best, item) => {
+  const activeItems = computedSlots.filter((s) => s.card !== null);
+  if (emptyHint) {
+    if (activeItems.length === 0) {
+      emptyHint.classList.remove("hidden");
+    } else {
+      emptyHint.classList.add("hidden");
+    }
+  }
+
+  const bestSpe = activeItems.reduce((best, item) => {
     if (best === null) return item.finalSpe;
     return isTrickRoom ? Math.min(best, item.finalSpe) : Math.max(best, item.finalSpe);
   }, null);
 
   const stagesList = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6];
 
-  grid.innerHTML = computedList
-    .map(({ card, finalSpe, form }) => {
+  grid.innerHTML = computedSlots
+    .map(({ slotIdx, card, finalSpe, form }) => {
+      // Empty Slot ("+ Chọn Pokémon" dashed card matching Screenshot 1)
+      if (!card) {
+        return `
+          <button type="button" onclick="openPokemonPicker({ mode: 'speed', slotIdx: ${slotIdx} })"
+            class="glass-panel rounded-2xl p-5 min-h-[150px] border border-slate-800/90 hover:border-sky-500/60 transition flex items-center justify-center group">
+            <div class="w-full h-full min-h-[112px] rounded-xl border-2 border-dashed border-slate-700/90 group-hover:border-sky-400/70 flex items-center justify-center gap-2 text-sm font-bold text-slate-300 group-hover:text-sky-300 transition">
+              <span>+ Chọn Pokémon</span>
+            </div>
+          </button>
+        `;
+      }
+
       const dexData = POKEDEX_MC[card.species] || POKEDEX_MC["Arcanine"];
       const isWinner = bestSpe !== null && finalSpe === bestSpe;
       const badgeLabel = isTrickRoom ? "Đi trước (TR)" : "Nhanh nhất";
-
-      const speciesOptions = speciesList
-        .map((sp) => `<option value="${sp}" ${sp === card.species ? "selected" : ""}>${sp}</option>`)
-        .join("");
-
-      const teamSlotOptions = `<option value="">Nạp slot...</option>` +
-        (team?.slots || [])
-          .map((m, idx) => {
-            const f = getEffectiveForm(m.species, m.isMega, m.item);
-            return `<option value="${idx}">#${idx + 1} ${f.displayName}</option>`;
-          })
-          .join("");
 
       const stageButtonsHtml = stagesList
         .map((st) => {
           const isCurrent = card.stage === st;
           const label = st > 0 ? `+${st}` : `${st}`;
           return `
-            <button type="button" onclick="updateSpeedCard(${card.id}, 'stage', ${st})"
+            <button type="button" onclick="updateSpeedSlot(${slotIdx}, 'stage', ${st})"
               class="py-1 rounded text-[11px] font-mono font-bold transition ${
                 isCurrent
                   ? "bg-sky-500 text-slate-950 shadow-sm shadow-sky-500/40"
@@ -1795,54 +1944,54 @@ function renderSpeedComparisonCards() {
             ? "border-2 border-emerald-500 shadow-lg shadow-emerald-500/15"
             : "border border-slate-800"
         }">
-          <!-- Top Bar: Winner Badge + Quick Slot Loader + Remove Button -->
-          <div class="flex items-center justify-between gap-2 min-h-[26px]">
+          <!-- Top Bar: Winner Badge + Change Pokémon + Close Button -->
+          <div class="flex items-center justify-between gap-2 min-h-[28px]">
             <div>
               ${
                 isWinner
                   ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[11px] font-extrabold tracking-wide shadow">${badgeLabel}</span>`
-                  : `<span class="text-[11px] font-semibold text-slate-500">So sánh tốc độ</span>`
+                  : `<span class="text-[11px] font-semibold text-slate-500">Slot #${slotIdx + 1}</span>`
               }
             </div>
             <div class="flex items-center gap-1.5">
-              <select onchange="loadSlotIntoSpeedCard(${card.id}, this.value)"
-                class="bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-0.5 text-[11px] text-slate-300 focus:outline-none">
-                ${teamSlotOptions}
-              </select>
-              <button type="button" onclick="removeSpeedCard(${card.id})"
+              <button type="button" onclick="openPokemonPicker({ mode: 'speed', slotIdx: ${slotIdx} })"
+                class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-semibold text-sky-300 transition">
+                Đổi Pokémon
+              </button>
+              <button type="button" onclick="removeSpeedSlot(${slotIdx})"
                 class="w-7 h-7 rounded-full bg-slate-900 hover:bg-rose-500/20 border border-slate-700 hover:border-rose-500/40 text-slate-400 hover:text-rose-300 flex items-center justify-center text-xs transition"
-                title="Xóa thẻ">
+                title="Xóa Pokémon này">
                 ✕
               </button>
             </div>
           </div>
 
-          <!-- Center Avatar, Species Selector, Mega Toggle, Types & Base Speed -->
+          <!-- Center Avatar (Click to change Pokémon), Mega Toggle, Types & Base Speed -->
           <div class="flex flex-col items-center text-center space-y-2">
-            <div class="w-20 h-20 rounded-full bg-slate-900/90 border border-slate-700/80 flex items-center justify-center shadow-inner">
-              ${buildSpriteImgHtml(form, "w-16 h-16")}
-            </div>
+            <button type="button" onclick="openPokemonPicker({ mode: 'speed', slotIdx: ${slotIdx} })"
+              title="Nhấn để đổi Pokémon khác"
+              class="w-20 h-20 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-sky-400 flex items-center justify-center shadow-inner transition group">
+              ${buildSpriteImgHtml(form, "w-16 h-16", "group-hover:scale-105 transition")}
+            </button>
 
-            <div class="flex items-center justify-center gap-1.5 w-full max-w-[260px]">
-              <select onchange="updateSpeedCard(${card.id}, 'species', this.value)"
-                class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1 text-sm font-extrabold text-white text-center focus:outline-none focus:border-sky-500">
-                ${speciesOptions}
-              </select>
+            <div class="flex items-center justify-center gap-1.5">
+              <button type="button" onclick="openPokemonPicker({ mode: 'speed', slotIdx: ${slotIdx} })"
+                class="text-base font-extrabold text-white hover:text-sky-300 transition">
+                ${escapeHtml(form.displayName)}
+              </button>
               ${
                 dexData.megas
-                  ? `<label class="inline-flex items-center gap-1 px-2 py-1 rounded-xl border text-[11px] font-extrabold cursor-pointer transition ${
+                  ? `<label class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-extrabold cursor-pointer transition ${
                       card.isMega
                         ? "bg-pink-500/20 border-pink-500/50 text-pink-300"
                         : "bg-slate-900 border-slate-700 text-slate-400"
                     }">
-                      <input type="checkbox" ${card.isMega ? "checked" : ""} onchange="updateSpeedCard(${card.id}, 'isMega', this.checked)" class="hidden" />
+                      <input type="checkbox" ${card.isMega ? "checked" : ""} onchange="updateSpeedSlot(${slotIdx}, 'isMega', this.checked)" class="hidden" />
                       <span>Mega</span>
                     </label>`
                   : ""
               }
             </div>
-
-            <div class="text-xs font-bold text-slate-200">${escapeHtml(form.displayName)}</div>
 
             <div class="flex items-center justify-center gap-1.5">
               ${renderTypeBadgesHtml(form.types)}
@@ -1860,7 +2009,7 @@ function renderSpeedComparisonCards() {
               <span class="font-mono font-extrabold text-sky-400">${card.sp}</span>
             </div>
             <input type="range" min="0" max="32" value="${card.sp}"
-              oninput="updateSpeedCard(${card.id}, 'sp', this.value)"
+              oninput="updateSpeedSlot(${slotIdx}, 'sp', this.value)"
               class="sp-slider w-full" />
           </div>
 
@@ -1868,7 +2017,7 @@ function renderSpeedComparisonCards() {
           <div class="space-y-1.5">
             <label class="block text-xs font-bold text-slate-200">Nature ảnh hưởng Speed</label>
             <div class="grid grid-cols-3 gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-xs">
-              <button type="button" onclick="updateSpeedCard(${card.id}, 'natureMode', 'minus')"
+              <button type="button" onclick="updateSpeedSlot(${slotIdx}, 'natureMode', 'minus')"
                 class="py-1.5 rounded-lg font-bold transition ${
                   card.natureMode === "minus"
                     ? "bg-slate-800 text-sky-300 border border-sky-500/40 shadow-sm"
@@ -1876,7 +2025,7 @@ function renderSpeedComparisonCards() {
                 }">
                 Giảm
               </button>
-              <button type="button" onclick="updateSpeedCard(${card.id}, 'natureMode', 'neutral')"
+              <button type="button" onclick="updateSpeedSlot(${slotIdx}, 'natureMode', 'neutral')"
                 class="py-1.5 rounded-lg font-bold transition ${
                   card.natureMode === "neutral"
                     ? "bg-slate-800 text-white border border-slate-600 shadow-sm"
@@ -1884,7 +2033,7 @@ function renderSpeedComparisonCards() {
                 }">
                 Trung tính
               </button>
-              <button type="button" onclick="updateSpeedCard(${card.id}, 'natureMode', 'plus')"
+              <button type="button" onclick="updateSpeedSlot(${slotIdx}, 'natureMode', 'plus')"
                 class="py-1.5 rounded-lg font-bold transition ${
                   card.natureMode === "plus"
                     ? "bg-slate-800 text-rose-300 border border-rose-500/40 shadow-sm"
@@ -1901,7 +2050,7 @@ function renderSpeedComparisonCards() {
               <span class="font-bold text-slate-200">Thang bậc Speed trong trận (tăng / giảm)</span>
               <span class="font-mono font-extrabold text-sky-400">${card.stage > 0 ? "+" + card.stage : card.stage}</span>
             </div>
-            <div class="grid grid-cols-13 gap-0.5" style="grid-template-columns: repeat(13, minmax(0, 1fr));">
+            <div class="grid gap-0.5" style="grid-template-columns: repeat(13, minmax(0, 1fr));">
               ${stageButtonsHtml}
             </div>
             <p class="text-[10px] leading-relaxed text-slate-400">
@@ -1915,21 +2064,21 @@ function renderSpeedComparisonCards() {
 
             <label class="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer select-none">
               <input type="checkbox" ${card.weatherAbilityDouble ? "checked" : ""}
-                onchange="updateSpeedCard(${card.id}, 'weatherAbilityDouble', this.checked)"
+                onchange="updateSpeedSlot(${slotIdx}, 'weatherAbilityDouble', this.checked)"
                 class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0" />
               <span>Nhân đôi do thời tiết/ability (vd Swift Swim + Mưa)</span>
             </label>
 
             <label class="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer select-none">
               <input type="checkbox" ${card.choiceScarf ? "checked" : ""}
-                onchange="updateSpeedCard(${card.id}, 'choiceScarf', this.checked)"
+                onchange="updateSpeedSlot(${slotIdx}, 'choiceScarf', this.checked)"
                 class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0" />
               <span>Choice Scarf</span>
             </label>
 
             <label class="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer select-none">
               <input type="checkbox" ${card.tailwind ? "checked" : ""}
-                onchange="updateSpeedCard(${card.id}, 'tailwind', this.checked)"
+                onchange="updateSpeedSlot(${slotIdx}, 'tailwind', this.checked)"
                 class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0" />
               <span>Tailwind (đồng đội hỗ trợ)</span>
             </label>

@@ -137,10 +137,10 @@
         <div class="lg:col-span-7 glass-panel rounded-2xl p-4 sm:p-5 space-y-5">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
             <div class="flex items-center gap-4">
-              <div class="w-20 h-20 rounded-2xl bg-slate-900 border border-slate-700/80 flex items-center justify-center relative overflow-hidden shrink-0">
-                <img id="editor-sprite" src="" alt="Pokemon" class="w-16 h-16 object-contain z-10" />
+              <button type="button" onclick="openPokemonPicker({ mode: 'builder' })" title="Nhấn để chọn Pokémon từ bảng ảnh" class="w-20 h-20 rounded-2xl bg-slate-900 hover:bg-slate-800/90 border border-slate-700/80 hover:border-sky-400 flex items-center justify-center relative overflow-hidden shrink-0 transition group">
+                <img id="editor-sprite" src="" alt="Pokemon" class="w-16 h-16 object-contain z-10 group-hover:scale-105 transition" />
                 <div class="absolute inset-0 bg-gradient-to-t from-sky-500/10 to-transparent"></div>
-              </div>
+              </button>
               <div class="space-y-1.5 flex-1">
                 <div class="flex items-center gap-2 flex-wrap">
                   <label class="text-[11px] font-bold uppercase tracking-wider text-sky-400">Slot <span id="editor-slot-num">1</span></label>
@@ -148,8 +148,11 @@
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <select id="sel-species" onchange="changeActiveSpecies(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-sky-500">
-                    </select>
+                    <button type="button" id="builder-species-btn" onclick="openPokemonPicker({ mode: 'builder' })"
+                      class="w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-sky-500 rounded-xl px-3 py-1.5 text-sm font-bold text-white flex items-center justify-between transition">
+                      <span id="builder-species-label">Garchomp</span>
+                      <span class="text-slate-400 text-xs">▾</span>
+                    </button>
                   </div>
                   <div>
                     <input type="text" id="input-nickname" oninput="updateActivePokemon('nickname', this.value)" placeholder="Biệt danh (Nickname)..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-sky-500" />
@@ -334,13 +337,18 @@
             </select>
           </div>
 
-          <!-- Species & Sprite -->
+          <!-- Species & Sprite (Visual Picker Trigger) -->
           <div class="flex items-center gap-3">
-            <img id="calc-p1-sprite" src="" alt="P1" class="w-14 h-14 object-contain bg-slate-900 rounded-xl border border-slate-800 p-1 shrink-0" />
+            <button type="button" onclick="openPokemonPicker({ mode: 'calc', side: 'p1' })" title="Nhấn để chọn Pokémon 1" class="w-16 h-16 bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-700 hover:border-sky-400 p-1 shrink-0 flex items-center justify-center transition group">
+              <img id="calc-p1-sprite" src="" alt="P1" class="w-14 h-14 object-contain group-hover:scale-105 transition" />
+            </button>
             <div class="flex-1 space-y-1.5 min-w-0">
               <div class="flex items-center gap-1.5">
-                <select id="calc-p1-species" onchange="updateCalcSide('p1', 'species', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-bold text-white"></select>
-                <label class="flex items-center gap-1 text-[11px] font-extrabold text-pink-400 bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 cursor-pointer shrink-0">
+                <button type="button" onclick="openPokemonPicker({ mode: 'calc', side: 'p1' })" class="flex-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-sky-400 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-bold text-white flex items-center justify-between min-w-0 transition">
+                  <span id="calc-p1-species-label" class="truncate">Garchomp</span>
+                  <span class="text-slate-400 text-xs ml-1">▾</span>
+                </button>
+                <label class="flex items-center gap-1 text-[11px] font-extrabold text-pink-400 bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-700 cursor-pointer shrink-0">
                   <input type="checkbox" id="calc-p1-mega" onchange="updateCalcSide('p1', 'isMega', this.checked)" /> Mega
                 </label>
               </div>
@@ -481,13 +489,18 @@
             </select>
           </div>
 
-          <!-- Species & Sprite -->
+          <!-- Species & Sprite (Visual Picker Trigger) -->
           <div class="flex items-center gap-3">
-            <img id="calc-p2-sprite" src="" alt="P2" class="w-14 h-14 object-contain bg-slate-900 rounded-xl border border-slate-800 p-1 shrink-0" />
+            <button type="button" onclick="openPokemonPicker({ mode: 'calc', side: 'p2' })" title="Nhấn để chọn Pokémon 2" class="w-16 h-16 bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-700 hover:border-rose-400 p-1 shrink-0 flex items-center justify-center transition group">
+              <img id="calc-p2-sprite" src="" alt="P2" class="w-14 h-14 object-contain group-hover:scale-105 transition" />
+            </button>
             <div class="flex-1 space-y-1.5 min-w-0">
               <div class="flex items-center gap-1.5">
-                <select id="calc-p2-species" onchange="updateCalcSide('p2', 'species', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-bold text-white"></select>
-                <label class="flex items-center gap-1 text-[11px] font-extrabold text-pink-400 bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 cursor-pointer shrink-0">
+                <button type="button" onclick="openPokemonPicker({ mode: 'calc', side: 'p2' })" class="flex-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-rose-400 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-bold text-white flex items-center justify-between min-w-0 transition">
+                  <span id="calc-p2-species-label" class="truncate">Incineroar</span>
+                  <span class="text-slate-400 text-xs ml-1">▾</span>
+                </button>
+                <label class="flex items-center gap-1 text-[11px] font-extrabold text-pink-400 bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-700 cursor-pointer shrink-0">
                   <input type="checkbox" id="calc-p2-mega" onchange="updateCalcSide('p2', 'isMega', this.checked)" /> Mega
                 </label>
               </div>
@@ -541,36 +554,47 @@
       </div>
     </section>
 
-    <!-- ==================== VIEW 3: MULTI-CARD SPEED COMPARISON PAGE ==================== -->
+    <!-- ==================== VIEW 3: 3-SLOT SPEED COMPARISON PAGE ==================== -->
     <section id="view-speed" class="hidden space-y-5">
 
-      <!-- Speed Workspace Header Bar -->
-      <div class="glass-panel rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <h2 class="text-base sm:text-lg font-extrabold text-white">So Sánh Tốc Độ Đa Pokémon (Lv.50 · 31 IVs)</h2>
-          <p class="text-xs text-slate-400">Tự động đánh dấu <span class="text-emerald-400 font-bold">Nhanh nhất</span> theo chỉ số SP, Nature, thang bậc (-6 đến +6) và điều kiện trận đấu.</p>
+      <!-- Speed Workspace Header Banner (Matching Screenshot) -->
+      <div class="glass-panel rounded-2xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-slate-800/90">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-400/40 text-sky-400 flex items-center justify-center shrink-0 mt-0.5 shadow-inner">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="space-y-1">
+            <h2 class="text-lg sm:text-xl font-extrabold text-white">So sánh tốc độ</h2>
+            <p class="text-xs text-slate-300">So sánh tốc độ thực chiến giữa các Pokémon: SP, Nature, buff thang bậc, thời tiết, Choice Scarf, Tailwind.</p>
+            <p class="text-xs text-slate-400">Tính năng cho phép bạn tính toán chỉ số tốc độ thực tế của Pokémon trong thực chiến, giúp bạn tính toán chiến thuật tốt hơn.</p>
+            <p class="text-xs text-slate-400">Hãy chọn tối đa 3 Pokémon để tiến hành so sánh tốc độ. Thêm các thông số liên quan đến tốc độ mà bạn sẽ sử dụng trong trận đấu để tính toán hợp lý.</p>
+          </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
           <label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-500/15 border border-purple-500/40 text-xs font-bold text-purple-300 cursor-pointer">
             <input type="checkbox" id="speed-trick-room" onchange="renderSpeedComparisonCards()" />
-            <span>Trick Room (Chậm đi trước)</span>
+            <span>Trick Room</span>
           </label>
-          <button onclick="addSpeedComparisonCard()" class="px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-xs font-extrabold text-slate-950 shadow-md shadow-sky-500/20 transition">
-            + Thêm Pokémon
+          <button onclick="loadTop3TeamToSpeedCards()" class="px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition">
+            ⚡ Nạp 3 con từ Team
           </button>
-          <button onclick="loadAllTeamToSpeedCards()" class="px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition">
-            ⚡ Nạp cả 6 con từ Team
-          </button>
-          <button onclick="resetDefaultSpeedCards()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition">
-            Đặt lại
+          <button onclick="clearAllSpeedSlots()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition">
+            Xóa tất cả
           </button>
         </div>
       </div>
 
-      <!-- Multi-Card Speed Comparison Grid (Matching Screenshot Layout) -->
-      <div id="speed-cards-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      <!-- 3-Slot Speed Comparison Grid -->
+      <div id="speed-cards-grid" class="grid grid-cols-1 md:grid-cols-3 gap-5">
         <!-- Rendered dynamically by renderSpeedComparisonCards() -->
+      </div>
+
+      <!-- Empty State Label when 0 Pokémon selected -->
+      <div id="speed-empty-hint" class="text-sm font-medium text-slate-400 pl-1">
+        Chưa chọn Pokémon nào.
       </div>
 
     </section>
@@ -636,8 +660,53 @@
 
   </main>
 
-  <!-- ==================== MODAL: EXPORT / IMPORT SHOWDOWN ==================== -->
-  <div id="paste-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+  <!-- ==================== MODAL 1: VISUAL POKÉMON GRID PICKER ==================== -->
+  <div id="pokemon-picker-modal" onclick="if(event.target === this) closePokemonPicker()" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-slate-900 border border-slate-700/90 rounded-3xl max-w-5xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Top Search & Filter Bar -->
+      <div class="p-4 sm:p-5 border-b border-slate-800 space-y-3">
+        <div class="flex items-center gap-3">
+          <div class="relative flex-1">
+            <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 103.5 10.5a7.5 7.5 0 0013.15 6.15z" />
+            </svg>
+            <input type="text" id="picker-search-input" oninput="renderPokemonPickerGrid()" placeholder="Tìm Pokémon theo tên hoặc hệ (vd: Garchomp, Mega, Dragon, Fire)..."
+              class="w-full bg-slate-950 border-2 border-sky-500/60 focus:border-sky-400 rounded-full pl-10 pr-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none" />
+          </div>
+          <button type="button" onclick="closePokemonPicker()" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center text-base font-bold transition shrink-0">
+            ✕
+          </button>
+        </div>
+
+        <!-- Quick Filter Pills -->
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" onclick="setPickerFilter('all')" id="picker-tab-all" class="px-3 py-1 rounded-full font-bold bg-sky-500 text-slate-950 transition">
+              Tất cả (<span id="picker-count-all">0</span>)
+            </button>
+            <button type="button" onclick="setPickerFilter('mega')" id="picker-tab-mega" class="px-3 py-1 rounded-full font-bold bg-slate-800 text-slate-300 hover:text-white transition">
+              🧬 Có Mega / Mega Z
+            </button>
+            <button type="button" onclick="setPickerFilter('team')" id="picker-tab-team" class="px-3 py-1 rounded-full font-bold bg-slate-800 text-slate-300 hover:text-white transition">
+              ⭐ Trong Team hiện tại
+            </button>
+          </div>
+          <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer select-none">
+            <input type="checkbox" id="picker-show-mega-forms" onchange="renderPokemonPickerGrid()" class="rounded border-slate-700 bg-slate-950 text-sky-500" />
+            <span>Hiện tách riêng dạng Mega / Mega Z</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 7-Column Visual Grid -->
+      <div id="picker-grid-container" class="p-4 sm:p-5 overflow-y-auto grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-2.5">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: EXPORT / IMPORT SHOWDOWN ==================== -->
+  <div id="paste-modal" onclick="if(event.target === this) closePasteModal()" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="glass-panel rounded-2xl max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-slate-700">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>

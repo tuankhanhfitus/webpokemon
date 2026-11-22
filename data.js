@@ -1,5 +1,5 @@
 // ============================================================================
-// POKÉMON CHAMPIONS — REGULATION M-C DATABASE (VGC 2026)
+// POKÉMON CHAMPIONS — REGULATION M-C DATABASE (VGC 2026 / POKECHAMPDEX)
 // Max 32 SP per stat | 66 SP total | Level 50 | Fixed 31 IVs
 // ============================================================================
 
@@ -53,61 +53,26 @@ const NATURES = {
   Serious: { plus: null,  minus: null,  label: "Serious (Trung tính)" }
 };
 
-// Regulation M-C Legal Pokédex & Mega Evolutions (including Mega Z Forms)
+// Full Regulation M-C Legal Pokédex & Mega Evolutions (including Mega Z Forms)
 const POKEDEX_MC = {
-  "Garchomp": {
-    dex: 445,
-    sprite: "garchomp",
-    types: ["Dragon", "Ground"],
-    base: { hp: 108, atk: 130, def: 95, spa: 80, spd: 85, spe: 102 },
-    abilities: ["Rough Skin", "Sand Veil"],
-    defaultMoves: ["Draco Meteor", "Earth Power", "Flamethrower", "Protect"],
+  "Abomasnow": {
+    dex: 460,
+    sprite: "abomasnow",
+    types: ["Grass", "Ice"],
+    base: { hp: 90, atk: 92, def: 75, spa: 92, spd: 85, spe: 60 },
+    abilities: ["Snow Warning", "Soundproof"],
+    defaultMoves: ["Blizzard", "Energy Ball", "Earth Power", "Protect"],
     megas: {
-      "Garchompite Z": {
-        name: "Garchomp-Mega-Z",
-        sprite: "garchomp-megaz",
-        fallbackSprite: "garchomp-mega",
-        types: ["Dragon"],
-        base: { hp: 108, atk: 130, def: 85, spa: 141, spd: 85, spe: 151 },
-        ability: "Levitate"
-      },
-      "Garchompite": {
-        name: "Garchomp-Mega",
-        sprite: "garchomp-mega",
-        fallbackSprite: "garchomp",
-        types: ["Dragon", "Ground"],
-        base: { hp: 108, atk: 170, def: 115, spa: 120, spd: 95, spe: 92 },
-        ability: "Sand Force"
+      "Abomasite": {
+        name: "Abomasnow-Mega",
+        sprite: "abomasnow-mega",
+        fallbackSprite: "abomasnow",
+        types: ["Grass", "Ice"],
+        base: { hp: 90, atk: 132, def: 105, spa: 132, spd: 105, spe: 30 },
+        ability: "Snow Warning"
       }
     },
-    defaultMegaStone: "Garchompite Z"
-  },
-  "Lucario": {
-    dex: 448,
-    sprite: "lucario",
-    types: ["Fighting", "Steel"],
-    base: { hp: 70, atk: 110, def: 70, spa: 115, spd: 70, spe: 90 },
-    abilities: ["Inner Focus", "Justified", "Steadfast"],
-    defaultMoves: ["Aura Sphere", "Flash Cannon", "Vacuum Wave", "Protect"],
-    megas: {
-      "Lucarionite Z": {
-        name: "Lucario-Mega-Z",
-        sprite: "lucario-megaz",
-        fallbackSprite: "lucario-mega",
-        types: ["Fighting", "Steel"],
-        base: { hp: 70, atk: 100, def: 70, spa: 164, spd: 70, spe: 151 },
-        ability: "Aura Guard"
-      },
-      "Lucarionite": {
-        name: "Lucario-Mega",
-        sprite: "lucario-mega",
-        fallbackSprite: "lucario",
-        types: ["Fighting", "Steel"],
-        base: { hp: 70, atk: 145, def: 88, spa: 140, spd: 70, spe: 112 },
-        ability: "Adaptability"
-      }
-    },
-    defaultMegaStone: "Lucarionite Z"
+    defaultMegaStone: "Abomasite"
   },
   "Absol": {
     dex: 359,
@@ -136,24 +101,325 @@ const POKEDEX_MC = {
     },
     defaultMegaStone: "Absolite Z"
   },
-  "Salamence": {
-    dex: 373,
-    sprite: "salamence",
-    types: ["Dragon", "Flying"],
-    base: { hp: 95, atk: 135, def: 80, spa: 110, spd: 80, spe: 100 },
-    abilities: ["Intimidate", "Moxie"],
-    defaultMoves: ["Double-Edge", "Hyper Voice", "Draco Meteor", "Protect"],
+  "Aegislash": {
+    dex: 681,
+    sprite: "aegislash",
+    types: ["Steel", "Ghost"],
+    base: { hp: 60, atk: 50, def: 140, spa: 50, spd: 140, spe: 60 },
+    abilities: ["Stance Change"],
+    defaultMoves: ["Shadow Ball", "Flash Cannon", "Wide Guard", "King's Shield"]
+  },
+  "Aegislash-Blade": {
+    dex: 681,
+    sprite: "aegislash-blade",
+    types: ["Steel", "Ghost"],
+    base: { hp: 60, atk: 140, def: 50, spa: 140, spd: 50, spe: 60 },
+    abilities: ["Stance Change"],
+    defaultMoves: ["Shadow Ball", "Flash Cannon", "Close Combat", "King's Shield"]
+  },
+  "Aerodactyl": {
+    dex: 142,
+    sprite: "aerodactyl",
+    types: ["Rock", "Flying"],
+    base: { hp: 80, atk: 105, def: 65, spa: 60, spd: 75, spe: 130 },
+    abilities: ["Unnerve", "Rock Head", "Pressure"],
+    defaultMoves: ["Rock Slide", "Dual Wingbeat", "Tailwind", "Protect"],
     megas: {
-      "Salamencite": {
-        name: "Salamence-Mega",
-        sprite: "salamence-mega",
-        fallbackSprite: "salamence",
-        types: ["Dragon", "Flying"],
-        base: { hp: 95, atk: 145, def: 130, spa: 120, spd: 90, spe: 120 },
-        ability: "Aerilate"
+      "Aerodactylite": {
+        name: "Aerodactyl-Mega",
+        sprite: "aerodactyl-mega",
+        fallbackSprite: "aerodactyl",
+        types: ["Rock", "Flying"],
+        base: { hp: 80, atk: 135, def: 85, spa: 70, spd: 95, spe: 150 },
+        ability: "Tough Claws"
       }
     },
-    defaultMegaStone: "Salamencite"
+    defaultMegaStone: "Aerodactylite"
+  },
+  "Aggron": {
+    dex: 306,
+    sprite: "aggron",
+    types: ["Steel", "Rock"],
+    base: { hp: 70, atk: 110, def: 180, spa: 60, spd: 60, spe: 50 },
+    abilities: ["Sturdy", "Rock Head"],
+    defaultMoves: ["Heavy Slam", "Body Press", "Rock Slide", "Protect"],
+    megas: {
+      "Aggronite": {
+        name: "Aggron-Mega",
+        sprite: "aggron-mega",
+        fallbackSprite: "aggron",
+        types: ["Steel"],
+        base: { hp: 70, atk: 140, def: 230, spa: 60, spd: 80, spe: 50 },
+        ability: "Filter"
+      }
+    },
+    defaultMegaStone: "Aggronite"
+  },
+  "Alakazam": {
+    dex: 65,
+    sprite: "alakazam",
+    types: ["Psychic"],
+    base: { hp: 55, atk: 50, def: 45, spa: 135, spd: 95, spe: 120 },
+    abilities: ["Magic Guard", "Inner Focus", "Synchronize"],
+    defaultMoves: ["Expanding Force", "Shadow Ball", "Dazzling Gleam", "Protect"],
+    megas: {
+      "Alakazite": {
+        name: "Alakazam-Mega",
+        sprite: "alakazam-mega",
+        fallbackSprite: "alakazam",
+        types: ["Psychic"],
+        base: { hp: 55, atk: 50, def: 65, spa: 175, spd: 105, spe: 150 },
+        ability: "Trace"
+      }
+    },
+    defaultMegaStone: "Alakazite"
+  },
+  "Alcremie": {
+    dex: 869,
+    sprite: "alcremie",
+    types: ["Fairy"],
+    base: { hp: 65, atk: 60, def: 75, spa: 110, spd: 121, spe: 64 },
+    abilities: ["Sweet Veil", "Aroma Veil"],
+    defaultMoves: ["Dazzling Gleam", "Decorate", "Encore", "Protect"]
+  },
+  "Altaria": {
+    dex: 334,
+    sprite: "altaria",
+    types: ["Dragon", "Flying"],
+    base: { hp: 75, atk: 70, def: 90, spa: 70, spd: 105, spe: 80 },
+    abilities: ["Cloud Nine", "Natural Cure"],
+    defaultMoves: ["Hyper Voice", "Draco Meteor", "Tailwind", "Protect"],
+    megas: {
+      "Altarianite": {
+        name: "Altaria-Mega",
+        sprite: "altaria-mega",
+        fallbackSprite: "altaria",
+        types: ["Dragon", "Fairy"],
+        base: { hp: 75, atk: 110, def: 110, spa: 110, spd: 105, spe: 80 },
+        ability: "Pixilate"
+      }
+    },
+    defaultMegaStone: "Altarianite"
+  },
+  "Ampharos": {
+    dex: 181,
+    sprite: "ampharos",
+    types: ["Electric"],
+    base: { hp: 90, atk: 75, def: 85, spa: 115, spd: 90, spe: 55 },
+    abilities: ["Static", "Plus"],
+    defaultMoves: ["Thunderbolt", "Dragon Pulse", "Dazzling Gleam", "Protect"],
+    megas: {
+      "Ampharosite": {
+        name: "Ampharos-Mega",
+        sprite: "ampharos-mega",
+        fallbackSprite: "ampharos",
+        types: ["Electric", "Dragon"],
+        base: { hp: 90, atk: 95, def: 105, spa: 165, spd: 110, spe: 45 },
+        ability: "Mold Breaker"
+      }
+    },
+    defaultMegaStone: "Ampharosite"
+  },
+  "Annihilape": {
+    dex: 979,
+    sprite: "annihilape",
+    types: ["Fighting", "Ghost"],
+    base: { hp: 110, atk: 115, def: 80, spa: 50, spd: 90, spe: 90 },
+    abilities: ["Defiant", "Inner Focus", "Vital Spirit"],
+    defaultMoves: ["Rage Fist", "Drain Punch", "Bulk Up", "Protect"]
+  },
+  "Appletun": {
+    dex: 842,
+    sprite: "appletun",
+    types: ["Grass", "Dragon"],
+    base: { hp: 110, atk: 85, def: 80, spa: 100, spd: 80, spe: 30 },
+    abilities: ["Thick Fat", "Ripen"],
+    defaultMoves: ["Apple Acid", "Dragon Pulse", "Leech Seed", "Protect"]
+  },
+  "Araquanid": {
+    dex: 752,
+    sprite: "araquanid",
+    types: ["Water", "Bug"],
+    base: { hp: 68, atk: 70, def: 92, spa: 50, spd: 132, spe: 42 },
+    abilities: ["Water Bubble"],
+    defaultMoves: ["Liquidation", "Leech Life", "Wide Guard", "Protect"]
+  },
+  "Arbok": {
+    dex: 24,
+    sprite: "arbok",
+    types: ["Poison"],
+    base: { hp: 60, atk: 95, def: 69, spa: 65, spd: 79, spe: 80 },
+    abilities: ["Intimidate", "Shed Skin"],
+    defaultMoves: ["Gunk Shot", "Knock Off", "Glare", "Protect"]
+  },
+  "Arboliva": {
+    dex: 930,
+    sprite: "arboliva",
+    types: ["Grass", "Normal"],
+    base: { hp: 78, atk: 69, def: 90, spa: 125, spd: 109, spe: 39 },
+    abilities: ["Seed Sower", "Harvest"],
+    defaultMoves: ["Hyper Voice", "Energy Ball", "Earth Power", "Protect"]
+  },
+  "Arcanine": {
+    dex: 59,
+    sprite: "arcanine",
+    types: ["Fire"],
+    base: { hp: 90, atk: 110, def: 80, spa: 100, spd: 80, spe: 95 },
+    abilities: ["Intimidate", "Flash Fire", "Justified"],
+    defaultMoves: ["Flare Blitz", "Extreme Speed", "Protect", "Helping Hand"]
+  },
+  "Arcanine-Hisui": {
+    dex: 59,
+    sprite: "arcanine-hisui",
+    types: ["Fire", "Rock"],
+    base: { hp: 95, atk: 115, def: 80, spa: 95, spd: 80, spe: 90 },
+    abilities: ["Intimidate", "Rock Head"],
+    defaultMoves: ["Rock Slide", "Flare Blitz", "Extreme Speed", "Protect"]
+  },
+  "Archaludon": {
+    dex: 1018,
+    sprite: "archaludon",
+    types: ["Steel", "Dragon"],
+    base: { hp: 90, atk: 105, def: 130, spa: 125, spd: 65, spe: 85 },
+    abilities: ["Stamina", "Stalwart"],
+    defaultMoves: ["Electro Shot", "Flash Cannon", "Draco Meteor", "Body Press"]
+  },
+  "Ariados": {
+    dex: 168,
+    sprite: "ariados",
+    types: ["Bug", "Poison"],
+    base: { hp: 70, atk: 90, def: 70, spa: 60, spd: 70, spe: 40 },
+    abilities: ["Swarm", "Insomnia", "Sniper"],
+    defaultMoves: ["Poison Jab", "First Impression", "Sticky Web", "Protect"]
+  },
+  "Armarouge": {
+    dex: 936,
+    sprite: "armarouge",
+    types: ["Fire", "Psychic"],
+    base: { hp: 85, atk: 60, def: 100, spa: 125, spd: 80, spe: 75 },
+    abilities: ["Flash Fire", "Weak Armor"],
+    defaultMoves: ["Expanding Force", "Armor Cannon", "Trick Room", "Wide Guard"]
+  },
+  "Aromatisse": {
+    dex: 683,
+    sprite: "aromatisse",
+    types: ["Fairy"],
+    base: { hp: 101, atk: 72, def: 72, spa: 99, spd: 89, spe: 29 },
+    abilities: ["Aroma Veil", "Healer"],
+    defaultMoves: ["Dazzling Gleam", "Trick Room", "Heal Pulse", "Protect"]
+  },
+  "Audino": {
+    dex: 531,
+    sprite: "audino",
+    types: ["Normal"],
+    base: { hp: 103, atk: 60, def: 86, spa: 60, spd: 86, spe: 50 },
+    abilities: ["Regenerator", "Healer"],
+    defaultMoves: ["Hyper Voice", "Trick Room", "Helping Hand", "Protect"],
+    megas: {
+      "Audinite": {
+        name: "Audino-Mega",
+        sprite: "audino-mega",
+        fallbackSprite: "audino",
+        types: ["Normal", "Fairy"],
+        base: { hp: 103, atk: 60, def: 126, spa: 80, spd: 126, spe: 50 },
+        ability: "Healer"
+      }
+    },
+    defaultMegaStone: "Audinite"
+  },
+  "Aurorus": {
+    dex: 699,
+    sprite: "aurorus",
+    types: ["Rock", "Ice"],
+    base: { hp: 123, atk: 77, def: 72, spa: 99, spd: 92, spe: 58 },
+    abilities: ["Refrigerate", "Snow Warning"],
+    defaultMoves: ["Hyper Voice", "Blizzard", "Earth Power", "Protect"]
+  },
+  "Avalugg": {
+    dex: 713,
+    sprite: "avalugg",
+    types: ["Ice"],
+    base: { hp: 95, atk: 117, def: 184, spa: 44, spd: 46, spe: 28 },
+    abilities: ["Sturdy", "Ice Body", "Own Tempo"],
+    defaultMoves: ["Icicle Crash", "Body Press", "Wide Guard", "Protect"]
+  },
+  "Avalugg-Hisui": {
+    dex: 713,
+    sprite: "avalugg-hisui",
+    types: ["Ice", "Rock"],
+    base: { hp: 95, atk: 127, def: 184, spa: 34, spd: 36, spe: 38 },
+    abilities: ["Strong Jaw", "Sturdy"],
+    defaultMoves: ["Mountain Gale", "Rock Slide", "Body Press", "Protect"]
+  },
+  "Azumarill": {
+    dex: 184,
+    sprite: "azumarill",
+    types: ["Water", "Fairy"],
+    base: { hp: 100, atk: 50, def: 80, spa: 60, spd: 80, spe: 50 },
+    abilities: ["Huge Power", "Sap Sipper"],
+    defaultMoves: ["Liquidation", "Play Rough", "Aqua Jet", "Protect"]
+  },
+  "Banette": {
+    dex: 354,
+    sprite: "banette",
+    types: ["Ghost"],
+    base: { hp: 64, atk: 115, def: 65, spa: 83, spd: 63, spe: 65 },
+    abilities: ["Frisk", "Insomnia"],
+    defaultMoves: ["Shadow Claw", "Sucker Punch", "Will-O-Wisp", "Protect"],
+    megas: {
+      "Banettite": {
+        name: "Banette-Mega",
+        sprite: "banette-mega",
+        fallbackSprite: "banette",
+        types: ["Ghost"],
+        base: { hp: 64, atk: 165, def: 75, spa: 93, spd: 83, spe: 75 },
+        ability: "Prankster"
+      }
+    },
+    defaultMegaStone: "Banettite"
+  },
+  "Barbaracle": {
+    dex: 689,
+    sprite: "barbaracle",
+    types: ["Rock", "Water"],
+    base: { hp: 72, atk: 105, def: 115, spa: 54, spd: 86, spe: 68 },
+    abilities: ["Tough Claws", "Sniper"],
+    defaultMoves: ["Razor Shell", "Rock Slide", "Cross Chop", "Protect"],
+    megas: {
+      "Barbaracite": {
+        name: "Barbaracle-Mega",
+        sprite: "barbaracle-mega",
+        fallbackSprite: "barbaracle",
+        types: ["Rock", "Water"],
+        base: { hp: 72, atk: 140, def: 135, spa: 64, spd: 101, spe: 88 },
+        ability: "Tough Claws"
+      }
+    },
+    defaultMegaStone: "Barbaracite"
+  },
+  "Basculegion": {
+    dex: 902,
+    sprite: "basculegion",
+    types: ["Water", "Ghost"],
+    base: { hp: 120, atk: 112, def: 65, spa: 80, spd: 75, spe: 78 },
+    abilities: ["Swift Swim", "Adaptability", "Mold Breaker"],
+    defaultMoves: ["Wave Crash", "Last Respects", "Aqua Jet", "Protect"]
+  },
+  "Basculegion-F": {
+    dex: 902,
+    sprite: "basculegion-f",
+    types: ["Water", "Ghost"],
+    base: { hp: 120, atk: 92, def: 65, spa: 100, spd: 75, spe: 78 },
+    abilities: ["Swift Swim", "Adaptability", "Mold Breaker"],
+    defaultMoves: ["Muddy Water", "Shadow Ball", "Ice Beam", "Protect"]
+  },
+  "Bastiodon": {
+    dex: 411,
+    sprite: "bastiodon",
+    types: ["Rock", "Steel"],
+    base: { hp: 60, atk: 52, def: 168, spa: 47, spd: 138, spe: 30 },
+    abilities: ["Sturdy", "Soundproof"],
+    defaultMoves: ["Body Press", "Heavy Slam", "Wide Guard", "Protect"]
   },
   "Baxcalibur": {
     dex: 998,
@@ -174,40 +440,32 @@ const POKEDEX_MC = {
     },
     defaultMegaStone: "Baxcalibrite"
   },
-  "Golisopod": {
-    dex: 768,
-    sprite: "golisopod",
-    types: ["Bug", "Water"],
-    base: { hp: 75, atk: 125, def: 140, spa: 60, spd: 90, spe: 40 },
-    abilities: ["Emergency Exit"],
-    defaultMoves: ["First Impression", "Liquidation", "Close Combat", "Protect"],
+  "Beartic": {
+    dex: 614,
+    sprite: "beartic",
+    types: ["Ice"],
+    base: { hp: 95, atk: 130, def: 80, spa: 70, spd: 80, spe: 50 },
+    abilities: ["Slush Rush", "Swift Swim", "Snow Cloak"],
+    defaultMoves: ["Icicle Crash", "Close Combat", "Aqua Jet", "Protect"]
+  },
+  "Beedrill": {
+    dex: 15,
+    sprite: "beedrill",
+    types: ["Bug", "Poison"],
+    base: { hp: 65, atk: 90, def: 40, spa: 45, spd: 80, spe: 75 },
+    abilities: ["Swarm", "Sniper"],
+    defaultMoves: ["Poison Jab", "U-turn", "Drill Run", "Protect"],
     megas: {
-      "Golisopodite": {
-        name: "Golisopod-Mega",
-        sprite: "golisopod-mega",
-        fallbackSprite: "golisopod",
-        types: ["Bug", "Steel"],
-        base: { hp: 75, atk: 150, def: 175, spa: 70, spd: 120, spe: 40 },
-        ability: "Tough Claws"
+      "Beedrillite": {
+        name: "Beedrill-Mega",
+        sprite: "beedrill-mega",
+        fallbackSprite: "beedrill",
+        types: ["Bug", "Poison"],
+        base: { hp: 65, atk: 150, def: 40, spa: 15, spd: 80, spe: 145 },
+        ability: "Adaptability"
       }
     },
-    defaultMegaStone: "Golisopodite"
-  },
-  "Arcanine": {
-    dex: 59,
-    sprite: "arcanine",
-    types: ["Fire"],
-    base: { hp: 90, atk: 110, def: 80, spa: 100, spd: 80, spe: 95 },
-    abilities: ["Intimidate", "Flash Fire", "Justified"],
-    defaultMoves: ["Flare Blitz", "Extreme Speed", "Protect", "Helping Hand"]
-  },
-  "Arcanine-Hisui": {
-    dex: 59,
-    sprite: "arcanine-hisui",
-    types: ["Fire", "Rock"],
-    base: { hp: 95, atk: 115, def: 80, spa: 95, spd: 80, spe: 90 },
-    abilities: ["Intimidate", "Rock Head"],
-    defaultMoves: ["Rock Slide", "Flare Blitz", "Extreme Speed", "Protect"]
+    defaultMegaStone: "Beedrillite"
   },
   "Bellibolt": {
     dex: 939,
@@ -217,101 +475,89 @@ const POKEDEX_MC = {
     abilities: ["Electromorphosis", "Static"],
     defaultMoves: ["Thunderbolt", "Muddy Water", "Protect", "Sucker Punch"]
   },
-  "Sneasler": {
-    dex: 903,
-    sprite: "sneasler",
-    types: ["Fighting", "Poison"],
-    base: { hp: 80, atk: 130, def: 60, spa: 40, spd: 80, spe: 120 },
-    abilities: ["Unburden", "Poison Touch", "Pressure"],
-    defaultMoves: ["Close Combat", "Dire Claw", "Fake Out", "Coaching"]
+  "Blastoise": {
+    dex: 9,
+    sprite: "blastoise",
+    types: ["Water"],
+    base: { hp: 79, atk: 83, def: 100, spa: 85, spd: 105, spe: 78 },
+    abilities: ["Torrent", "Rain Dish"],
+    defaultMoves: ["Water Spout", "Ice Beam", "Aura Sphere", "Protect"],
+    megas: {
+      "Blastoisinite": {
+        name: "Blastoise-Mega",
+        sprite: "blastoise-mega",
+        fallbackSprite: "blastoise",
+        types: ["Water"],
+        base: { hp: 79, atk: 103, def: 120, spa: 135, spd: 115, spe: 78 },
+        ability: "Mega Launcher"
+      }
+    },
+    defaultMegaStone: "Blastoisinite"
   },
-  "Rillaboom": {
-    dex: 812,
-    sprite: "rillaboom",
-    types: ["Grass"],
-    base: { hp: 100, atk: 125, def: 90, spa: 60, spd: 70, spe: 85 },
-    abilities: ["Grassy Surge", "Overgrow"],
-    defaultMoves: ["Fake Out", "Grassy Glide", "Wood Hammer", "U-turn"]
+  "Blaziken": {
+    dex: 257,
+    sprite: "blaziken",
+    types: ["Fire", "Fighting"],
+    base: { hp: 80, atk: 120, def: 70, spa: 110, spd: 70, spe: 80 },
+    abilities: ["Speed Boost", "Blaze"],
+    defaultMoves: ["Flare Blitz", "Close Combat", "Rock Slide", "Protect"],
+    megas: {
+      "Blazikenite": {
+        name: "Blaziken-Mega",
+        sprite: "blaziken-mega",
+        fallbackSprite: "blaziken",
+        types: ["Fire", "Fighting"],
+        base: { hp: 80, atk: 160, def: 80, spa: 130, spd: 80, spe: 100 },
+        ability: "Speed Boost"
+      }
+    },
+    defaultMegaStone: "Blazikenite"
   },
-  "Incineroar": {
-    dex: 727,
-    sprite: "incineroar",
-    types: ["Fire", "Dark"],
-    base: { hp: 95, atk: 115, def: 90, spa: 80, spd: 90, spe: 60 },
-    abilities: ["Intimidate", "Blaze"],
-    defaultMoves: ["Fake Out", "Flare Blitz", "Knock Off", "Parting Shot"]
+  "Camerupt": {
+    dex: 323,
+    sprite: "camerupt",
+    types: ["Fire", "Ground"],
+    base: { hp: 70, atk: 100, def: 70, spa: 105, spd: 75, spe: 40 },
+    abilities: ["Solid Rock", "Magma Armor"],
+    defaultMoves: ["Eruption", "Earth Power", "Heat Wave", "Protect"],
+    megas: {
+      "Cameruptite": {
+        name: "Camerupt-Mega",
+        sprite: "camerupt-mega",
+        fallbackSprite: "camerupt",
+        types: ["Fire", "Ground"],
+        base: { hp: 70, atk: 120, def: 100, spa: 145, spd: 105, spe: 20 },
+        ability: "Sheer Force"
+      }
+    },
+    defaultMegaStone: "Cameruptite"
   },
-  "Kingambit": {
-    dex: 983,
-    sprite: "kingambit",
-    types: ["Dark", "Steel"],
-    base: { hp: 100, atk: 135, def: 120, spa: 60, spd: 85, spe: 50 },
-    abilities: ["Defiant", "Supreme Overlord"],
-    defaultMoves: ["Kowtow Cleave", "Iron Head", "Sucker Punch", "Protect"]
-  },
-  "Indeedee-F": {
-    dex: 876,
-    sprite: "indeedee-f",
-    types: ["Psychic", "Normal"],
-    base: { hp: 70, atk: 55, def: 65, spa: 95, spd: 105, spe: 85 },
-    abilities: ["Psychic Surge", "Synchronize"],
-    defaultMoves: ["Follow Me", "Psychic", "Helping Hand", "Trick Room"]
-  },
-  "Armarouge": {
-    dex: 936,
-    sprite: "armarouge",
-    types: ["Fire", "Psychic"],
-    base: { hp: 85, atk: 60, def: 100, spa: 125, spd: 80, spe: 75 },
+  "Ceruledge": {
+    dex: 937,
+    sprite: "ceruledge",
+    types: ["Fire", "Ghost"],
+    base: { hp: 75, atk: 125, def: 80, spa: 60, spd: 100, spe: 85 },
     abilities: ["Flash Fire", "Weak Armor"],
-    defaultMoves: ["Expanding Force", "Armor Cannon", "Trick Room", "Wide Guard"]
+    defaultMoves: ["Bitter Blade", "Shadow Sneak", "Close Combat", "Protect"]
   },
-  "Archaludon": {
-    dex: 1018,
-    sprite: "archaludon",
-    types: ["Steel", "Dragon"],
-    base: { hp: 90, atk: 105, def: 130, spa: 125, spd: 65, spe: 85 },
-    abilities: ["Stamina", "Stalwart"],
-    defaultMoves: ["Electro Shot", "Flash Cannon", "Draco Meteor", "Body Press"]
-  },
-  "Pelipper": {
-    dex: 279,
-    sprite: "pelipper",
-    types: ["Water", "Flying"],
-    base: { hp: 60, atk: 50, def: 100, spa: 95, spd: 70, spe: 65 },
-    abilities: ["Drizzle", "Keen Eye"],
-    defaultMoves: ["Weather Ball", "Hurricane", "Wide Guard", "Tailwind"]
-  },
-  "Basculegion": {
-    dex: 902,
-    sprite: "basculegion",
-    types: ["Water", "Ghost"],
-    base: { hp: 120, atk: 112, def: 65, spa: 80, spd: 75, spe: 78 },
-    abilities: ["Swift Swim", "Adaptability", "Mold Breaker"],
-    defaultMoves: ["Wave Crash", "Last Respects", "Aqua Jet", "Protect"]
-  },
-  "Basculegion-F": {
-    dex: 902,
-    sprite: "basculegion-f",
-    types: ["Water", "Ghost"],
-    base: { hp: 120, atk: 92, def: 65, spa: 100, spd: 75, spe: 78 },
-    abilities: ["Swift Swim", "Adaptability", "Mold Breaker"],
-    defaultMoves: ["Muddy Water", "Shadow Ball", "Ice Beam", "Protect"]
-  },
-  "Gholdengo": {
-    dex: 1000,
-    sprite: "gholdengo",
-    types: ["Steel", "Ghost"],
-    base: { hp: 87, atk: 60, def: 95, spa: 133, spd: 91, spe: 84 },
-    abilities: ["Good as Gold"],
-    defaultMoves: ["Make It Rain", "Shadow Ball", "Nasty Plot", "Protect"]
-  },
-  "Farigiraf": {
-    dex: 981,
-    sprite: "farigiraf",
-    types: ["Normal", "Psychic"],
-    base: { hp: 120, atk: 90, def: 70, spa: 110, spd: 70, spe: 60 },
-    abilities: ["Armor Tail", "Cud Chew"],
-    defaultMoves: ["Psychic", "Dazzling Gleam", "Helping Hand", "Trick Room"]
+  "Chandelure": {
+    dex: 609,
+    sprite: "chandelure",
+    types: ["Ghost", "Fire"],
+    base: { hp: 60, atk: 55, def: 90, spa: 145, spd: 90, spe: 80 },
+    abilities: ["Flash Fire", "Infiltrator", "Flame Body"],
+    defaultMoves: ["Heat Wave", "Shadow Ball", "Trick Room", "Protect"],
+    megas: {
+      "Chandelurite": {
+        name: "Chandelure-Mega",
+        sprite: "chandelure-mega",
+        fallbackSprite: "chandelure",
+        types: ["Ghost", "Fire"],
+        base: { hp: 60, atk: 75, def: 105, spa: 175, spd: 105, spe: 100 },
+        ability: "Shadow Tag"
+      }
+    },
+    defaultMegaStone: "Chandelurite"
   },
   "Charizard": {
     dex: 6,
@@ -340,24 +586,205 @@ const POKEDEX_MC = {
     },
     defaultMegaStone: "Charizardite Y"
   },
-  "Venusaur": {
-    dex: 3,
-    sprite: "venusaur",
-    types: ["Grass", "Poison"],
-    base: { hp: 80, atk: 82, def: 83, spa: 100, spd: 100, spe: 80 },
-    abilities: ["Chlorophyll", "Overgrow"],
-    defaultMoves: ["Sludge Bomb", "Energy Ball", "Earth Power", "Protect"],
+  "Chesnaught": {
+    dex: 652,
+    sprite: "chesnaught",
+    types: ["Grass", "Fighting"],
+    base: { hp: 88, atk: 107, def: 122, spa: 74, spd: 75, spe: 64 },
+    abilities: ["Bulletproof", "Overgrow"],
+    defaultMoves: ["Wood Hammer", "Body Press", "Wide Guard", "Spiky Shield"],
     megas: {
-      "Venusaurite": {
-        name: "Venusaur-Mega",
-        sprite: "venusaur-mega",
-        fallbackSprite: "venusaur",
-        types: ["Grass", "Poison"],
-        base: { hp: 80, atk: 100, def: 123, spa: 122, spd: 120, spe: 80 },
-        ability: "Thick Fat"
+      "Chesnaughtite": {
+        name: "Chesnaught-Mega",
+        sprite: "chesnaught-mega",
+        fallbackSprite: "chesnaught",
+        types: ["Grass", "Fighting"],
+        base: { hp: 88, atk: 137, def: 152, spa: 84, spd: 95, spe: 74 },
+        ability: "Bulletproof"
       }
     },
-    defaultMegaStone: "Venusaurite"
+    defaultMegaStone: "Chesnaughtite"
+  },
+  "Chimecho": {
+    dex: 358,
+    sprite: "chimecho",
+    types: ["Psychic"],
+    base: { hp: 75, atk: 50, def: 80, spa: 95, spd: 90, spe: 65 },
+    abilities: ["Levitate"],
+    defaultMoves: ["Psychic", "Dazzling Gleam", "Trick Room", "Protect"],
+    megas: {
+      "Chimechonite": {
+        name: "Chimecho-Mega",
+        sprite: "chimecho-mega",
+        fallbackSprite: "chimecho",
+        types: ["Psychic", "Steel"],
+        base: { hp: 75, atk: 60, def: 105, spa: 125, spd: 120, spe: 70 },
+        ability: "Levitate"
+      }
+    },
+    defaultMegaStone: "Chimechonite"
+  },
+  "Cinderace": {
+    dex: 815,
+    sprite: "cinderace",
+    types: ["Fire"],
+    base: { hp: 80, atk: 116, def: 75, spa: 65, spd: 75, spe: 119 },
+    abilities: ["Libero", "Blaze"],
+    defaultMoves: ["Pyro Ball", "High Jump Kick", "Sucker Punch", "Protect"]
+  },
+  "Clawitzer": {
+    dex: 693,
+    sprite: "clawitzer",
+    types: ["Water"],
+    base: { hp: 71, atk: 73, def: 88, spa: 120, spd: 89, spe: 59 },
+    abilities: ["Mega Launcher"],
+    defaultMoves: ["Water Pulse", "Aura Sphere", "Dark Pulse", "Protect"]
+  },
+  "Clefable": {
+    dex: 36,
+    sprite: "clefable",
+    types: ["Fairy"],
+    base: { hp: 95, atk: 70, def: 73, spa: 95, spd: 90, spe: 60 },
+    abilities: ["Unaware", "Magic Guard", "Cute Charm"],
+    defaultMoves: ["Moonblast", "Follow Me", "Helping Hand", "Protect"],
+    megas: {
+      "Clefablite": {
+        name: "Clefable-Mega",
+        sprite: "clefable-mega",
+        fallbackSprite: "clefable",
+        types: ["Fairy", "Flying"],
+        base: { hp: 95, atk: 80, def: 93, spa: 135, spd: 110, spe: 70 },
+        ability: "Magic Guard"
+      }
+    },
+    defaultMegaStone: "Clefablite"
+  },
+  "Cofagrigus": {
+    dex: 563,
+    sprite: "cofagrigus",
+    types: ["Ghost"],
+    base: { hp: 58, atk: 50, def: 145, spa: 95, spd: 105, spe: 30 },
+    abilities: ["Mummy"],
+    defaultMoves: ["Shadow Ball", "Body Press", "Trick Room", "Protect"]
+  },
+  "Conkeldurr": {
+    dex: 534,
+    sprite: "conkeldurr",
+    types: ["Fighting"],
+    base: { hp: 105, atk: 140, def: 95, spa: 55, spd: 65, spe: 45 },
+    abilities: ["Guts", "Iron Fist", "Sheer Force"],
+    defaultMoves: ["Drain Punch", "Mach Punch", "Knock Off", "Protect"]
+  },
+  "Delphox": {
+    dex: 655,
+    sprite: "delphox",
+    types: ["Fire", "Psychic"],
+    base: { hp: 75, atk: 69, def: 72, spa: 114, spd: 100, spe: 104 },
+    abilities: ["Blaze", "Magician"],
+    defaultMoves: ["Heat Wave", "Expanding Force", "Dazzling Gleam", "Protect"],
+    megas: {
+      "Delphoxite": {
+        name: "Delphox-Mega",
+        sprite: "delphox-mega",
+        fallbackSprite: "delphox",
+        types: ["Fire", "Psychic"],
+        base: { hp: 75, atk: 79, def: 82, spa: 154, spd: 120, spe: 124 },
+        ability: "Magic Guard"
+      }
+    },
+    defaultMegaStone: "Delphoxite"
+  },
+  "Dragonite": {
+    dex: 149,
+    sprite: "dragonite",
+    types: ["Dragon", "Flying"],
+    base: { hp: 91, atk: 134, def: 95, spa: 100, spd: 100, spe: 80 },
+    abilities: ["Multiscale", "Inner Focus"],
+    defaultMoves: ["Extreme Speed", "Draco Meteor", "Stomping Tantrum", "Protect"],
+    megas: {
+      "Dragoninite": {
+        name: "Dragonite-Mega",
+        sprite: "dragonite-mega",
+        fallbackSprite: "dragonite",
+        types: ["Dragon", "Flying"],
+        base: { hp: 91, atk: 124, def: 115, spa: 145, spd: 125, spe: 100 },
+        ability: "Multiscale"
+      }
+    },
+    defaultMegaStone: "Dragoninite"
+  },
+  "Excadrill": {
+    dex: 530,
+    sprite: "excadrill",
+    types: ["Ground", "Steel"],
+    base: { hp: 110, atk: 135, def: 60, spa: 50, spd: 65, spe: 88 },
+    abilities: ["Sand Rush", "Mold Breaker"],
+    defaultMoves: ["High Horsepower", "Iron Head", "Rock Slide", "Protect"],
+    megas: {
+      "Excadrillite": {
+        name: "Excadrill-Mega",
+        sprite: "excadrill-mega",
+        fallbackSprite: "excadrill",
+        types: ["Ground", "Steel"],
+        base: { hp: 110, atk: 165, def: 85, spa: 60, spd: 80, spe: 108 },
+        ability: "Sand Rush"
+      }
+    },
+    defaultMegaStone: "Excadrillite"
+  },
+  "Farigiraf": {
+    dex: 981,
+    sprite: "farigiraf",
+    types: ["Normal", "Psychic"],
+    base: { hp: 120, atk: 90, def: 70, spa: 110, spd: 70, spe: 60 },
+    abilities: ["Armor Tail", "Cud Chew"],
+    defaultMoves: ["Psychic", "Dazzling Gleam", "Helping Hand", "Trick Room"]
+  },
+  "Gallade": {
+    dex: 475,
+    sprite: "gallade",
+    types: ["Psychic", "Fighting"],
+    base: { hp: 68, atk: 125, def: 65, spa: 65, spd: 115, spe: 80 },
+    abilities: ["Sharpness", "Justified", "Steadfast"],
+    defaultMoves: ["Sacred Sword", "Psycho Cut", "Wide Guard", "Protect"],
+    megas: {
+      "Galladite": {
+        name: "Gallade-Mega",
+        sprite: "gallade-mega",
+        fallbackSprite: "gallade",
+        types: ["Psychic", "Fighting"],
+        base: { hp: 68, atk: 165, def: 95, spa: 65, spd: 115, spe: 110 },
+        ability: "Inner Focus"
+      }
+    },
+    defaultMegaStone: "Galladite"
+  },
+  "Garchomp": {
+    dex: 445,
+    sprite: "garchomp",
+    types: ["Dragon", "Ground"],
+    base: { hp: 108, atk: 130, def: 95, spa: 80, spd: 85, spe: 102 },
+    abilities: ["Rough Skin", "Sand Veil"],
+    defaultMoves: ["Draco Meteor", "Earth Power", "Flamethrower", "Protect"],
+    megas: {
+      "Garchompite Z": {
+        name: "Garchomp-Mega-Z",
+        sprite: "garchomp-megaz",
+        fallbackSprite: "garchomp-mega",
+        types: ["Dragon"],
+        base: { hp: 108, atk: 130, def: 85, spa: 141, spd: 85, spe: 151 },
+        ability: "Levitate"
+      },
+      "Garchompite": {
+        name: "Garchomp-Mega",
+        sprite: "garchomp-mega",
+        fallbackSprite: "garchomp",
+        types: ["Dragon", "Ground"],
+        base: { hp: 108, atk: 170, def: 115, spa: 120, spd: 95, spe: 92 },
+        ability: "Sand Force"
+      }
+    },
+    defaultMegaStone: "Garchompite Z"
   },
   "Gardevoir": {
     dex: 282,
@@ -378,43 +805,32 @@ const POKEDEX_MC = {
     },
     defaultMegaStone: "Gardevoirite"
   },
-  "Metagross": {
-    dex: 376,
-    sprite: "metagross",
-    types: ["Steel", "Psychic"],
-    base: { hp: 80, atk: 135, def: 130, spa: 95, spd: 90, spe: 70 },
-    abilities: ["Clear Body"],
-    defaultMoves: ["Iron Head", "Psychic Fangs", "Stomping Tantrum", "Protect"],
+  "Gengar": {
+    dex: 94,
+    sprite: "gengar",
+    types: ["Ghost", "Poison"],
+    base: { hp: 60, atk: 65, def: 60, spa: 130, spd: 75, spe: 110 },
+    abilities: ["Cursed Body"],
+    defaultMoves: ["Shadow Ball", "Sludge Bomb", "Icy Wind", "Protect"],
     megas: {
-      "Metagrossite": {
-        name: "Metagross-Mega",
-        sprite: "metagross-mega",
-        fallbackSprite: "metagross",
-        types: ["Steel", "Psychic"],
-        base: { hp: 80, atk: 145, def: 150, spa: 105, spd: 110, spe: 110 },
-        ability: "Tough Claws"
+      "Gengarite": {
+        name: "Gengar-Mega",
+        sprite: "gengar-mega",
+        fallbackSprite: "gengar",
+        types: ["Ghost", "Poison"],
+        base: { hp: 60, atk: 65, def: 80, spa: 170, spd: 95, spe: 130 },
+        ability: "Shadow Tag"
       }
     },
-    defaultMegaStone: "Metagrossite"
+    defaultMegaStone: "Gengarite"
   },
-  "Tyranitar": {
-    dex: 248,
-    sprite: "tyranitar",
-    types: ["Rock", "Dark"],
-    base: { hp: 100, atk: 134, def: 110, spa: 95, spd: 100, spe: 61 },
-    abilities: ["Sand Stream", "Unnerve"],
-    defaultMoves: ["Rock Slide", "Knock Off", "Low Kick", "Protect"],
-    megas: {
-      "Tyranitarite": {
-        name: "Tyranitar-Mega",
-        sprite: "tyranitar-mega",
-        fallbackSprite: "tyranitar",
-        types: ["Rock", "Dark"],
-        base: { hp: 100, atk: 164, def: 150, spa: 95, spd: 120, spe: 71 },
-        ability: "Sand Stream"
-      }
-    },
-    defaultMegaStone: "Tyranitarite"
+  "Gholdengo": {
+    dex: 1000,
+    sprite: "gholdengo",
+    types: ["Steel", "Ghost"],
+    base: { hp: 87, atk: 60, def: 95, spa: 133, spd: 91, spe: 84 },
+    abilities: ["Good as Gold"],
+    defaultMoves: ["Make It Rain", "Shadow Ball", "Nasty Plot", "Protect"]
   },
   "Glimmora": {
     dex: 970,
@@ -435,24 +851,229 @@ const POKEDEX_MC = {
     },
     defaultMegaStone: "Glimmoranite"
   },
-  "Dragonite": {
-    dex: 149,
-    sprite: "dragonite",
-    types: ["Dragon", "Flying"],
-    base: { hp: 91, atk: 134, def: 95, spa: 100, spd: 100, spe: 80 },
-    abilities: ["Multiscale", "Inner Focus"],
-    defaultMoves: ["Extreme Speed", "Draco Meteor", "Stomping Tantrum", "Protect"],
+  "Golisopod": {
+    dex: 768,
+    sprite: "golisopod",
+    types: ["Bug", "Water"],
+    base: { hp: 75, atk: 125, def: 140, spa: 60, spd: 90, spe: 40 },
+    abilities: ["Emergency Exit"],
+    defaultMoves: ["First Impression", "Liquidation", "Close Combat", "Protect"],
     megas: {
-      "Dragoninite": {
-        name: "Dragonite-Mega",
-        sprite: "dragonite-mega",
-        fallbackSprite: "dragonite",
-        types: ["Dragon", "Flying"],
-        base: { hp: 91, atk: 124, def: 115, spa: 145, spd: 125, spe: 100 },
-        ability: "Multiscale"
+      "Golisopodite": {
+        name: "Golisopod-Mega",
+        sprite: "golisopod-mega",
+        fallbackSprite: "golisopod",
+        types: ["Bug", "Steel"],
+        base: { hp: 75, atk: 150, def: 175, spa: 70, spd: 120, spe: 40 },
+        ability: "Tough Claws"
       }
     },
-    defaultMegaStone: "Dragoninite"
+    defaultMegaStone: "Golisopodite"
+  },
+  "Greninja": {
+    dex: 658,
+    sprite: "greninja",
+    types: ["Water", "Dark"],
+    base: { hp: 72, atk: 95, def: 67, spa: 103, spd: 71, spe: 122 },
+    abilities: ["Protean", "Battle Bond", "Torrent"],
+    defaultMoves: ["Hydro Pump", "Dark Pulse", "Ice Beam", "Protect"],
+    megas: {
+      "Greninjite": {
+        name: "Greninja-Mega",
+        sprite: "greninja-mega",
+        fallbackSprite: "greninja",
+        types: ["Water", "Dark"],
+        base: { hp: 72, atk: 125, def: 77, spa: 143, spd: 81, spe: 142 },
+        ability: "Protean"
+      }
+    },
+    defaultMegaStone: "Greninjite"
+  },
+  "Grimmsnarl": {
+    dex: 861,
+    sprite: "grimmsnarl",
+    types: ["Dark", "Fairy"],
+    base: { hp: 95, atk: 120, def: 65, spa: 95, spd: 75, spe: 60 },
+    abilities: ["Prankster"],
+    defaultMoves: ["Spirit Break", "Fake Out", "Reflect", "Light Screen"]
+  },
+  "Gyarados": {
+    dex: 130,
+    sprite: "gyarados",
+    types: ["Water", "Flying"],
+    base: { hp: 95, atk: 125, def: 79, spa: 60, spd: 100, spe: 81 },
+    abilities: ["Intimidate", "Moxie"],
+    defaultMoves: ["Waterfall", "Crunch", "Dragon Dance", "Protect"],
+    megas: {
+      "Gyaradosite": {
+        name: "Gyarados-Mega",
+        sprite: "gyarados-mega",
+        fallbackSprite: "gyarados",
+        types: ["Water", "Dark"],
+        base: { hp: 95, atk: 155, def: 109, spa: 70, spd: 130, spe: 81 },
+        ability: "Mold Breaker"
+      }
+    },
+    defaultMegaStone: "Gyaradosite"
+  },
+  "Hawlucha": {
+    dex: 701,
+    sprite: "hawlucha",
+    types: ["Fighting", "Flying"],
+    base: { hp: 78, atk: 92, def: 75, spa: 74, spd: 63, spe: 118 },
+    abilities: ["Unburden", "Limber", "Mold Breaker"],
+    defaultMoves: ["Close Combat", "Acrobatics", "Coaching", "Protect"],
+    megas: {
+      "Hawluchanite": {
+        name: "Hawlucha-Mega",
+        sprite: "hawlucha-mega",
+        fallbackSprite: "hawlucha",
+        types: ["Fighting", "Flying"],
+        base: { hp: 78, atk: 132, def: 95, spa: 84, spd: 73, spe: 138 },
+        ability: "Tough Claws"
+      }
+    },
+    defaultMegaStone: "Hawluchanite"
+  },
+  "Incineroar": {
+    dex: 727,
+    sprite: "incineroar",
+    types: ["Fire", "Dark"],
+    base: { hp: 95, atk: 115, def: 90, spa: 80, spd: 90, spe: 60 },
+    abilities: ["Intimidate", "Blaze"],
+    defaultMoves: ["Fake Out", "Flare Blitz", "Knock Off", "Parting Shot"]
+  },
+  "Indeedee-F": {
+    dex: 876,
+    sprite: "indeedee-f",
+    types: ["Psychic", "Normal"],
+    base: { hp: 70, atk: 55, def: 65, spa: 95, spd: 105, spe: 85 },
+    abilities: ["Psychic Surge", "Synchronize"],
+    defaultMoves: ["Follow Me", "Psychic", "Helping Hand", "Trick Room"]
+  },
+  "Kangaskhan": {
+    dex: 115,
+    sprite: "kangaskhan",
+    types: ["Normal"],
+    base: { hp: 105, atk: 95, def: 80, spa: 40, spd: 80, spe: 90 },
+    abilities: ["Scrappy", "Inner Focus"],
+    defaultMoves: ["Fake Out", "Body Slam", "Sucker Punch", "Protect"],
+    megas: {
+      "Kangaskhanite": {
+        name: "Kangaskhan-Mega",
+        sprite: "kangaskhan-mega",
+        fallbackSprite: "kangaskhan",
+        types: ["Normal"],
+        base: { hp: 105, atk: 125, def: 100, spa: 60, spd: 100, spe: 100 },
+        ability: "Parental Bond"
+      }
+    },
+    defaultMegaStone: "Kangaskhanite"
+  },
+  "Kingambit": {
+    dex: 983,
+    sprite: "kingambit",
+    types: ["Dark", "Steel"],
+    base: { hp: 100, atk: 135, def: 120, spa: 60, spd: 85, spe: 50 },
+    abilities: ["Defiant", "Supreme Overlord"],
+    defaultMoves: ["Kowtow Cleave", "Iron Head", "Sucker Punch", "Protect"]
+  },
+  "Lucario": {
+    dex: 448,
+    sprite: "lucario",
+    types: ["Fighting", "Steel"],
+    base: { hp: 70, atk: 110, def: 70, spa: 115, spd: 70, spe: 90 },
+    abilities: ["Inner Focus", "Justified", "Steadfast"],
+    defaultMoves: ["Aura Sphere", "Flash Cannon", "Vacuum Wave", "Protect"],
+    megas: {
+      "Lucarionite Z": {
+        name: "Lucario-Mega-Z",
+        sprite: "lucario-megaz",
+        fallbackSprite: "lucario-mega",
+        types: ["Fighting", "Steel"],
+        base: { hp: 70, atk: 100, def: 70, spa: 164, spd: 70, spe: 151 },
+        ability: "Aura Guard"
+      },
+      "Lucarionite": {
+        name: "Lucario-Mega",
+        sprite: "lucario-mega",
+        fallbackSprite: "lucario",
+        types: ["Fighting", "Steel"],
+        base: { hp: 70, atk: 145, def: 88, spa: 140, spd: 70, spe: 112 },
+        ability: "Adaptability"
+      }
+    },
+    defaultMegaStone: "Lucarionite Z"
+  },
+  "Mawile": {
+    dex: 303,
+    sprite: "mawile",
+    types: ["Steel", "Fairy"],
+    base: { hp: 50, atk: 85, def: 85, spa: 55, spd: 55, spe: 50 },
+    abilities: ["Intimidate", "Hyper Cutter"],
+    defaultMoves: ["Play Rough", "Iron Head", "Sucker Punch", "Protect"],
+    megas: {
+      "Mawilite": {
+        name: "Mawile-Mega",
+        sprite: "mawile-mega",
+        fallbackSprite: "mawile",
+        types: ["Steel", "Fairy"],
+        base: { hp: 50, atk: 105, def: 125, spa: 55, spd: 95, spe: 50 },
+        ability: "Huge Power"
+      }
+    },
+    defaultMegaStone: "Mawilite"
+  },
+  "Metagross": {
+    dex: 376,
+    sprite: "metagross",
+    types: ["Steel", "Psychic"],
+    base: { hp: 80, atk: 135, def: 130, spa: 95, spd: 90, spe: 70 },
+    abilities: ["Clear Body"],
+    defaultMoves: ["Iron Head", "Psychic Fangs", "Stomping Tantrum", "Protect"],
+    megas: {
+      "Metagrossite": {
+        name: "Metagross-Mega",
+        sprite: "metagross-mega",
+        fallbackSprite: "metagross",
+        types: ["Steel", "Psychic"],
+        base: { hp: 80, atk: 145, def: 150, spa: 105, spd: 110, spe: 110 },
+        ability: "Tough Claws"
+      }
+    },
+    defaultMegaStone: "Metagrossite"
+  },
+  "Ninetales-Alola": {
+    dex: 38,
+    sprite: "ninetales-alola",
+    types: ["Ice", "Fairy"],
+    base: { hp: 73, atk: 67, def: 75, spa: 81, spd: 100, spe: 109 },
+    abilities: ["Snow Warning"],
+    defaultMoves: ["Blizzard", "Moonblast", "Aurora Veil", "Protect"]
+  },
+  "Pelipper": {
+    dex: 279,
+    sprite: "pelipper",
+    types: ["Water", "Flying"],
+    base: { hp: 60, atk: 50, def: 100, spa: 95, spd: 70, spe: 65 },
+    abilities: ["Drizzle", "Keen Eye"],
+    defaultMoves: ["Weather Ball", "Hurricane", "Wide Guard", "Tailwind"]
+  },
+  "Pincurchin": {
+    dex: 871,
+    sprite: "pincurchin",
+    types: ["Electric"],
+    base: { hp: 48, atk: 101, def: 95, spa: 91, spd: 85, spe: 15 },
+    abilities: ["Electric Surge", "Lightning Rod"],
+    defaultMoves: ["Zing Zap", "Scald", "Sucker Punch", "Protect"]
+  },
+  "Primarina": {
+    dex: 730,
+    sprite: "primarina",
+    types: ["Water", "Fairy"],
+    base: { hp: 80, atk: 74, def: 74, spa: 126, spd: 116, spe: 60 },
+    abilities: ["Liquid Voice", "Torrent"],
+    defaultMoves: ["Hyper Voice", "Moonblast", "Haze", "Protect"]
   },
   "Raichu": {
     dex: 26,
@@ -481,13 +1102,51 @@ const POKEDEX_MC = {
     },
     defaultMegaStone: "Raichunite Y"
   },
-  "Whimsicott": {
-    dex: 547,
-    sprite: "whimsicott",
-    types: ["Grass", "Fairy"],
-    base: { hp: 60, atk: 67, def: 85, spa: 77, spd: 75, spe: 116 },
-    abilities: ["Prankster", "Infiltrator"],
-    defaultMoves: ["Moonblast", "Tailwind", "Encore", "Sunny Day"]
+  "Rillaboom": {
+    dex: 812,
+    sprite: "rillaboom",
+    types: ["Grass"],
+    base: { hp: 100, atk: 125, def: 90, spa: 60, spd: 70, spe: 85 },
+    abilities: ["Grassy Surge", "Overgrow"],
+    defaultMoves: ["Fake Out", "Grassy Glide", "Wood Hammer", "U-turn"]
+  },
+  "Salamence": {
+    dex: 373,
+    sprite: "salamence",
+    types: ["Dragon", "Flying"],
+    base: { hp: 95, atk: 135, def: 80, spa: 110, spd: 80, spe: 100 },
+    abilities: ["Intimidate", "Moxie"],
+    defaultMoves: ["Double-Edge", "Hyper Voice", "Draco Meteor", "Protect"],
+    megas: {
+      "Salamencite": {
+        name: "Salamence-Mega",
+        sprite: "salamence-mega",
+        fallbackSprite: "salamence",
+        types: ["Dragon", "Flying"],
+        base: { hp: 95, atk: 145, def: 130, spa: 120, spd: 90, spe: 120 },
+        ability: "Aerilate"
+      }
+    },
+    defaultMegaStone: "Salamencite"
+  },
+  "Scizor": {
+    dex: 212,
+    sprite: "scizor",
+    types: ["Bug", "Steel"],
+    base: { hp: 70, atk: 130, def: 100, spa: 55, spd: 80, spe: 65 },
+    abilities: ["Technician", "Swarm"],
+    defaultMoves: ["Bullet Punch", "U-turn", "Close Combat", "Protect"],
+    megas: {
+      "Scizorite": {
+        name: "Scizor-Mega",
+        sprite: "scizor-mega",
+        fallbackSprite: "scizor",
+        types: ["Bug", "Steel"],
+        base: { hp: 70, atk: 150, def: 140, spa: 65, spd: 100, spe: 75 },
+        ability: "Technician"
+      }
+    },
+    defaultMegaStone: "Scizorite"
   },
   "Sinistcha": {
     dex: 1013,
@@ -497,37 +1156,13 @@ const POKEDEX_MC = {
     abilities: ["Hospitality", "Heatproof"],
     defaultMoves: ["Matcha Gotcha", "Shadow Ball", "Rage Powder", "Trick Room"]
   },
-  "Grimmsnarl": {
-    dex: 861,
-    sprite: "grimmsnarl",
-    types: ["Dark", "Fairy"],
-    base: { hp: 95, atk: 120, def: 65, spa: 95, spd: 75, spe: 60 },
-    abilities: ["Prankster"],
-    defaultMoves: ["Spirit Break", "Fake Out", "Reflect", "Light Screen"]
-  },
-  "Annihilape": {
-    dex: 979,
-    sprite: "annihilape",
-    types: ["Fighting", "Ghost"],
-    base: { hp: 110, atk: 115, def: 80, spa: 50, spd: 90, spe: 90 },
-    abilities: ["Defiant", "Inner Focus", "Vital Spirit"],
-    defaultMoves: ["Rage Fist", "Drain Punch", "Bulk Up", "Protect"]
-  },
-  "Excadrill": {
-    dex: 530,
-    sprite: "excadrill",
-    types: ["Ground", "Steel"],
-    base: { hp: 110, atk: 135, def: 60, spa: 50, spd: 65, spe: 88 },
-    abilities: ["Sand Rush", "Mold Breaker"],
-    defaultMoves: ["High Horsepower", "Iron Head", "Rock Slide", "Protect"]
-  },
-  "Primarina": {
-    dex: 730,
-    sprite: "primarina",
-    types: ["Water", "Fairy"],
-    base: { hp: 80, atk: 74, def: 74, spa: 126, spd: 116, spe: 60 },
-    abilities: ["Liquid Voice", "Torrent"],
-    defaultMoves: ["Hyper Voice", "Moonblast", "Haze", "Protect"]
+  "Sneasler": {
+    dex: 903,
+    sprite: "sneasler",
+    types: ["Fighting", "Poison"],
+    base: { hp: 80, atk: 130, def: 60, spa: 40, spd: 80, spe: 120 },
+    abilities: ["Unburden", "Poison Touch", "Pressure"],
+    defaultMoves: ["Close Combat", "Dire Claw", "Fake Out", "Coaching"]
   },
   "Torkoal": {
     dex: 324,
@@ -537,25 +1172,55 @@ const POKEDEX_MC = {
     abilities: ["Drought", "White Smoke"],
     defaultMoves: ["Eruption", "Heat Wave", "Earth Power", "Protect"]
   },
-  "Ninetales-Alola": {
-    dex: 38,
-    sprite: "ninetales-alola",
-    types: ["Ice", "Fairy"],
-    base: { hp: 73, atk: 67, def: 75, spa: 81, spd: 100, spe: 109 },
-    abilities: ["Snow Warning"],
-    defaultMoves: ["Blizzard", "Moonblast", "Aurora Veil", "Protect"]
+  "Tyranitar": {
+    dex: 248,
+    sprite: "tyranitar",
+    types: ["Rock", "Dark"],
+    base: { hp: 100, atk: 134, def: 110, spa: 95, spd: 100, spe: 61 },
+    abilities: ["Sand Stream", "Unnerve"],
+    defaultMoves: ["Rock Slide", "Knock Off", "Low Kick", "Protect"],
+    megas: {
+      "Tyranitarite": {
+        name: "Tyranitar-Mega",
+        sprite: "tyranitar-mega",
+        fallbackSprite: "tyranitar",
+        types: ["Rock", "Dark"],
+        base: { hp: 100, atk: 164, def: 150, spa: 95, spd: 120, spe: 71 },
+        ability: "Sand Stream"
+      }
+    },
+    defaultMegaStone: "Tyranitarite"
   },
-  "Pincurchin": {
-    dex: 871,
-    sprite: "pincurchin",
-    types: ["Electric"],
-    base: { hp: 48, atk: 101, def: 95, spa: 91, spd: 85, spe: 15 },
-    abilities: ["Electric Surge", "Lightning Rod"],
-    defaultMoves: ["Zing Zap", "Scald", "Sucker Punch", "Protect"]
+  "Venusaur": {
+    dex: 3,
+    sprite: "venusaur",
+    types: ["Grass", "Poison"],
+    base: { hp: 80, atk: 82, def: 83, spa: 100, spd: 100, spe: 80 },
+    abilities: ["Chlorophyll", "Overgrow"],
+    defaultMoves: ["Sludge Bomb", "Energy Ball", "Earth Power", "Protect"],
+    megas: {
+      "Venusaurite": {
+        name: "Venusaur-Mega",
+        sprite: "venusaur-mega",
+        fallbackSprite: "venusaur",
+        types: ["Grass", "Poison"],
+        base: { hp: 80, atk: 100, def: 123, spa: 122, spd: 120, spe: 80 },
+        ability: "Thick Fat"
+      }
+    },
+    defaultMegaStone: "Venusaurite"
+  },
+  "Whimsicott": {
+    dex: 547,
+    sprite: "whimsicott",
+    types: ["Grass", "Fairy"],
+    base: { hp: 60, atk: 67, def: 85, spa: 77, spd: 75, spe: 116 },
+    abilities: ["Prankster", "Infiltrator"],
+    defaultMoves: ["Moonblast", "Tailwind", "Encore", "Sunny Day"]
   }
 };
 
-// Held Items in Regulation M-C
+// Held Items & Mega Stones in Regulation M-C
 const ITEMS_MC = [
   "None",
   "Focus Sash",
@@ -591,35 +1256,64 @@ const ITEMS_MC = [
   "Wide Lens",
   "Eviolite",
   "Iron Ball",
-  "Garchompite Z",
-  "Garchompite",
-  "Lucarionite Z",
-  "Lucarionite",
+  "Abomasite",
   "Absolite Z",
   "Absolite",
-  "Salamencite",
+  "Aerodactylite",
+  "Aggronite",
+  "Alakazite",
+  "Altarianite",
+  "Ampharosite",
+  "Audinite",
+  "Banettite",
+  "Barbaracite",
   "Baxcalibrite",
-  "Golisopodite",
+  "Beedrillite",
+  "Blastoisinite",
+  "Blazikenite",
+  "Cameruptite",
+  "Chandelurite",
   "Charizardite Y",
   "Charizardite X",
-  "Venusaurite",
-  "Gardevoirite",
-  "Metagrossite",
-  "Tyranitarite",
-  "Glimmoranite",
+  "Chesnaughtite",
+  "Chimechonite",
+  "Clefablite",
+  "Delphoxite",
   "Dragoninite",
+  "Excadrillite",
+  "Galladite",
+  "Garchompite Z",
+  "Garchompite",
+  "Gardevoirite",
+  "Gengarite",
+  "Glimmoranite",
+  "Golisopodite",
+  "Greninjite",
+  "Gyaradosite",
+  "Hawluchanite",
+  "Kangaskhanite",
+  "Lucarionite Z",
+  "Lucarionite",
+  "Mawilite",
+  "Metagrossite",
   "Raichunite Y",
-  "Raichunite X"
+  "Raichunite X",
+  "Salamencite",
+  "Scizorite",
+  "Tyranitarite",
+  "Venusaurite"
 ];
 
 // Competitive VGC Moves Database
 const MOVES_DB = {
   "Protect":          { bp: 0,   type: "Normal",   cat: "Status",   spread: false },
   "Spiky Shield":     { bp: 0,   type: "Grass",    cat: "Status",   spread: false },
+  "King's Shield":    { bp: 0,   type: "Steel",    cat: "Status",   spread: false },
   "Fake Out":         { bp: 40,  type: "Normal",   cat: "Physical", spread: false, contact: true },
   "Follow Me":        { bp: 0,   type: "Normal",   cat: "Status",   spread: false },
   "Rage Powder":      { bp: 0,   type: "Bug",      cat: "Status",   spread: false },
   "Helping Hand":     { bp: 0,   type: "Normal",   cat: "Status",   spread: false },
+  "Decorate":         { bp: 0,   type: "Fairy",    cat: "Status",   spread: false },
   "Tailwind":         { bp: 0,   type: "Flying",   cat: "Status",   spread: false },
   "Trick Room":       { bp: 0,   type: "Psychic",  cat: "Status",   spread: false },
   "Wide Guard":       { bp: 0,   type: "Rock",     cat: "Status",   spread: false },
@@ -627,38 +1321,55 @@ const MOVES_DB = {
   "Coaching":         { bp: 0,   type: "Fighting", cat: "Status",   spread: false },
   "Nasty Plot":       { bp: 0,   type: "Dark",     cat: "Status",   spread: false },
   "Bulk Up":          { bp: 0,   type: "Fighting", cat: "Status",   spread: false },
+  "Dragon Dance":     { bp: 0,   type: "Dragon",   cat: "Status",   spread: false },
   "Encore":           { bp: 0,   type: "Normal",   cat: "Status",   spread: false },
   "Sunny Day":        { bp: 0,   type: "Fire",     cat: "Status",   spread: false },
   "Reflect":          { bp: 0,   type: "Psychic",  cat: "Status",   spread: false },
   "Light Screen":     { bp: 0,   type: "Psychic",  cat: "Status",   spread: false },
   "Aurora Veil":      { bp: 0,   type: "Ice",      cat: "Status",   spread: false },
   "Haze":             { bp: 0,   type: "Ice",      cat: "Status",   spread: false },
+  "Heal Pulse":       { bp: 0,   type: "Psychic",  cat: "Status",   spread: false },
+  "Will-O-Wisp":      { bp: 0,   type: "Fire",     cat: "Status",   spread: false },
+  "Glare":            { bp: 0,   type: "Normal",   cat: "Status",   spread: false },
+  "Sticky Web":       { bp: 0,   type: "Bug",      cat: "Status",   spread: false },
+  "Leech Seed":       { bp: 0,   type: "Grass",    cat: "Status",   spread: false },
   "Earthquake":       { bp: 100, type: "Ground",   cat: "Physical", spread: true },
   "High Horsepower":  { bp: 95,  type: "Ground",   cat: "Physical", spread: false, contact: true },
   "Stomping Tantrum": { bp: 75,  type: "Ground",   cat: "Physical", spread: false, contact: true },
+  "Drill Run":        { bp: 80,  type: "Ground",   cat: "Physical", spread: false, contact: true },
   "Earth Power":      { bp: 90,  type: "Ground",   cat: "Special",  spread: false },
   "Dragon Claw":      { bp: 80,  type: "Dragon",   cat: "Physical", spread: false, contact: true },
   "Glaive Rush":      { bp: 120, type: "Dragon",   cat: "Physical", spread: false, contact: true },
   "Draco Meteor":     { bp: 130, type: "Dragon",   cat: "Special",  spread: false },
+  "Dragon Pulse":     { bp: 85,  type: "Dragon",   cat: "Special",  spread: false },
   "Rock Slide":       { bp: 75,  type: "Rock",     cat: "Physical", spread: true },
   "Power Gem":        { bp: 80,  type: "Rock",     cat: "Special",  spread: false },
   "Close Combat":     { bp: 120, type: "Fighting", cat: "Physical", spread: false, contact: true },
   "Sacred Sword":     { bp: 90,  type: "Fighting", cat: "Physical", spread: false, contact: true, slicing: true },
   "Drain Punch":      { bp: 75,  type: "Fighting", cat: "Physical", spread: false, contact: true },
+  "Mach Punch":       { bp: 40,  type: "Fighting", cat: "Physical", spread: false, contact: true },
   "Low Kick":         { bp: 100, type: "Fighting", cat: "Physical", spread: false, contact: true },
   "Body Press":       { bp: 80,  type: "Fighting", cat: "Physical", spread: false, contact: true },
+  "Cross Chop":       { bp: 100, type: "Fighting", cat: "Physical", spread: false, contact: true },
+  "High Jump Kick":   { bp: 130, type: "Fighting", cat: "Physical", spread: false, contact: true },
   "Aura Sphere":      { bp: 80,  type: "Fighting", cat: "Special",  spread: false },
   "Vacuum Wave":      { bp: 40,  type: "Fighting", cat: "Special",  spread: false },
   "Dire Claw":        { bp: 80,  type: "Poison",   cat: "Physical", spread: false, contact: true },
+  "Gunk Shot":        { bp: 120, type: "Poison",   cat: "Physical", spread: false },
+  "Poison Jab":       { bp: 80,  type: "Poison",   cat: "Physical", spread: false, contact: true },
   "Sludge Bomb":      { bp: 90,  type: "Poison",   cat: "Special",  spread: false },
   "Grassy Glide":     { bp: 55,  type: "Grass",    cat: "Physical", spread: false, contact: true },
   "Wood Hammer":      { bp: 120, type: "Grass",    cat: "Physical", spread: false, contact: true },
   "Energy Ball":      { bp: 90,  type: "Grass",    cat: "Special",  spread: false },
+  "Apple Acid":       { bp: 80,  type: "Grass",    cat: "Special",  spread: false },
   "Solar Beam":       { bp: 120, type: "Grass",    cat: "Special",  spread: false },
   "Matcha Gotcha":    { bp: 80,  type: "Grass",    cat: "Special",  spread: true },
   "U-turn":           { bp: 70,  type: "Bug",      cat: "Physical", spread: false, contact: true },
   "First Impression": { bp: 90,  type: "Bug",      cat: "Physical", spread: false, contact: true },
+  "Leech Life":       { bp: 80,  type: "Bug",      cat: "Physical", spread: false, contact: true },
   "Flare Blitz":      { bp: 120, type: "Fire",     cat: "Physical", spread: false, contact: true },
+  "Bitter Blade":     { bp: 90,  type: "Fire",     cat: "Physical", spread: false, contact: true, slicing: true },
+  "Pyro Ball":        { bp: 120, type: "Fire",     cat: "Physical", spread: false },
   "Flamethrower":     { bp: 90,  type: "Fire",     cat: "Special",  spread: false },
   "Heat Wave":        { bp: 95,  type: "Fire",     cat: "Special",  spread: true },
   "Eruption":         { bp: 150, type: "Fire",     cat: "Special",  spread: true },
@@ -667,29 +1378,44 @@ const MOVES_DB = {
   "Kowtow Cleave":    { bp: 85,  type: "Dark",     cat: "Physical", spread: false, contact: true, slicing: true },
   "Sucker Punch":     { bp: 70,  type: "Dark",     cat: "Physical", spread: false, contact: true },
   "Night Slash":      { bp: 70,  type: "Dark",     cat: "Physical", spread: false, contact: true, slicing: true },
+  "Crunch":           { bp: 80,  type: "Dark",     cat: "Physical", spread: false, contact: true },
+  "Dark Pulse":       { bp: 80,  type: "Dark",     cat: "Special",  spread: false },
   "Iron Head":        { bp: 80,  type: "Steel",    cat: "Physical", spread: false, contact: true },
+  "Heavy Slam":       { bp: 100, type: "Steel",    cat: "Physical", spread: false, contact: true },
+  "Bullet Punch":     { bp: 40,  type: "Steel",    cat: "Physical", spread: false, contact: true },
   "Flash Cannon":     { bp: 80,  type: "Steel",    cat: "Special",  spread: false },
   "Make It Rain":     { bp: 120, type: "Steel",    cat: "Special",  spread: true },
   "Psychic":          { bp: 90,  type: "Psychic",  cat: "Special",  spread: false },
   "Expanding Force":  { bp: 80,  type: "Psychic",  cat: "Special",  spread: true },
   "Psychic Fangs":    { bp: 85,  type: "Psychic",  cat: "Physical", spread: false, contact: true },
+  "Psycho Cut":       { bp: 70,  type: "Psychic",  cat: "Physical", spread: false, slicing: true },
   "Shadow Ball":      { bp: 80,  type: "Ghost",    cat: "Special",  spread: false },
   "Shadow Claw":      { bp: 70,  type: "Ghost",    cat: "Physical", spread: false, contact: true, slicing: true },
+  "Shadow Sneak":     { bp: 40,  type: "Ghost",    cat: "Physical", spread: false, contact: true },
   "Last Respects":    { bp: 100, type: "Ghost",    cat: "Physical", spread: false },
   "Rage Fist":        { bp: 100, type: "Ghost",    cat: "Physical", spread: false, contact: true },
   "Wave Crash":       { bp: 120, type: "Water",    cat: "Physical", spread: false, contact: true },
   "Liquidation":      { bp: 85,  type: "Water",    cat: "Physical", spread: false, contact: true },
+  "Waterfall":        { bp: 80,  type: "Water",    cat: "Physical", spread: false, contact: true },
+  "Razor Shell":      { bp: 75,  type: "Water",    cat: "Physical", spread: false, contact: true, slicing: true },
   "Aqua Jet":         { bp: 40,  type: "Water",    cat: "Physical", spread: false, contact: true },
   "Weather Ball":     { bp: 100, type: "Water",    cat: "Special",  spread: false },
   "Muddy Water":      { bp: 90,  type: "Water",    cat: "Special",  spread: true },
   "Scald":            { bp: 80,  type: "Water",    cat: "Special",  spread: false },
+  "Hydro Pump":       { bp: 110, type: "Water",    cat: "Special",  spread: false },
+  "Water Spout":      { bp: 150, type: "Water",    cat: "Special",  spread: true },
+  "Water Pulse":      { bp: 60,  type: "Water",    cat: "Special",  spread: false },
   "Hurricane":        { bp: 110, type: "Flying",   cat: "Special",  spread: false },
   "Air Slash":        { bp: 75,  type: "Flying",   cat: "Special",  spread: false },
+  "Dual Wingbeat":    { bp: 80,  type: "Flying",   cat: "Physical", spread: false, contact: true },
+  "Acrobatics":       { bp: 110, type: "Flying",   cat: "Physical", spread: false, contact: true },
   "Double-Edge":      { bp: 120, type: "Normal",   cat: "Physical", spread: false, contact: true },
+  "Body Slam":        { bp: 85,  type: "Normal",   cat: "Physical", spread: false, contact: true },
   "Hyper Voice":      { bp: 90,  type: "Normal",   cat: "Special",  spread: true },
   "Extreme Speed":    { bp: 80,  type: "Normal",   cat: "Physical", spread: false, contact: true },
   "Feint":            { bp: 30,  type: "Normal",   cat: "Physical", spread: false },
   "Icicle Crash":     { bp: 85,  type: "Ice",      cat: "Physical", spread: false },
+  "Mountain Gale":    { bp: 100, type: "Ice",      cat: "Physical", spread: false },
   "Ice Shard":        { bp: 40,  type: "Ice",      cat: "Physical", spread: false },
   "Ice Beam":         { bp: 90,  type: "Ice",      cat: "Special",  spread: false },
   "Blizzard":         { bp: 110, type: "Ice",      cat: "Special",  spread: true },
@@ -701,6 +1427,7 @@ const MOVES_DB = {
   "Nuzzle":           { bp: 20,  type: "Electric", cat: "Physical", spread: false, contact: true },
   "Dazzling Gleam":   { bp: 80,  type: "Fairy",    cat: "Special",  spread: true },
   "Moonblast":        { bp: 95,  type: "Fairy",    cat: "Special",  spread: false },
+  "Play Rough":       { bp: 90,  type: "Fairy",    cat: "Physical", spread: false, contact: true },
   "Spirit Break":     { bp: 75,  type: "Fairy",    cat: "Physical", spread: false, contact: true }
 };
 
