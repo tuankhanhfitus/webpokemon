@@ -6,9 +6,7 @@ const STORAGE_KEY_TEAMS = "vgc_mc_teams_v2";
 const STORAGE_KEY_ACTIVE_TEAM = "vgc_mc_active_team_v2";
 const STORAGE_KEY_GEMINI_KEY = "vgc_mc_gemini_key";
 const GEMINI_AI_MODEL = "gemini-3.8-flash";
-const GEMINI_AI_FALLBACK_MODEL = "gemini-3.6-flash";
-// Retry only for temporary server-side overloads. Do not repeat auth or quota failures.
-const GEMINI_RETRY_DELAY_MS = [1000, 2200];
+const GEMINI_FALLBACK_MODELS = [GEMINI_AI_MODEL, "gemini-2.5-flash"];
 const STORAGE_KEY_WORKSPACE = "vgc_studio_workspace_v1";
 let activeMainTab = "builder";
 let hasRestoredCalcState = false;
@@ -925,7 +923,7 @@ function setAppLanguage(lang) {
     const key = el.getAttribute("data-i18n");
     if (dict[key]) el.textContent = dict[key];
   });
- }
+}
 
 function toggleLanguage() {
   setAppLanguage(currentLang === "vi" ? "en" : "vi");
@@ -2791,42 +2789,34 @@ function explainGeminiFailure(status, error, modelName = GEMINI_AI_MODEL) {
   return `HTTP ${status}: ${details || "Gemini API trả về lỗi không xác định."}`;
 }
 
-const GEMINI_OVERLOAD_STATUSES = new Set([502, 503, 504]);
+function isRetryableGeminiStatus(status) {
+  return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+}
 
-function delayGeminiRetry(ms) {
+function waitMs(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Retry transient HTTP 502/503/504 responses, then let the caller attempt a fallback model.
-// Authentication, access and quota errors must not silently trigger retries or fallback.
-async function requestGeminiWithRetry(apiKey, promptText, modelName, attempts) {
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    if (attempt > 0) {
-      const backoff = GEMINI_RETRY_DELAY_MS[Math.min(attempt - 1, GEMINI_RETRY_DELAY_MS.length - 1)];
-      setAiScanStatus(`Gemini ${modelName} đang quá tải. Tự thử lại lần ${attempt + 1}/${attempts}...`);
-      await delayGeminiRetry(backoff);
-    }
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey
-      },
-      body: JSON.stringify({
-        model: modelName,
-        store: false,
-        input: [
-          { type: "text", text: promptText },
-          { type: "image", data: aiSelectedImageBase64, mime_type: aiSelectedImageMime }
-        ]
-      })
-    });
-    const data = await response.json().catch(() => ({}));
-    if (response.ok || !GEMINI_OVERLOAD_STATUSES.has(response.status) || attempt === attempts - 1) {
-      return { ok: response.ok, status: response.status, data, modelName };
-    }
-  }
-  throw new Error("Không nhận được phản hồi từ dịch vụ Gemini.");
+async function callGeminiInteractionsOnce(apiKey, modelName, promptText) {
+  // Google's documented Interactions API for inline base64 images.
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey
+    },
+    body: JSON.stringify({
+      model: modelName,
+      store: false,
+      input: [
+        { type: "text", text: promptText },
+        { type: "image", data: aiSelectedImageBase64, mime_type: aiSelectedImageMime }
+      ]
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
 }
 
 function extractInteractionText(data) {
@@ -2855,8 +2845,6 @@ async function analyzeTeamImageWithAI() {
   if (btn.disabled) return; // Prevent two requests for the same image.
   const btnText = document.getElementById("ai-scan-btn-text");
   btn.disabled = true;
-  btnText.textContent = "⏳ Gemini 3.8 Flash đang phân tích ảnh...";
-  setAiScanStatus("Đang gửi ảnh tới Gemini 3.8 Flash (Interactions API)...");
 
   const promptText = `You are a competitive Pokémon VGC Regulation M-C team parser.
 Extract all Pokémon visible in this team image and output ONLY clean Pokémon Showdown paste format.
@@ -2874,21 +2862,37 @@ Level: 50
 - Do NOT include markdown code fences or extra commentary, only the Showdown paste text.`;
 
   try {
-    // First try Gemini 3.8; if Google's server is overloaded, use Gemini 3.6.
-    let result = await requestGeminiWithRetry(apiKey, promptText, GEMINI_AI_MODEL, 3);
-    let fallbackUsed = false;
-    if (!result.ok && GEMINI_OVERLOAD_STATUSES.has(result.status)) {
-      fallbackUsed = true;
-      setAiScanStatus(`Gemini 3.8 đang quá tải. Chuyển sang Gemini 3.6 Flash dự phòng...`);
-      result = await requestGeminiWithRetry(apiKey, promptText, GEMINI_AI_FALLBACK_MODEL, 2);
+    let lastError = null;
+    let data = null;
+
+    for (const modelName of GEMINI_FALLBACK_MODELS) {
+      const maxAttempts = 3;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        btnText.textContent = `⏳ ${modelName} đang phân tích (lần ${attempt}/${maxAttempts})...`;
+        setAiScanStatus(`Đang gửi ảnh tới ${modelName} (lần thử ${attempt}/${maxAttempts})...`);
+
+        const res = await callGeminiInteractionsOnce(apiKey, modelName, promptText);
+        if (res.response.ok) {
+          data = res.data;
+          lastError = null;
+          break;
+        }
+
+        lastError = new Error(explainGeminiFailure(res.response.status, res.data.error, modelName));
+        if (!isRetryableGeminiStatus(res.response.status) || attempt === maxAttempts) {
+          break;
+        }
+
+        const delay = attempt * 1500;
+        setAiScanStatus(`${modelName} đang quá tải (${res.response.status}), thử lại sau ${delay / 1000}s...`);
+        await waitMs(delay);
+      }
+      if (data) break;
     }
-    if (!result.ok) {
-      const extra = fallbackUsed && GEMINI_OVERLOAD_STATUSES.has(result.status)
-        ? " Đã thử lại và thử model dự phòng nhưng Google vẫn đang quá tải."
-        : "";
-      throw new Error(explainGeminiFailure(result.status, result.data.error, result.modelName) + extra);
+
+    if (!data) {
+      throw lastError || new Error("Không nhận được phản hồi hợp lệ từ Gemini API.");
     }
-    const { data } = result;
 
     const rawText = extractInteractionText(data);
     const cleaned = rawText.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "").trim();
@@ -2896,12 +2900,12 @@ Level: 50
       throw new Error("Gemini phản hồi thành công nhưng không trả văn bản. Kiểm tra nội dung ảnh và thử lại.");
     }
     document.getElementById("ai-output-textarea").value = cleaned;
-    setAiScanStatus(fallbackUsed ? "Đã quét thành công bằng Gemini 3.6 Flash (dự phòng)." : "Đã quét ảnh thành công bằng Gemini 3.8 Flash.", "success");
+    setAiScanStatus("Đã quét ảnh thành công.", "success");
     showToast("Quét ảnh đội hình thành công!", "success");
   } catch (err) {
     // Do not log the API key or the input image data.
     console.error("Gemini AI scanner:", err.message);
-    const errorMessage = (err instanceof TypeError || err?.name === "TypeError") && /failed to fetch|networkerror/i.test(err.message)
+    const errorMessage = err instanceof TypeError && /failed to fetch|networkerror/i.test(err.message)
       ? "Không kết nối được tới Gemini. Kiểm tra mạng và Console → Network. Nếu báo CORS, xác nhận app.js mới đã được tải (không còn header Api-Revision)."
       : err.message;
     setAiScanStatus(errorMessage, "error");
