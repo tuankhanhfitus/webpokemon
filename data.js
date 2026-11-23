@@ -1190,6 +1190,14 @@ const POKEDEX_MC = {
     abilities: ["Unburden", "Poison Touch", "Pressure"],
     defaultMoves: ["Close Combat", "Dire Claw", "Fake Out", "Coaching"]
   },
+  "Milotic": {
+    dex: 350,
+    sprite: "milotic",
+    types: ["Water"],
+    base: { hp: 95, atk: 60, def: 79, spa: 100, spd: 125, spe: 81 },
+    abilities: ["Marvel Scale", "Competitive", "Cute Charm"],
+    defaultMoves: ["Scald", "Ice Beam", "Icy Wind", "Protect"]
+  },
   "Torkoal": {
     dex: 324,
     sprite: "torkoal",
@@ -1434,6 +1442,7 @@ const MOVES_DB = {
   "Decorate":         { bp: 0,   type: "Fairy",    cat: "Status",   spread: false },
   "Tailwind":         { bp: 0,   type: "Flying",   cat: "Status",   spread: false },
   "Trick Room":       { bp: 0,   type: "Psychic",  cat: "Status",   spread: false },
+  "Imprison":         { bp: 0,   type: "Psychic",  cat: "Status",   spread: false },
   "Wide Guard":       { bp: 0,   type: "Rock",     cat: "Status",   spread: false },
   "Parting Shot":     { bp: 0,   type: "Dark",     cat: "Status",   spread: false },
   "Coaching":         { bp: 0,   type: "Fighting", cat: "Status",   spread: false },
@@ -1460,6 +1469,7 @@ const MOVES_DB = {
   "Glaive Rush":      { bp: 120, type: "Dragon",   cat: "Physical", spread: false, contact: true },
   "Draco Meteor":     { bp: 130, type: "Dragon",   cat: "Special",  spread: false },
   "Dragon Pulse":     { bp: 85,  type: "Dragon",   cat: "Special",  spread: false },
+  "Rock Tomb":        { bp: 60,  type: "Rock",     cat: "Physical", spread: false },
   "Rock Slide":       { bp: 75,  type: "Rock",     cat: "Physical", spread: true },
   "Power Gem":        { bp: 80,  type: "Rock",     cat: "Special",  spread: false },
   "Close Combat":     { bp: 120, type: "Fighting", cat: "Physical", spread: false, contact: true },

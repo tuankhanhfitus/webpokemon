@@ -1887,7 +1887,16 @@ function formatTeamToShowdown(team, mode = "ranked") {
           (k) => `${spToEvEquivalent(mon.sp[k])} ${STAT_LABELS[k]}`
         );
         if (evParts.length > 0) {
-          lines.push(`EVs: ${evParts.join(" / ")}`);
+          // Champions permits 66 SP, which sometimes maps to 512/516 classic EVs.
+          // A Showdown EV line above 510 is invalid. Export exact Champions
+          // SPs in that case so importing back never corrupts the team.
+          const evBudget = STAT_KEYS.reduce((sum, k) => sum + spToEvEquivalent(mon.sp[k] || 0), 0);
+          if (evBudget <= 510) lines.push(`EVs: ${evParts.join(" / ")}`);
+          else {
+            const spParts = STAT_KEYS.filter(k => (mon.sp[k] || 0) > 0)
+              .map(k => `${mon.sp[k]} ${STAT_LABELS[k]}`);
+            lines.push(`SPs: ${spParts.join(" / ")}`);
+          }
         }
       }
 
@@ -2006,7 +2015,24 @@ function extractVisibleAllocation(lines, report = null, label = "Pokémon") {
     const ev = line.match(/^EVs?\s*:\s*(.+)$/i);
     const sp = line.match(/^(?:SPs?|Stat\s*Points?)\s*:\s*(.+)$/i);
     if (!ev && !sp) continue;
-    const parsed = parseScannedStatParts((sp || ev)[1], sp ? "sp" : "ev");
+    // Some Pokémon Champions team sheets label STAT POINTS as "EVs" even though
+    // they use the Champions 0–32 / 66-point scale rather than standard 0–252 EVs.
+    // A near-full legal Champions distribution is strong evidence of this format.
+    // Conventional Showdown EVs (e.g. 252 Atk / 4 SpD / 252 Spe) are unaffected.
+    let scale = sp ? "sp" : "ev";
+    if (ev) {
+      const championsCandidate = parseScannedStatParts(ev[1], "sp");
+      const candidate = championsCandidate.allocation;
+      const candidateTotal = candidate
+        ? STAT_KEYS.reduce((total, stat) => total + candidate[stat], 0)
+        : 0;
+      if (candidate && championsCandidate.issues.length === 0 &&
+          candidateTotal >= 64 && candidateTotal <= 66) {
+        scale = "sp";
+        if (report) report.inferredSp = (report.inferredSp || 0) + 1;
+      }
+    }
+    const parsed = parseScannedStatParts((sp || ev)[1], scale);
     if (parsed.issues.length && report) report.errors.push(...parsed.issues.map(issue => `${label}: ${issue}`));
     if (sp) fromSp = parsed.allocation;
     else fromEvs = parsed.allocation;
@@ -2214,7 +2240,7 @@ function openImportModal() {
   modalMode = "import";
   const modal = document.getElementById("paste-modal");
   document.getElementById("modal-title").textContent = "Nhập Đội Hình Từ Showdown Paste";
-  document.getElementById("modal-subtitle").textContent = "Dán 1–6 Pokémon; giữ nguyên chiêu và chỉ số. Sau khi nhập, nhấn Lưu ở Team Builder.";
+  document.getElementById("modal-subtitle").textContent = "Dán 1–6 Pokémon. EVs dạng Champions (66 điểm) giữ nguyên SP; EVs 252/4/252 được quy đổi. Sau khi nhập, nhấn Lưu.";
   document.getElementById("modal-export-tabs").classList.add("hidden");
   document.getElementById("modal-action-btn").textContent = "Nạp vào Đội Hình";
   const input = document.getElementById("modal-paste-textarea");
@@ -2267,7 +2293,10 @@ function handleModalPrimaryAction() {
     renderTeamRibbon();
     renderActiveSlotEditor();
     closePasteModal();
-    showToast("Đã nạp Paste vào bản nháp. Nhấn Lưu để giữ đội hình.", "success");
+    const recognizedSp = lastShowdownImportReport.inferredSp || 0;
+    showToast(recognizedSp
+      ? `Đã nhập ${recognizedSp} bộ EVs dạng SP Champions (giữ nguyên 66 điểm). Nhấn Lưu để lưu đội hình.`
+      : "Đã nạp Paste vào bản nháp. Nhấn Lưu để giữ đội hình.", "success");
   } else {
     copyTextToClipboard(textarea.value);
   }
