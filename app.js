@@ -77,12 +77,228 @@ let calcState = {
 let speedSlots = [null, null, null];
 
 // ============================================================================
+// UI COLOR THEME + IMAGE-ENABLED ITEM SELECTORS
+// ============================================================================
+const THEME_STORAGE_KEY = "vgc_studio_theme";
+let activeItemPicker = null;
+
+function applyAppTheme(theme) {
+  const mode = theme === "light" ? "light" : "dark";
+  document.documentElement.classList.toggle("light", mode === "light");
+  document.documentElement.classList.toggle("dark", mode === "dark");
+  const button = document.getElementById("theme-toggle");
+  if (button) {
+    button.setAttribute("aria-label", mode === "light" ? "Chuyển sang giao diện tối" : "Chuyển sang giao diện sáng");
+    button.setAttribute("aria-pressed", String(mode === "light"));
+  }
+  const label = document.getElementById("theme-toggle-label");
+  if (label) label.textContent = mode === "light" ? "Tối" : "Sáng";
+  const meta = document.getElementById("app-theme-color");
+  if (meta) meta.content = mode === "light" ? "#f1f5fc" : "#060911";
+}
+
+function toggleAppTheme() {
+  const next = document.documentElement.classList.contains("light") ? "dark" : "light";
+  applyAppTheme(next);
+  try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch (_) { /* optional */ }
+}
+
+function getItemIconUrl(item) {
+  if (!item || item === "None") return "assets/no-item.svg";
+  if (REG_MC_MEGA_STONES.includes(item)) return "assets/mega-stone.svg";
+  const irregular = {
+    "Black Glasses": "blackglasses", "Bright Powder": "brightpowder",
+    "King's Rock": "kings-rock", "Never-Melt Ice": "never-melt-ice",
+    "Silver Powder": "silverpowder", "Twisted Spoon": "twistedspoon",
+    "Miracle Seed": "miracle-seed", "Spell Tag": "spell-tag"
+  };
+  const slug = irregular[item] || item.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return `https://play.pokemonshowdown.com/sprites/itemicons/${slug}.png`;
+}
+
+function itemIconFallback(item) {
+  return REG_MC_MEGA_STONES.includes(item) ? "assets/mega-stone.svg" :
+    item === "None" ? "assets/no-item.svg" : "assets/item-placeholder.svg";
+}
+
+function makeItemIcon(item, sizeClass = "") {
+  const img = document.createElement("img");
+  img.className = "item-sprite " + sizeClass;
+  img.alt = "";
+  img.loading = "lazy";
+  img.src = getItemIconUrl(item);
+  img.onerror = () => { img.onerror = null; img.src = itemIconFallback(item); };
+  return img;
+}
+
+function syncItemPicker(selectOrId) {
+  const select = typeof selectOrId === "string" ? document.getElementById(selectOrId) : selectOrId;
+  if (!select) return;
+  const host = select.closest(".item-picker-host");
+  if (!host) return;
+  const title = host.querySelector(".item-picker-label");
+  const iconBox = host.querySelector(".item-picker-icon");
+  const value = select.value || "None";
+  if (title) title.textContent = value === "None" ? "Không có vật phẩm" : value;
+  if (iconBox) iconBox.replaceChildren(makeItemIcon(value));
+  host.querySelector(".item-picker-trigger")?.setAttribute("title", value);
+}
+
+function setupItemImagePickers() {
+  ["sel-item", "calc-p1-item", "calc-p2-item"].forEach((id) => {
+    const select = document.getElementById(id);
+    if (!select || select.closest(".item-picker-host")) return;
+    const host = document.createElement("div");
+    host.className = "item-picker-host" + (id === "sel-item" ? " item-picker-builder" : " item-picker-calc");
+    select.parentNode.insertBefore(host, select);
+    host.appendChild(select);
+    select.classList.add("item-picker-native");
+    select.tabIndex = -1;
+    select.setAttribute("aria-hidden", "true");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "item-picker-trigger";
+    btn.setAttribute("aria-haspopup", "dialog");
+    btn.setAttribute("aria-expanded", "false");
+    btn.setAttribute("aria-label", id === "sel-item" ? "Chọn vật phẩm Pokémon" : "Chọn vật phẩm tính sát thương");
+    btn.innerHTML = '<span class="item-picker-icon"></span><span class="item-picker-label"></span><span class="item-picker-chevron" aria-hidden="true">▾</span>';
+    host.appendChild(btn);
+    btn.addEventListener("click", () => openItemImagePicker(select));
+    syncItemPicker(select);
+  });
+}
+
+function closeItemImagePicker(restoreFocus = false) {
+  if (!activeItemPicker) return;
+  const { dialog, trigger } = activeItemPicker;
+  dialog.remove();
+  if (trigger) trigger.setAttribute("aria-expanded", "false");
+  activeItemPicker = null;
+  if (restoreFocus && trigger) trigger.focus();
+}
+
+function positionItemImagePicker() {
+  if (!activeItemPicker) return;
+  const { trigger, dialog } = activeItemPicker;
+  const rect = trigger.getBoundingClientRect();
+  const width = Math.min(390, window.innerWidth - 24);
+  const height = Math.min(410, window.innerHeight - 28);
+  const left = Math.min(Math.max(12, rect.left), window.innerWidth - width - 12);
+  const below = window.innerHeight - rect.bottom;
+  const above = rect.top;
+  const showAbove = below < Math.min(270, height) && above > below;
+  dialog.style.width = width + "px";
+  dialog.style.maxHeight = height + "px";
+  dialog.style.left = left + "px";
+  dialog.style.top = showAbove ? Math.max(12, rect.top - height - 8) + "px" : Math.min(window.innerHeight - height - 12, rect.bottom + 8) + "px";
+}
+
+function openItemImagePicker(select) {
+  if (activeItemPicker && activeItemPicker.select === select) {
+    closeItemImagePicker();
+    return;
+  }
+  closeItemImagePicker();
+  const trigger = select.closest(".item-picker-host").querySelector(".item-picker-trigger");
+  const dialog = document.createElement("div");
+  dialog.className = "item-picker-dialog";
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-label", "Chọn vật phẩm");
+  dialog.innerHTML = '<div class="item-picker-dialog-header"><strong>Vật phẩm · Regulation M-C</strong><button type="button" class="item-picker-close" aria-label="Đóng danh sách">✕</button></div><input type="search" class="item-picker-search" placeholder="Tìm vật phẩm hoặc Mega Stone..." aria-label="Tìm vật phẩm" autocomplete="off"/><div class="item-picker-options" role="listbox" aria-label="Danh sách vật phẩm"></div>';
+  document.body.appendChild(dialog);
+  activeItemPicker = { select, trigger, dialog };
+  trigger.setAttribute("aria-expanded", "true");
+  positionItemImagePicker();
+  const search = dialog.querySelector(".item-picker-search");
+  const list = dialog.querySelector(".item-picker-options");
+  function render(query = "") {
+    list.replaceChildren();
+    const q = query.trim().toLocaleLowerCase("vi");
+    const groups = [
+      ["Không trang bị", ["None"]],
+      ["Vật phẩm", REG_MC_HELD_ITEMS],
+      ["Mega Stone", REG_MC_MEGA_STONES]
+    ];
+    let count = 0;
+    groups.forEach(([label, items]) => {
+      const filtered = items.filter((item) => (item === "None" ? "none không có vật phẩm" : item.toLocaleLowerCase("vi")).includes(q));
+      if (!filtered.length) return;
+      const header = document.createElement("div");
+      header.className = "item-picker-group-label";
+      header.textContent = label + " (" + filtered.length + ")";
+      list.appendChild(header);
+      filtered.forEach((item) => {
+        const opt = document.createElement("button");
+        opt.type = "button";
+        opt.className = "item-picker-option" + (item === select.value ? " is-selected" : "");
+        opt.setAttribute("role", "option");
+        opt.setAttribute("aria-selected", String(item === select.value));
+        opt.appendChild(makeItemIcon(item));
+        const name = document.createElement("span");
+        name.textContent = item === "None" ? "Không có vật phẩm" : item;
+        opt.appendChild(name);
+        if (item === select.value) {
+          const check = document.createElement("span");
+          check.textContent = "✓";
+          check.className = "item-picker-check";
+          opt.appendChild(check);
+        }
+        opt.addEventListener("click", () => {
+          select.value = item;
+          closeItemImagePicker();
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+          syncItemPicker(select);
+        });
+        list.appendChild(opt);
+        count++;
+      });
+    });
+    if (!count) {
+      const msg = document.createElement("div");
+      msg.className = "item-picker-empty";
+      msg.textContent = "Không tìm thấy vật phẩm phù hợp.";
+      list.appendChild(msg);
+    }
+  }
+  render();
+  search.addEventListener("input", () => render(search.value));
+  search.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.preventDefault(); closeItemImagePicker(true); }
+    if (e.key === "Enter" || e.key === "ArrowDown") {
+      const first = list.querySelector(".item-picker-option");
+      if (first) { e.preventDefault(); if (e.key === "Enter") first.click(); else first.focus(); }
+    }
+  });
+  list.addEventListener("keydown", (e) => {
+    const opts = [...list.querySelectorAll(".item-picker-option")];
+    const idx = opts.indexOf(document.activeElement);
+    if (e.key === "Escape") { e.preventDefault(); closeItemImagePicker(true); }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      (opts[(idx + (e.key === "ArrowDown" ? 1 : -1) + opts.length) % opts.length] || opts[0])?.focus();
+    }
+  });
+  dialog.querySelector(".item-picker-close").addEventListener("click", () => closeItemImagePicker(true));
+  search.focus();
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (activeItemPicker && !activeItemPicker.dialog.contains(e.target) && !activeItemPicker.trigger.contains(e.target)) closeItemImagePicker();
+});
+window.addEventListener("resize", positionItemImagePicker);
+window.addEventListener("scroll", (e) => {
+  if (activeItemPicker && !activeItemPicker.dialog.contains(e.target)) closeItemImagePicker();
+}, true);
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
+  applyAppTheme(document.documentElement.classList.contains("light") ? "light" : "dark");
   loadTeamsFromStorage();
   populateStaticDropdowns();
+  setupItemImagePickers();
   renderTeamSelector();
   renderTeamRibbon();
   renderActiveSlotEditor();
@@ -118,6 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
       activeMoveDropdownId = null;
       closePokemonPicker();
       closePasteModal();
+      closeItemImagePicker();
     }
   });
 
@@ -785,6 +1002,7 @@ function renderActiveSlotEditor() {
 
   document.getElementById("input-gender").value = mon.gender || "";
   document.getElementById("sel-item").value = mon.item || "None";
+  syncItemPicker("sel-item");
   document.getElementById("sel-nature").value = mon.nature || "Serious";
 
   const selAbility = document.getElementById("sel-ability");
@@ -1482,6 +1700,7 @@ function renderCalcSideUI(side) {
 
   document.getElementById(`calc-${side}-types`).innerHTML = renderTypeBadgesHtml(form.types);
   document.getElementById(`calc-${side}-item`).value = st.item;
+  syncItemPicker(`calc-${side}-item`);
   document.getElementById(`calc-${side}-nature`).value = st.nature;
   document.getElementById(`calc-${side}-status`).value = st.status;
 
