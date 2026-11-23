@@ -5,6 +5,7 @@
 const STORAGE_KEY_TEAMS = "vgc_mc_teams_v2";
 const STORAGE_KEY_ACTIVE_TEAM = "vgc_mc_active_team_v2";
 const STORAGE_KEY_GEMINI_KEY = "vgc_mc_gemini_key";
+const GEMINI_AI_MODEL = "gemini-3.8-flash";
 const STORAGE_KEY_WORKSPACE = "vgc_studio_workspace_v1";
 let activeMainTab = "builder";
 let hasRestoredCalcState = false;
@@ -2775,7 +2776,7 @@ async function analyzeTeamImageWithAI() {
   const btn = document.getElementById("btn-run-ai-scan");
   const btnText = document.getElementById("ai-scan-btn-text");
   btn.disabled = true;
-  btnText.textContent = "⏳ Đang phân tích ảnh bằng Gemini AI...";
+  btnText.textContent = "⏳ Gemini 3.8 Flash đang phân tích ảnh...";
 
   const promptText = `You are a competitive Pokémon VGC Regulation M-C team parser.
 Extract all Pokémon visible in this team image and output ONLY clean Pokémon Showdown paste format.
@@ -2794,10 +2795,13 @@ Level: 50
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_AI_MODEL}:generateContent`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey
+        },
         body: JSON.stringify({
           contents: [
             {
@@ -2821,8 +2825,16 @@ Level: 50
       throw new Error(data.error?.message || "Lỗi kết nối Gemini API");
     }
 
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    // Gemini 3.8 có thể trả về nhiều phần nội dung; bỏ phần suy luận nếu có.
+    const rawText = (data.candidates?.[0]?.content?.parts || [])
+      .filter((part) => typeof part.text === "string" && !part.thought)
+      .map((part) => part.text)
+      .join("\n");
     const cleaned = rawText.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "").trim();
+    if (!cleaned) {
+      const reason = data.candidates?.[0]?.finishReason;
+      throw new Error(reason ? `Gemini chưa trả văn bản (finishReason: ${reason}).` : "Gemini chưa trả về nội dung đội hình.");
+    }
     document.getElementById("ai-output-textarea").value = cleaned;
     showToast("Quét ảnh đội hình thành công!", "success");
   } catch (err) {
