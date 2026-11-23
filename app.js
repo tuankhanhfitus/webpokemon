@@ -1943,6 +1943,49 @@ function updateSpeedSlot(slotIdx, field, value) {
   renderSpeedComparisonCards();
 }
 
+// Capture the pointer for a full 0–32 SP drag even if the mouse leaves the thumb.
+// We handle mouse, pen and touch with the same pointer events; keyboard still
+// uses the range input's native `oninput` event.
+let speedSpPointerDrag = null;
+
+function setSpeedSpFromPointer(input, slotIdx, clientX) {
+  const rect = input.getBoundingClientRect();
+  // The thumb is ~16px wide, so its center moves inside these endpoints.
+  const thumbRadius = 8;
+  const usableWidth = Math.max(1, rect.width - thumbRadius * 2);
+  const progress = Math.min(1, Math.max(0, (clientX - rect.left - thumbRadius) / usableWidth));
+  const nextSp = Math.round(progress * 32);
+  input.value = String(nextSp);
+  if (speedSlots[slotIdx] && speedSlots[slotIdx].sp !== nextSp) {
+    updateSpeedSlot(slotIdx, "sp", nextSp);
+  }
+}
+
+function beginSpeedSpDrag(event, slotIdx) {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  const input = event.currentTarget;
+  event.preventDefault();
+  speedSpPointerDrag = { input, slotIdx, pointerId: event.pointerId };
+  input.setPointerCapture(event.pointerId);
+  setSpeedSpFromPointer(input, slotIdx, event.clientX);
+}
+
+function moveSpeedSpDrag(event) {
+  const active = speedSpPointerDrag;
+  if (!active || active.input !== event.currentTarget || active.pointerId !== event.pointerId) return;
+  event.preventDefault();
+  setSpeedSpFromPointer(active.input, active.slotIdx, event.clientX);
+}
+
+function endSpeedSpDrag(event) {
+  const active = speedSpPointerDrag;
+  if (!active || active.input !== event.currentTarget || active.pointerId !== event.pointerId) return;
+  speedSpPointerDrag = null;
+  if (active.input.hasPointerCapture(event.pointerId)) {
+    active.input.releasePointerCapture(event.pointerId);
+  }
+}
+
 // Refresh only the output labels, winner badges and colors while dragging.
 // Rebuilding #speed-cards-grid on every `input` releases the range thumb.
 function updateSpeedComparisonLive() {
@@ -2149,8 +2192,13 @@ function renderSpeedComparisonCards() {
             <input data-speed-sp-slider type="range" min="0" max="32" step="1" value="${card.sp}"
               aria-label="Stat Points Speed - Pokémon ${slotIdx + 1}"
               oninput="updateSpeedSlot(${slotIdx}, 'sp', this.value)"
-              style="background: linear-gradient(to right, #38bdf8 0%, #38bdf8 ${card.sp / 32 * 100}%, #1e293b ${card.sp / 32 * 100}%, #1e293b 100%);"
-              class="sp-slider w-full" />
+              onpointerdown="beginSpeedSpDrag(event, ${slotIdx})"
+              onpointermove="moveSpeedSpDrag(event)"
+              onpointerup="endSpeedSpDrag(event)"
+              onpointercancel="endSpeedSpDrag(event)"
+              onlostpointercapture="endSpeedSpDrag(event)"
+              style="touch-action: none; user-select: none; background: linear-gradient(to right, #38bdf8 0%, #38bdf8 ${card.sp / 32 * 100}%, #1e293b ${card.sp / 32 * 100}%, #1e293b 100%);"
+              class="sp-slider w-full speed-sp-drag-slider" />
           </div>
 
           <div class="space-y-1.5">
