@@ -1934,7 +1934,68 @@ function updateSpeedSlot(slotIdx, field, value) {
     card[field] = value;
   }
 
+  // Updating an SP range input must NOT replace its DOM node during dragging.
+  if (field === "sp") {
+    updateSpeedComparisonLive();
+    return;
+  }
+
   renderSpeedComparisonCards();
+}
+
+// Refresh only the output labels, winner badges and colors while dragging.
+// Rebuilding #speed-cards-grid on every `input` releases the range thumb.
+function updateSpeedComparisonLive() {
+  const isTrickRoom = document.getElementById("speed-trick-room")?.checked || false;
+  const active = speedSlots
+    .map((card, slotIdx) => card ? { slotIdx, card, finalSpe: computeSpeedCardFinalValue(card).finalSpe } : null)
+    .filter(Boolean);
+  if (!active.length) return;
+
+  const bestSpe = active.reduce((best, entry) =>
+    isTrickRoom ? Math.min(best, entry.finalSpe) : Math.max(best, entry.finalSpe),
+    isTrickRoom ? Infinity : -Infinity
+  );
+
+  active.forEach(({ slotIdx, card, finalSpe }) => {
+    const cardEl = document.querySelector(`[data-speed-slot="${slotIdx}"]`);
+    if (!cardEl) return;
+    const isWinner = finalSpe === bestSpe;
+    const valueEl = cardEl.querySelector("[data-speed-sp-value]");
+    const speedEl = cardEl.querySelector("[data-speed-final-value]");
+    const slider = cardEl.querySelector("[data-speed-sp-slider]");
+    const badge = cardEl.querySelector("[data-speed-winner-badge]");
+    const result = cardEl.querySelector("[data-speed-result-panel]");
+
+    if (valueEl) valueEl.textContent = String(card.sp);
+    if (speedEl) {
+      speedEl.textContent = String(finalSpe);
+      speedEl.classList.toggle("text-emerald-400", isWinner);
+      speedEl.classList.toggle("text-white", !isWinner);
+    }
+    if (slider) {
+      // Change the paint, not the input element or its current pointer capture.
+      const percentage = (card.sp / 32) * 100;
+      slider.style.background = `linear-gradient(to right, #38bdf8 0%, #38bdf8 ${percentage}%, #1e293b ${percentage}%, #1e293b 100%)`;
+    }
+    cardEl.classList.toggle("border-emerald-500", isWinner);
+    cardEl.classList.toggle("border-slate-800", !isWinner);
+    cardEl.classList.toggle("shadow-lg", isWinner);
+    cardEl.classList.toggle("shadow-emerald-500/15", isWinner);
+
+    if (result) {
+      result.classList.toggle("bg-emerald-500/10", isWinner);
+      result.classList.toggle("border-emerald-500/40", isWinner);
+      result.classList.toggle("bg-slate-950/90", !isWinner);
+      result.classList.toggle("border-slate-800", !isWinner);
+    }
+    if (badge) {
+      badge.textContent = isWinner ? (isTrickRoom ? "Đi trước (TR)" : "Nhanh nhất") : `Slot #${slotIdx + 1}`;
+      badge.className = isWinner
+        ? "inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[11px] font-extrabold tracking-wide shadow"
+        : "text-[11px] font-semibold text-slate-500";
+    }
+  });
 }
 
 function computeSpeedCardFinalValue(card) {
@@ -2021,18 +2082,16 @@ function renderSpeedComparisonCards() {
         .join("");
 
       return `
-        <div class="glass-panel rounded-2xl p-5 relative flex flex-col justify-between space-y-4 transition-all ${
+        <div data-speed-slot="${slotIdx}" class="glass-panel rounded-2xl p-5 relative flex flex-col justify-between space-y-4 border-2 transition-[border-color,box-shadow] ${
           isWinner
-            ? "border-2 border-emerald-500 shadow-lg shadow-emerald-500/15"
-            : "border border-slate-800"
+            ? "border-emerald-500 shadow-lg shadow-emerald-500/15"
+            : "border-slate-800"
         }">
           <div class="flex items-center justify-between gap-2 min-h-[28px]">
             <div>
-              ${
-                isWinner
-                  ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[11px] font-extrabold tracking-wide shadow">${badgeLabel}</span>`
-                  : `<span class="text-[11px] font-semibold text-slate-500">Slot #${slotIdx + 1}</span>`
-              }
+              <span data-speed-winner-badge class="${isWinner
+                ? "inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[11px] font-extrabold tracking-wide shadow"
+                : "text-[11px] font-semibold text-slate-500"}">${isWinner ? badgeLabel : `Slot #${slotIdx + 1}`}</span>
             </div>
             <div class="flex items-center gap-1.5">
               <button type="button" onclick="openPokemonPicker({ mode: 'speed', slotIdx: ${slotIdx} })"
@@ -2085,10 +2144,12 @@ function renderSpeedComparisonCards() {
           <div class="space-y-1.5">
             <div class="flex items-center justify-between text-xs">
               <span class="font-bold text-slate-200">Stat Points (SP) vào Speed</span>
-              <span class="font-mono font-extrabold text-sky-400">${card.sp}</span>
+              <span data-speed-sp-value class="font-mono font-extrabold text-sky-400">${card.sp}</span>
             </div>
-            <input type="range" min="0" max="32" value="${card.sp}"
+            <input data-speed-sp-slider type="range" min="0" max="32" step="1" value="${card.sp}"
+              aria-label="Stat Points Speed - Pokémon ${slotIdx + 1}"
               oninput="updateSpeedSlot(${slotIdx}, 'sp', this.value)"
+              style="background: linear-gradient(to right, #38bdf8 0%, #38bdf8 ${card.sp / 32 * 100}%, #1e293b ${card.sp / 32 * 100}%, #1e293b 100%);"
               class="sp-slider w-full" />
           </div>
 
@@ -2160,13 +2221,13 @@ function renderSpeedComparisonCards() {
             </label>
           </div>
 
-          <div class="rounded-xl p-3 text-center border ${
+          <div data-speed-result-panel class="rounded-xl p-3 text-center border ${
             isWinner
               ? "bg-emerald-500/10 border-emerald-500/40"
               : "bg-slate-950/90 border-slate-800"
           }">
             <div class="text-[11px] font-semibold text-slate-400">Tốc độ cuối cùng</div>
-            <div class="font-mono text-3xl font-extrabold mt-0.5 ${
+            <div data-speed-final-value class="font-mono text-3xl font-extrabold mt-0.5 ${
               isWinner ? "text-emerald-400" : "text-white"
             }">
               ${finalSpe}
