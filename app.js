@@ -845,7 +845,7 @@ function renderPokemonPickerGrid() {
 
   const query = (document.getElementById("picker-search-input")?.value || "").trim().toLowerCase();
   const showMegaForms = document.getElementById("picker-show-mega-forms")?.checked || false;
-  const teamSpeciesSet = new Set((getCurrentTeam()?.slots || []).map((s) => s.species));
+  const teamSpeciesSet = new Set((getCurrentTeam()?.slots || []).filter(Boolean).map((s) => s.species));
 
   let entries = [];
   Object.keys(POKEDEX_MC)
@@ -934,8 +934,14 @@ function selectPokemonFromPicker(species, isMega, megaStone) {
     changeActiveSpecies(species);
     const mon = getCurrentPokemon();
     if (mon) {
-      mon.isMega = Boolean(isMega);
-      if (isMega && megaStone) mon.item = megaStone;
+      const dex = POKEDEX_MC[species];
+      mon.isMega = Boolean(isMega && dex?.megas);
+      if (mon.isMega) {
+        mon.item = megaStone || dex.defaultMegaStone;
+      } else if (dex?.megas?.[mon.item]) {
+        // Choosing the base form should not leave a hidden Mega Stone equipped.
+        mon.item = "None";
+      }
       saveTeamsToStorage();
       renderTeamRibbon();
       renderActiveSlotEditor();
@@ -1202,7 +1208,7 @@ function getCurrentTeam() {
 
 function getCurrentPokemon() {
   const team = getCurrentTeam();
-  return team.slots[activeSlotIndex];
+  return team?.slots?.[activeSlotIndex] || null;
 }
 
 function populateStaticDropdowns() {
@@ -1258,9 +1264,9 @@ function renameCurrentTeam(newName) {
 
 function createNewTeam() {
   const newId = "team_" + Date.now();
-  const newSlots = Array.from({ length: 6 }, (_, i) =>
-    cloneDeep(DEFAULT_SAMPLE_TEAM[i] || createEmptySlot())
-  );
+  // New teams begin with six genuinely empty slots. The sample team is only
+  // used for the initial demo, never when the user explicitly clicks New.
+  const newSlots = Array(6).fill(null);
   teams.push({
     id: newId,
     name: `Team Reg M-C #${teams.length + 1}`,
@@ -1318,8 +1324,18 @@ function renderTeamRibbon() {
 
   container.innerHTML = team.slots
     .map((mon, idx) => {
-      const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
       const isSelected = idx === activeSlotIndex;
+      if (!mon) {
+        return `
+          <button type="button" onclick="selectSlot(${idx})"
+            aria-label="Slot ${idx + 1}: Chọn Pokémon"
+            class="slot-card slot-card-empty text-left p-2.5 rounded-2xl border ${isSelected ? "active-slot" : "border-slate-800 bg-slate-900/70 hover:border-slate-700"} flex flex-col justify-center items-center gap-1.5">
+            <span class="text-[10px] font-semibold text-slate-500">#${idx + 1}</span>
+            <span class="text-xs font-bold text-slate-300">+ Chọn Pokémon</span>
+          </button>
+        `;
+      }
+      const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
       const usedSp = STAT_KEYS.reduce((acc, k) => acc + (mon.sp[k] || 0), 0);
       return `
         <button type="button" onclick="selectSlot(${idx})"
@@ -1359,10 +1375,17 @@ function selectSlot(idx) {
     renderTeamRibbon();
   }
   renderActiveSlotEditor();
+  if (!getCurrentPokemon()) openPokemonPicker({ mode: "builder" });
 }
 
 function renderActiveSlotEditor() {
   const mon = getCurrentPokemon();
+  const editor = document.getElementById("active-slot-editor");
+  const emptyPanel = document.getElementById("empty-slot-panel");
+  if (editor) editor.classList.toggle("hidden", !mon);
+  if (emptyPanel) emptyPanel.classList.toggle("hidden", Boolean(mon));
+  const emptySlotNumber = document.getElementById("empty-slot-number");
+  if (emptySlotNumber) emptySlotNumber.textContent = String(activeSlotIndex + 1);
   if (!mon) return;
   const dexData = POKEDEX_MC[mon.species] || POKEDEX_MC["Garchomp"];
   const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
@@ -1474,20 +1497,36 @@ function renderBuilderStatsTable() {
 }
 
 function changeActiveSpecies(newSpecies) {
-  const mon = getCurrentPokemon();
+  const team = getCurrentTeam();
   const dexData = POKEDEX_MC[newSpecies];
-  if (!mon || !dexData) return;
-
-  mon.species = newSpecies;
-  mon.ability = dexData.abilities[0];
-  mon.moves = [...dexData.defaultMoves];
-  if (dexData.megas) {
-    mon.isMega = true;
-    mon.item = dexData.defaultMegaStone;
+  if (!team || !dexData) return;
+  let mon = getCurrentPokemon();
+  if (!mon) {
+    // First Pokémon chosen for a blank slot: do not inherit Incineroar,
+    // sample-team SP, Nature, held item or moves.
+    mon = {
+      species: newSpecies,
+      gender: "",
+      item: "None",
+      ability: dexData.abilities?.[0] || "Pressure",
+      nature: "Serious",
+      isMega: false,
+      sp: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+      moves: (dexData.defaultMoves || ["Protect"]).slice(0, 4)
+    };
+    team.slots[activeSlotIndex] = mon;
   } else {
-    mon.isMega = false;
-    if ((mon.item && mon.item.endsWith("ite")) || (mon.item && mon.item.includes("ite "))) {
-      mon.item = "Focus Sash";
+    mon.species = newSpecies;
+    mon.ability = dexData.abilities?.[0] || "Pressure";
+    mon.moves = [...(dexData.defaultMoves || ["Protect"])].slice(0, 4);
+    if (dexData.megas) {
+      mon.isMega = true;
+      mon.item = dexData.defaultMegaStone;
+    } else {
+      mon.isMega = false;
+      if ((mon.item && mon.item.endsWith("ite")) || (mon.item && mon.item.includes("ite "))) {
+        mon.item = "Focus Sash";
+      }
     }
   }
   saveTeamsToStorage();
@@ -1575,7 +1614,7 @@ function updateBuilderSpLive() {
   });
 
   // Only the SP count in the active team slot needs changing — leave sprites alone.
-  const ribbonCount = document.querySelectorAll("#team-slots-ribbon [data-team-sp-usage]")[activeSlotIndex];
+  const ribbonCount = document.querySelector(`#team-slots-ribbon .slot-card:nth-child(${activeSlotIndex + 1}) [data-team-sp-usage]`);
   if (ribbonCount) {
     ribbonCount.textContent = `${used}/66 SP`;
     ribbonCount.classList.toggle("text-emerald-400", used === 66);
@@ -1656,7 +1695,7 @@ function applySpPreset(presetKey) {
 
 function clearCurrentSlot() {
   const team = getCurrentTeam();
-  team.slots[activeSlotIndex] = createEmptySlot();
+  team.slots[activeSlotIndex] = null;
   saveTeamsToStorage();
   renderTeamRibbon();
   renderActiveSlotEditor();
@@ -1668,7 +1707,9 @@ function clearCurrentSlot() {
 // ============================================================================
 
 function formatTeamToShowdown(team, mode = "ranked") {
+  // Blank slots must not appear as Incineroar or crash Showdown export.
   return team.slots
+    .filter(Boolean)
     .map((mon) => {
       const lines = [];
       const genderStr = mon.gender ? ` (${mon.gender})` : "";
@@ -1878,7 +1919,7 @@ function parseShowdownPasteToSlots(pasteText) {
 
   if (parsedSlots.some(slot => slot === null)) return null;
   while (parsedSlots.length < 6) {
-    parsedSlots.push(createEmptySlot());
+    parsedSlots.push(null);
   }
 
   return parsedSlots;

@@ -38,7 +38,7 @@
       }
     };
   </script>
-  <link rel="stylesheet" href="style.css?v=11" />
+  <link rel="stylesheet" href="style.css?v=12" />
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-sky-500/30 selection:text-sky-200">
 
@@ -144,8 +144,18 @@
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5" id="team-slots-ribbon">
       </div>
 
+      <!-- Empty slot: choose a Pokémon before showing stat/item controls. -->
+      <div id="empty-slot-panel" class="glass-panel rounded-2xl p-6 sm:p-8 text-center">
+        <p class="text-xs font-bold uppercase tracking-wider text-sky-400 mb-2">Slot <span id="empty-slot-number">1</span></p>
+        <button type="button" onclick="openPokemonPicker({ mode: 'builder' })"
+          class="empty-slot-select-btn mx-auto w-full max-w-xl min-h-36 rounded-2xl border-2 border-dashed border-slate-700 hover:border-sky-400 text-slate-300 hover:text-sky-300 font-bold transition flex flex-col items-center justify-center gap-2">
+          <span class="text-3xl font-light" aria-hidden="true">+</span>
+          <span>Chọn Pokémon</span>
+        </button>
+      </div>
+
       <!-- Active Pokémon Editor Panel -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div id="active-slot-editor" class="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
         <!-- Left Column: Identity, Mega, Item, Ability, Moves (7 cols) -->
         <div class="lg:col-span-7 glass-panel rounded-2xl p-4 sm:p-5 space-y-5">
@@ -745,6 +755,6 @@
   <script src="data.js?v=17"></script>
   <script src="champions-roster.js?v=18"></script>
   <script src="champions-bulbapedia.js?v=18"></script>
-  <script src="app.js?v=24"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>
