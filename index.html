@@ -740,11 +740,14 @@
 
   <!-- Pokémon Showdown's public Pokédex provides base stats for missing M-C species.
        If this CDN is blocked, the original built-in roster remains usable. -->
+  <!-- Showdown's public dex script may export into 'exports.BattlePokedex'. -->
   <script>window.exports = window.exports || {};</script>
   <script src="https://play.pokemonshowdown.com/data/pokedex.js"></script>
+  <script>window.BattlePokedex = window.BattlePokedex || window.exports.BattlePokedex || {};</script>
   <script src="https://play.pokemonshowdown.com/data/moves.js"></script>
   <script src="data.js?v=17"></script>
-  <script src="champions-roster.js?v=17"></script>
-  <script src="app.js?v=17"></script>
+  <script src="champions-roster.js?v=18"></script>
+  <script src="champions-bulbapedia.js?v=18"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>

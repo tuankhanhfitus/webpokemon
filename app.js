@@ -543,48 +543,79 @@ document.addEventListener("DOMContentLoaded", () => {
 // HELPERS: STATS, SPRITES (MEGA Z SUPPORT) & FORM RESOLUTION
 // ============================================================================
 
+// Sprite fallback: several verified image libraries before a neutral placeholder.
+// Do not silently replace Mega or patterned forms with the artwork of a DIFFERENT form.
 function getSpriteUrl(spriteSlug) {
-  // Mega Z sprites are hosted in Showdown's gen5 folder, not dex.
-  const folder = spriteSlug.endsWith("-megaz") ? "gen5" : "dex";
+  const folder = /-megaz$/.test(spriteSlug) ? "gen5" : "dex";
   return `https://play.pokemonshowdown.com/sprites/${folder}/${spriteSlug}.png`;
 }
+function buildSpriteCandidates(primarySlug) {
+  const slugs = [primarySlug];
+  // Different sprite hosts use -mega-z/-megaz and -mega-x/-megax.
+  if (primarySlug.endsWith('-mega-z')) slugs.push(primarySlug.replace(/-mega-z$/, '-megaz'));
+  if (primarySlug.endsWith('-megaz')) slugs.push(primarySlug.replace(/-megaz$/, '-mega-z'));
+  if (/-mega-[xy]$/.test(primarySlug)) slugs.push(primarySlug.replace(/-mega-([xy])$/, '-mega$1'));
+  if (/-mega[xy]$/.test(primarySlug)) slugs.push(primarySlug.replace(/-mega([xy])$/, '-mega-$1'));
+  // Showdown short aliases vs Champions sprite pack's name slugs.
+  const repoAlias = {
+    'mrmime':'mr-mime','mrrime':'mr-rime',
+    'tauros-paldeacombat':'tauros-paldea-combat',
+    'tauros-paldeablaze':'tauros-paldea-blaze',
+    'tauros-paldeaaqua':'tauros-paldea-aqua',
+    'kommoo':'kommo-o'
+  };
+  const candidates = [];
+  const folders = /-mega(?:-?[xyz])?$/.test(primarySlug) || /-megaz$/.test(primarySlug)
+    ? ['gen5', 'dex', 'home', 'home-centered']
+    : ['dex', 'home', 'home-centered', 'gen5'];
+  // The primary sprite URL is already used by the <img> src.
+  for (const slug of slugs) for (const folder of folders) {
+    candidates.push(`https://play.pokemonshowdown.com/sprites/${folder}/${slug}.png`);
+  }
+  // Pokémon Champions-specific artwork (including additional Mega forms).
+  const repo = 'https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/sprites/';
+  const repoSlugs = [...new Set([...slugs.map(slug => repoAlias[slug] || slug), ...slugs])];
+  for (const slug of repoSlugs) candidates.push(repo + slug + '.png');
+  // National Pokédex artwork is safe only for the unmodified base form.
+  if (!primarySlug.includes('-')) {
+    const mon = Object.values(POKEDEX_MC).find(p => p.sprite === primarySlug);
+    if (mon && mon.dex > 0) {
+      candidates.push(`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${mon.dex}.png`);
+    }
+  }
+  return [...new Set(candidates)];
+}
 
-// Multi-step fallback so Mega Z sprites (e.g. garchomp-megaz -> garchompmegaz -> garchomp-mega -> garchomp) never break
 function handleSpriteError(imgEl, primarySlug, fallbackSlug, baseSlug) {
-  const step = parseInt(imgEl.dataset.errStep || "0", 10);
-  if (step === 0 && primarySlug && primarySlug.includes("-")) {
-    imgEl.dataset.errStep = "1";
-    const compactSlug = primarySlug.replace(/-/g, "");
-    imgEl.src = getSpriteUrl(compactSlug);
-    return;
+  if (!imgEl.dataset.spriteCandidates) {
+    imgEl.dataset.spriteCandidates = JSON.stringify(buildSpriteCandidates(primarySlug));
+    imgEl.dataset.spriteCandidateIndex = '0';
   }
-  if (step <= 1 && fallbackSlug && fallbackSlug !== primarySlug) {
-    imgEl.dataset.errStep = "2";
-    imgEl.src = getSpriteUrl(fallbackSlug);
-    return;
-  }
-  if (step <= 2 && baseSlug && baseSlug !== fallbackSlug) {
-    imgEl.dataset.errStep = "3";
-    imgEl.src = getSpriteUrl(baseSlug);
+  const candidates = JSON.parse(imgEl.dataset.spriteCandidates);
+  const next = Number(imgEl.dataset.spriteCandidateIndex || 0) + 1;
+  if (next < candidates.length) {
+    imgEl.dataset.spriteCandidateIndex = String(next);
+    imgEl.src = candidates[next];
     return;
   }
   imgEl.onerror = null;
-  imgEl.src = "https://placehold.co/80x80/0f172a/38bdf8?text=PKMN";
+  imgEl.src = 'assets/pokemon-placeholder.svg';
+  imgEl.title = `Chưa tìm thấy ảnh đúng dạng: ${primarySlug}`;
 }
-
 function buildSpriteImgHtml(form, sizeClass = "w-16 h-16", extraClass = "") {
   return `<img src="${getSpriteUrl(form.sprite)}" alt="${escapeHtml(form.displayName)}"
     class="${sizeClass} object-contain ${extraClass}"
     onerror="handleSpriteError(this, '${form.sprite}', '${form.fallbackSprite || form.baseSprite}', '${form.baseSprite}')" />`;
 }
-
 function setImgElementForm(imgEl, form) {
   if (!imgEl || !form) return;
-  imgEl.dataset.errStep = "0";
+  delete imgEl.dataset.spriteCandidates;
+  delete imgEl.dataset.spriteCandidateIndex;
   imgEl.onerror = function () {
     handleSpriteError(this, form.sprite, form.fallbackSprite || form.baseSprite, form.baseSprite);
   };
   imgEl.src = getSpriteUrl(form.sprite);
+  imgEl.title = form.displayName;
 }
 
 function getEffectiveForm(species, isMega, item) {
@@ -608,7 +639,7 @@ function getEffectiveForm(species, isMega, item) {
     }
   }
   return {
-    displayName: species,
+    displayName: baseData.formLabel || species,
     sprite: baseData.sprite,
     fallbackSprite: baseData.sprite,
     baseSprite: baseData.sprite,
@@ -750,7 +781,7 @@ function renderPokemonPickerGrid() {
         species,
         isMega: false,
         megaStone: null,
-        displayName: species,
+        displayName: data.formLabel || species,
         sprite: data.sprite,
         fallbackSprite: data.sprite,
         baseSprite: data.sprite,
