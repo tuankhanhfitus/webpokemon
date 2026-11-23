@@ -543,13 +543,27 @@ document.addEventListener("DOMContentLoaded", () => {
 // HELPERS: STATS, SPRITES (MEGA Z SUPPORT) & FORM RESOLUTION
 // ============================================================================
 
+// Verified Pokémon Champions artworks: the Showdown dex/gen5/home PNG paths
+// do not expose these two forms. Using the correct URL directly prevents
+// 8+ broken-image retries and visual blinking on every render.
+const VERIFIED_CHAMPIONS_SPRITES = Object.freeze({
+  "raichu-megax": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/sprites/raichu-mega-x.png",
+  "raichu-megay": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/sprites/raichu-mega-y.png"
+});
+
 // Sprite fallback: several verified image libraries before a neutral placeholder.
 // Do not silently replace Mega or patterned forms with the artwork of a DIFFERENT form.
 function getSpriteUrl(spriteSlug) {
+  if (VERIFIED_CHAMPIONS_SPRITES[spriteSlug]) return VERIFIED_CHAMPIONS_SPRITES[spriteSlug];
   const folder = /-megaz$/.test(spriteSlug) ? "gen5" : "dex";
   return `https://play.pokemonshowdown.com/sprites/${folder}/${spriteSlug}.png`;
 }
 function buildSpriteCandidates(primarySlug) {
+  // These exact Mega Raichu images have been verified. Never retry the known
+  // missing Showdown aliases (or fall back to ordinary Raichu artwork).
+  if (VERIFIED_CHAMPIONS_SPRITES[primarySlug]) {
+    return [VERIFIED_CHAMPIONS_SPRITES[primarySlug]];
+  }
   const slugs = [primarySlug];
   // Different sprite hosts use -mega-z/-megaz and -mega-x/-megax.
   if (primarySlug.endsWith('-mega-z')) slugs.push(primarySlug.replace(/-mega-z$/, '-megaz'));
@@ -609,12 +623,22 @@ function buildSpriteImgHtml(form, sizeClass = "w-16 h-16", extraClass = "") {
 }
 function setImgElementForm(imgEl, form) {
   if (!imgEl || !form) return;
+  const correctUrl = getSpriteUrl(form.sprite);
+  // A normal re-render of the same Pokémon must NOT reset its loaded image.
+  // Assigning src repeatedly can cause a blank frame or visible flicker.
+  if (imgEl.dataset.spriteSlug === form.sprite &&
+      imgEl.currentSrc === correctUrl && imgEl.complete && imgEl.naturalWidth > 0) {
+    imgEl.title = form.displayName;
+    return;
+  }
+  imgEl.dataset.spriteSlug = form.sprite;
   delete imgEl.dataset.spriteCandidates;
   delete imgEl.dataset.spriteCandidateIndex;
   imgEl.onerror = function () {
     handleSpriteError(this, form.sprite, form.fallbackSprite || form.baseSprite, form.baseSprite);
   };
-  imgEl.src = getSpriteUrl(form.sprite);
+  // Do not restart the same in-flight image request unnecessarily.
+  if (imgEl.getAttribute("src") !== correctUrl) imgEl.src = correctUrl;
   imgEl.title = form.displayName;
 }
 
@@ -1207,8 +1231,21 @@ function renderTeamRibbon() {
 }
 
 function selectSlot(idx) {
+  if (!Number.isInteger(idx) || idx < 0 || idx > 5) return;
+  const previous = activeSlotIndex;
   activeSlotIndex = idx;
-  renderTeamRibbon();
+  // Only change the selected border. Rebuilding the entire ribbon discarded
+  // six <img> elements and caused Mega Raichu sprites to flash/reload.
+  const cards = document.querySelectorAll("#team-slots-ribbon .slot-card");
+  if (cards.length === 6 && cards[previous] && cards[idx]) {
+    const idleClasses = ["border-slate-800", "bg-slate-900/70", "hover:border-slate-700"];
+    cards[previous].classList.remove("active-slot");
+    cards[previous].classList.add(...idleClasses);
+    cards[idx].classList.remove(...idleClasses);
+    cards[idx].classList.add("active-slot");
+  } else {
+    renderTeamRibbon();
+  }
   renderActiveSlotEditor();
 }
 
