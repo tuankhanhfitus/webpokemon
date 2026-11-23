@@ -326,6 +326,191 @@ window.addEventListener("scroll", (e) => {
   if (activeItemPicker && !activeItemPicker.dialog.contains(e.target)) closeItemImagePicker();
 }, true);
 
+
+// ============================================================================
+// REGULATION M-C META BUILDS (SHOWDOWN REPLAYS + SMOGON FALLBACK)
+// ============================================================================
+// Daily public statistics by jamesrcode/project-red-data. These are unofficial
+// Pokemon Showdown replay statistics, not official Champions in-game usage.
+// All UI paths use a bundled static 2026-10 selection/role fallback if offline.
+// https://github.com/jamesrcode/project-red-data
+const MC_META_URLS = [
+  "https://raw.githubusercontent.com/jamesrcode/project-red-data/main/stats.json",
+  "https://cdn.jsdelivr.net/gh/jamesrcode/project-red-data@main/stats.json"
+];
+const MC_META_CACHE_KEY = "vgc_mc_live_meta_v1";
+let mcMetaEntries = new Map();
+let mcMetaInfo = null;
+let mcMetaMatchedCount = 0;
+
+function mcMetaId(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// Distributions in the public data are maps of name -> frequency, not arrays.
+function mcMetaRanked(obj) {
+  if (!obj || typeof obj !== "object") return [];
+  const records = Array.isArray(obj)
+    ? obj.map(x => Array.isArray(x) ? x : [x?.name || x?.key, x?.usage ?? x?.value])
+    : Object.entries(obj);
+  return records.filter(([k, v]) => k && Number.isFinite(Number(v)))
+    .sort((a, b) => Number(b[1]) - Number(a[1]));
+}
+
+function mcMetaCanonical(raw, names) {
+  const wanted = mcMetaId(raw);
+  return names.find(name => mcMetaId(name) === wanted) || null;
+}
+
+function mcMetaParseSpread(raw) {
+  // Smogon/Pokémon Showdown: "Adamant:2/32/0/0/0/32".
+  const match = String(raw).match(/^([^:]+):\s*(\d+)\/(\d+)\/(\d+)\/(\d+)\/(\d+)\/(\d+)$/);
+  if (!match) return null;
+  const nature = mcMetaCanonical(match[1].trim(), Object.keys(NATURES));
+  const points = match.slice(2).map(Number);
+  if (!nature || points.some(x => x < 0 || x > 32) || points.reduce((a,b) => a+b,0) > 66) return null;
+  return { nature, sp: Object.fromEntries(STAT_KEYS.map((key, i) => [key, points[i]])) };
+}
+
+function mcMetaSetIndex(payload) {
+  if (!payload || typeof payload !== "object" ||
+      !payload.pokemon || typeof payload.pokemon !== "object" ||
+      (payload.info?.regulation && payload.info.regulation !== "M-C")) return false;
+  const entries = new Map();
+  for (const [name, data] of Object.entries(payload.pokemon)) {
+    if (!data || typeof data !== "object") continue;
+    const id = mcMetaId(name);
+    if (!id) continue;
+    const previous = entries.get(id);
+    if (!previous || (data.sheets || 0) > (previous.sheets || 0)) entries.set(id, data);
+  }
+  if (entries.size < 10) return false;
+  mcMetaEntries = entries;
+  mcMetaInfo = payload.info || {};
+  mcMetaMatchedCount = 0;
+  for (const [species, dex] of Object.entries(POKEDEX_MC)) {
+    if (entries.has(mcMetaId(species))) mcMetaMatchedCount++;
+    for (const mega of Object.values(dex.megas || {})) {
+      if (entries.has(mcMetaId(mega.name))) mcMetaMatchedCount++;
+    }
+  }
+  return true;
+}
+
+function mcMetaLoadCache() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(MC_META_CACHE_KEY) || "null");
+    if (saved && saved.raw && mcMetaSetIndex(saved.raw)) return true;
+  } catch (error) { console.warn("Meta cache unreadable", error); }
+  return false;
+}
+
+async function mcMetaRefresh() {
+  for (const url of MC_META_URLS) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8500);
+      let response;
+      try { response = await fetch(url, { signal: controller.signal, cache: "no-store" }); }
+      finally { clearTimeout(timeout); }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!mcMetaSetIndex(data)) throw new Error("Invalid/mismatched M-C meta payload");
+      try { localStorage.setItem(MC_META_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), raw: data })); }
+      catch (_) { /* Private/incognito may not persist the cache. */ }
+      mcMetaRefreshNotes();
+      console.info(`Champions Reg M-C meta: ${mcMetaEntries.size} records, ${mcMetaMatchedCount} matched forms.`, mcMetaInfo);
+      // Do not overwrite user's already selected/built Pokémon or unsaved team.
+      return true;
+    } catch (error) { console.warn("Meta feed unavailable:", url, error); }
+  }
+  mcMetaRefreshNotes();
+  return false;
+}
+
+function mcMetaRefreshNotes() {
+  const el = document.getElementById("mc-meta-source");
+  if (!el) return;
+  el.textContent = mcMetaEntries.size
+    ? `Meta online: ${mcMetaMatchedCount} Pokémon/dạng · chọn lại hoặc bấm ↻ để áp dụng`
+    : "Chưa tải được meta mới; đang dùng bộ gợi ý có sẵn";
+  el.title = mcMetaEntries.size
+    ? "Dữ liệu trận đấu Pokémon Showdown. Không phải số liệu thi đấu trong game."
+    : "Dữ liệu dự phòng dùng khi thiếu kết nối đến nguồn thống kê.";
+}
+
+// Mega/other form names are matched by exact form (not just base species).
+function mcMetaFindProfile(species, stone) {
+  const dex = POKEDEX_MC[species];
+  const mega = stone ? dex?.megas?.[stone] : null;
+  if (mega) {
+    const keys = [mega.name];
+    // Some sources call the Eternal Flower form "Floette-Eternal-Mega".
+    if (species === "Floette-Eternal") keys.push("Floette-Eternal-Mega");
+    for (const k of keys) {
+      const entry = mcMetaEntries.get(mcMetaId(k));
+      if (entry) return entry;
+    }
+    return null; // Never assign base form stats/items to a Mega by accident.
+  }
+  return mcMetaEntries.get(mcMetaId(species)) || null;
+}
+
+// Extend the move metadata only for genuinely published popular moves.
+// Pokémon Showdown's moves.js is already loaded by index.html.
+function mcMetaVerifiedMove(rawName) {
+  const known = mcMetaCanonical(rawName, Object.keys(MOVES_DB));
+  if (known) return known;
+  const source = (typeof BattleMovedex !== "undefined" && BattleMovedex) ||
+    globalThis.BattleMovedex || globalThis.exports?.BattleMovedex || {};
+  const data = source[mcMetaId(rawName)];
+  if (!data || data.isNonstandard ||
+      !ALL_TYPES.includes(data.type) ||
+      !["Physical", "Special", "Status"].includes(data.category)) return null;
+  const name = String(data.name || rawName);
+  MOVES_DB[name] = {
+    bp: Number(data.basePower || 0), type: data.type, cat: data.category,
+    spread: ["allAdjacent", "allAdjacentFoes", "all"].includes(data.target),
+    contact: Boolean(data.flags?.contact)
+  };
+  return name;
+}
+
+function mcMetaBuildSet(species, stone) {
+  const dex = POKEDEX_MC[species];
+  if (!dex) return null;
+  const entry = mcMetaFindProfile(species, stone);
+  if (!entry) return null;
+  const mega = stone ? dex.megas?.[stone] : null;
+  const rankedSpreads = mcMetaRanked(entry.spreads).map(([label, freq]) =>
+    ({ details: mcMetaParseSpread(label), freq: Number(freq) })).filter(x => x.details);
+  const topSpread = rankedSpreads[0]?.details || null;
+  // A published move/item/ability marginal needn't belong to the same 4-move set.
+  const popularMoves = mcMetaRanked(entry.moves)
+    .map(([name]) => mcMetaVerifiedMove(name)).filter(Boolean);
+  const candidates = [...popularMoves, ...(dex.defaultMoves || []), "Protect"];
+  const moves = [...new Set(candidates)].filter(name => MOVES_DB[name]).slice(0, 4);
+  while (moves.length < 4) moves.push("Protect");
+  const item = mega ? stone : (mcMetaRanked(entry.items)
+    .map(([name]) => mcMetaCanonical(name, ITEMS_MC)).find(Boolean) || "None");
+  const allowedAbilities = (dex.abilities || []).slice();
+  const commonAbility = mcMetaRanked(entry.abilities)
+    .map(([name]) => mcMetaCanonical(name, allowedAbilities)).find(Boolean);
+  const stats = mega ? mega.base : dex.base;
+  const special = stats.spa > stats.atk;
+  const fallbackNature = special ? "Modest" : "Adamant";
+  const nature = topSpread?.nature || fallbackNature;
+  const sp = topSpread?.sp || (special
+    ? { hp: 2, atk: 0, def: 0, spa: 32, spd: 0, spe: 32 }
+    : { hp: 2, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 });
+  return {
+    item, ability: mega?.ability || commonAbility || allowedAbilities[0] || "Pressure",
+    nature, sp, moves, isMega: Boolean(mega),
+    source: "live", estimatedSp: Boolean(entry.spreadsEstimated || mcMetaInfo?.spreadsEstimated || !topSpread),
+    formKey: stone ? `${species}::${stone}` : species
+  };
+}
+
 // ============================================================================
 // WORKSPACE SESSION PERSISTENCE (F5 / PAGE RELOAD)
 // ============================================================================
@@ -359,7 +544,7 @@ function sanitizeCalcSide(saved, fallback) {
       ? saved.status : "Healthy",
     sp: {}, stages: {}, moves: [],
     selectedMoveIdx: clampWorkspaceNumber(saved.selectedMoveIdx, 0, 3),
-    presetSource: saved.presetSource === "smogon" ? "smogon" : "suggested",
+    presetSource: ["live", "smogon", "suggested"].includes(saved.presetSource) ? saved.presetSource : "suggested",
     presetEdited: Boolean(saved.presetEdited)
   };
   for (const key of STAT_KEYS) {
@@ -497,6 +682,7 @@ function setupWorkspaceAutosave() {
 
 document.addEventListener("DOMContentLoaded", () => {
   applyAppTheme(document.documentElement.classList.contains("light") ? "light" : "dark");
+  mcMetaLoadCache();
   // Notify if the external dex is unreachable; never show fake base stats.
   const rosterReport = globalThis.CHAMPIONS_MC_ROSTER_REPORT;
   if (rosterReport && (rosterReport.missingSpecies.length || rosterReport.missingMegaStones.length)) {
@@ -520,6 +706,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initSpeedWorkspace();
   finishWorkspaceRestore(restoredWorkspace);
   setupWorkspaceAutosave();
+  mcMetaRefreshNotes();
+  void mcMetaRefresh();
 
   // Load saved Gemini API Key
   const savedKey = localStorage.getItem(STORAGE_KEY_GEMINI_KEY);
@@ -902,21 +1090,7 @@ function selectPokemonFromPicker(species, isMega, megaStone) {
   closePokemonPicker();
 
   if (target.mode === "builder") {
-    changeActiveSpecies(species);
-    const mon = getCurrentPokemon();
-    if (mon) {
-      const dex = POKEDEX_MC[species];
-      mon.isMega = Boolean(isMega && dex?.megas);
-      if (mon.isMega) {
-        mon.item = megaStone || dex.defaultMegaStone;
-      } else if (dex?.megas?.[mon.item]) {
-        // Choosing the base form should not leave a hidden Mega Stone equipped.
-        mon.item = "None";
-      }
-      saveTeamsToStorage();
-      renderTeamRibbon();
-      renderActiveSlotEditor();
-    }
+    applyPopularBuilderSet(species, Boolean(isMega), megaStone);
   } else if (target.mode === "calc") {
     // Set the full species/form profile atomically so the old set cannot leak.
     applyPopularCalcSet(target.side || "p1", species, Boolean(isMega), megaStone);
@@ -1367,6 +1541,12 @@ function renderActiveSlotEditor() {
 
   const speciesLabelEl = document.getElementById("builder-species-label");
   if (speciesLabelEl) speciesLabelEl.textContent = mon.species;
+  const buildNote = document.getElementById("builder-preset-note");
+  if (buildNote) {
+    buildNote.textContent = mon.presetSource === "live" ? "Meta M-C · trận đấu Showdown"
+      : mon.presetSource === "smogon" ? "Meta Smogon 10/2026"
+      : mon.presetSource === "suggested" ? "Build gợi ý theo chỉ số" : "Build tùy chỉnh";
+  }
 
   document.getElementById("input-gender").value = mon.gender || "";
   document.getElementById("sel-item").value = mon.item || "None";
@@ -1467,48 +1647,50 @@ function renderBuilderStatsTable() {
   updateBuilderSpLive();
 }
 
-function changeActiveSpecies(newSpecies) {
+// Apply common M-C set when a species/form is chosen or when the user taps
+// "↻ Build phổ biến". Does not overwrite other team slots or auto-save the team.
+function applyPopularBuilderSet(species, isMega = false, megaStone = null) {
   const team = getCurrentTeam();
-  const dexData = POKEDEX_MC[newSpecies];
-  if (!team || !dexData) return;
-  let mon = getCurrentPokemon();
-  if (!mon) {
-    // First Pokémon chosen for a blank slot: do not inherit Incineroar,
-    // sample-team SP, Nature, held item or moves.
-    mon = {
-      species: newSpecies,
-      gender: "",
-      item: "None",
-      ability: dexData.abilities?.[0] || "Pressure",
-      nature: "Serious",
-      isMega: false,
-      sp: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
-      moves: (dexData.defaultMoves || ["Protect"]).slice(0, 4)
-    };
-    team.slots[activeSlotIndex] = mon;
-  } else {
-    mon.species = newSpecies;
-    mon.ability = dexData.abilities?.[0] || "Pressure";
-    mon.moves = [...(dexData.defaultMoves || ["Protect"])].slice(0, 4);
-    if (dexData.megas) {
-      mon.isMega = true;
-      mon.item = dexData.defaultMegaStone;
-    } else {
-      mon.isMega = false;
-      if ((mon.item && mon.item.endsWith("ite")) || (mon.item && mon.item.includes("ite "))) {
-        mon.item = "Focus Sash";
-      }
-    }
-  }
-  saveTeamsToStorage();
+  const mon = getCurrentPokemon();
+  const chosenSpecies = species || mon?.species;
+  const dex = POKEDEX_MC[chosenSpecies];
+  if (!team || !dex) return;
+  const megaEnabled = Boolean(isMega && dex.megas);
+  const stone = megaEnabled && dex.megas[megaStone] ? megaStone :
+    megaEnabled ? dex.defaultMegaStone : null;
+  const preset = getCalcSuggestedSet(chosenSpecies, Boolean(stone), stone);
+  // In Team Builder the held Ability is the BASE ability. A Mega's effective
+  // Ability is resolved automatically in getEffectiveForm, so don't store it here.
+  const ability = (dex.abilities || []).includes(preset.ability)
+    ? preset.ability : (dex.abilities?.[0] || "Pressure");
+  team.slots[activeSlotIndex] = {
+    species: chosenSpecies, gender: mon?.species === chosenSpecies ? (mon.gender || "") : "",
+    item: stone || preset.item, ability, nature: preset.nature, isMega: Boolean(stone),
+    sp: { ...preset.sp }, moves: [...preset.moves], presetSource: preset.source,
+    presetEdited: false
+  };
+  saveTeamsToStorage(); // Manual Save remains required.
   renderTeamRibbon();
   renderActiveSlotEditor();
+}
+
+function restorePopularBuilderSet() {
+  const mon = getCurrentPokemon();
+  if (!mon) return;
+  applyPopularBuilderSet(mon.species, Boolean(mon.isMega), mon.item);
+  showToast("Đã nạp build gợi ý. Nhấn Lưu để ghi đội hình.", "info");
+}
+
+function changeActiveSpecies(newSpecies) {
+  if (!POKEDEX_MC[newSpecies]) return;
+  applyPopularBuilderSet(newSpecies, false, null);
 }
 
 function updateActivePokemon(key, value) {
   const mon = getCurrentPokemon();
   if (!mon) return;
   mon[key] = value;
+  mon.presetEdited = true;
 
   if (key === "item") {
     const dexData = POKEDEX_MC[mon.species];
@@ -1528,6 +1710,7 @@ function updateActiveMove(moveIdx, moveName) {
   const mon = getCurrentPokemon();
   if (!mon) return;
   mon.moves[moveIdx] = moveName;
+  mon.presetEdited = true;
   saveTeamsToStorage();
   renderActiveSlotEditor();
 }
@@ -2065,6 +2248,8 @@ function getCalcSuggestedSet(species, isMega, megaStone) {
     : null;
   const form = stone ? dex.megas[stone] : null;
   const key = stone ? `${species}::${stone}` : species;
+  const live = mcMetaBuildSet(species, stone);
+  if (live) return { ...live, sp: { ...live.sp }, moves: [...live.moves] };
   const popular = CALC_POPULAR_SETS_MC[key];
   const curated = typeof CALC_RECOMMENDED_SETS_MC !== "undefined" ? CALC_RECOMMENDED_SETS_MC[key] : null;
   if (curated && !popular) {
@@ -2259,13 +2444,16 @@ function renderCalcSideUI(side) {
 
   const presetLabel = document.getElementById(`calc-${side}-preset-note`);
   if (presetLabel) {
-    const kind = st.presetSource === 'smogon'
-      ? 'Meta · Smogon 10/2026, 1760+'
-      : 'Build gợi ý · chưa có thống kê';
+    const kind = st.presetSource === 'live'
+      ? 'Meta M-C · trận đấu Showdown (SP có thể ước tính)'
+      : st.presetSource === 'smogon' ? 'Meta Smogon · 10/2026, 1760+'
+      : 'Build gợi ý · chưa đủ thống kê';
     presetLabel.textContent = kind + (st.presetEdited ? ' · đã chỉnh tay' : '');
-    presetLabel.title = st.presetSource === 'smogon'
-      ? 'Item, Ability, Nature, SP và các chiêu có tần suất dùng cao. Không chắc chắn là một set của cùng một người chơi.'
-      : 'Dựa trên chỉ số và các chiêu mặc định, không phải bộ phổ biến nhất được xác minh.';
+    presetLabel.title = st.presetSource === 'live'
+      ? 'Dữ liệu trận đấu cộng đồng (Item/chiêu theo tần suất, SP có thể ước tính). Không đảm bảo 4 chiêu thuộc cùng một đội hình.'
+      : st.presetSource === 'smogon'
+      ? 'Dữ liệu Smogon tháng 10/2026. Các lựa chọn phổ biến riêng lẻ không đảm bảo là cùng một bộ.'
+      : 'Dựa trên chỉ số/chiêu mặc định; không phải bộ phổ biến có đủ bằng chứng.';
   }
 
   const megaChk = document.getElementById(`calc-${side}-mega`);
