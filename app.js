@@ -141,7 +141,11 @@ document.addEventListener("DOMContentLoaded", () => {
 // ============================================================================
 
 function getSpriteUrl(spriteSlug) {
-  return `https://play.pokemonshowdown.com/sprites/dex/${spriteSlug}.png`;
+  const folder = spriteSlug.endsWith("-megaz")
+    ? "gen5"
+    : "dex";
+
+  return `https://play.pokemonshowdown.com/sprites/${folder}/${spriteSlug}.png`;
 }
 
 // Multi-step fallback so Mega Z sprites (e.g. garchomp-megaz -> garchompmegaz -> garchomp-mega -> garchomp) never break
