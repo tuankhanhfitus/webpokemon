@@ -609,7 +609,7 @@
               <h2 class="text-lg sm:text-xl font-extrabold text-white">Quét ảnh đội hình 6 Pokémon ra Showdown</h2>
             </div>
             <p class="text-xs sm:text-sm text-slate-400 mt-1">
-              Tải lên hoặc dán ảnh chụp màn hình team 6 Pokémon Champions Regulation M-C. AI sẽ trích xuất tên Pokémon, Mega Stone/Item, Ability, Nature và 4 chiêu thức.
+              Tải lên hoặc dán ảnh chụp màn hình team 6 Pokémon Champions Regulation M-C. AI sẽ trích xuất tên Pokémon, Mega Stone/Item, Ability, Nature, 4 chiêu thức và EVs/SP nếu hiện rõ trong ảnh.
             </p>
           </div>
         </div>
@@ -650,6 +650,7 @@
                 Copy Text
               </button>
             </div>
+            <p class="text-[11px] text-slate-400">Nếu ảnh có EVs hoặc SP, kết quả sẽ có dòng <code>EVs:</code> hoặc <code>SPs:</code>. Kiểm tra các số trước khi nạp; nếu ảnh không có, SP của Pokémon sẽ là 0.</p>
             <textarea id="ai-output-textarea" rows="11" placeholder="Kết quả đội hình 6 Pokémon chuẩn Showdown sẽ hiển thị tại đây sau khi quét ảnh..." class="w-full flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-slate-200 focus:outline-none focus:border-sky-500"></textarea>
             <button onclick="loadAiOutputToBuilder()" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs sm:text-sm transition shadow-md shadow-emerald-500/20">
               ⚡ Nạp thẳng vào Team Builder
@@ -748,6 +749,6 @@
   <script src="data.js?v=17"></script>
   <script src="champions-roster.js?v=18"></script>
   <script src="champions-bulbapedia.js?v=18"></script>
-  <script src="app.js?v=21"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>

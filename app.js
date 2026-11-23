@@ -1665,6 +1665,54 @@ function resolveImportedSpecies(rawName, heldItem, knownSpecies) {
   return null;
 }
 
+// Read allocation lines from a scanned or pasted team sheet. Do not invent SPs
+// when a screenshot only shows final Lv.50 stats or omits EVs entirely.
+function parseScannedStatParts(raw, scale) {
+  const result = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+  let matched = 0;
+  const aliases = {
+    hp: "hp", atk: "atk", attack: "atk", def: "def", defense: "def",
+    spa: "spa", spatk: "spa", specialattack: "spa",
+    spd: "spd", spdef: "spd", specialdefense: "spd",
+    spe: "spe", speed: "spe"
+  };
+  for (const part of raw.split(/\s*[/,;|]\s*/)) {
+    // Supported: "252 SpA", "+26 HP", "SpD: 4", "Speed +32".
+    const p = part.trim();
+    const m = p.match(/^\+?(\d+)\s+([A-Za-z. ]+)$/) ||
+      p.match(/^([A-Za-z. ]+?)\s*[:=+]\s*(\d+)$/);
+    if (!m) continue;
+    const isAmountFirst = /^\d+$/.test(m[1]);
+    const number = Number(isAmountFirst ? m[1] : m[2]);
+    const label = (isAmountFirst ? m[2] : m[1]).toLowerCase().replace(/[^a-z]/g, "");
+    const stat = aliases[label];
+    if (!stat || !Number.isInteger(number) || number < 0) continue;
+    result[stat] = scale === "ev" ? evToSpEquivalent(number) : Math.min(32, number);
+    matched++;
+  }
+  return matched ? result : null;
+}
+
+function extractVisibleAllocation(lines) {
+  let fromEvs = null;
+  let fromSp = null;
+  for (const line of lines) {
+    const ev = line.match(/^EVs?\s*:\s*(.+)$/i);
+    if (ev) fromEvs = parseScannedStatParts(ev[1], "ev") || fromEvs;
+    const sp = line.match(/^(?:SPs?|Stat\s*Points?)\s*:\s*(.+)$/i);
+    if (sp) fromSp = parseScannedStatParts(sp[1], "sp") || fromSp;
+  }
+  // SP directly seen in Pokémon Champions takes priority over EV approximations.
+  const allocation = fromSp || fromEvs;
+  if (!allocation) return null;
+  const total = Object.values(allocation).reduce((a, b) => a + b, 0);
+  if (total > 66) {
+    console.warn("Skipped scanned allocation that exceeds the 66 SP budget.");
+    return null;
+  }
+  return allocation;
+}
+
 function parseShowdownPasteToSlots(pasteText) {
   const blocks = pasteText
     .trim()
@@ -1728,6 +1776,11 @@ function parseShowdownPasteToSlots(pasteText) {
       slot.isMega = false;
     }
 
+    // AI emits EVs only if the screenshot visibly contains EVs, or SPs if a
+    // Champions/PokéChampDex stat allocation is visible. Otherwise keep zero SP.
+    const scannedAllocation = extractVisibleAllocation(lines.slice(1));
+    if (scannedAllocation) slot.sp = scannedAllocation;
+
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
       if (line.startsWith("Ability:")) {
@@ -1738,20 +1791,6 @@ function parseShowdownPasteToSlots(pasteText) {
       } else if (line.endsWith("Nature")) {
         const natName = line.replace("Nature", "").trim();
         if (NATURES[natName]) slot.nature = natName;
-      } else if (line.startsWith("EVs:")) {
-        const evStr = line.replace("EVs:", "").trim();
-        let budget = 66;
-        evStr.split("/").forEach((part) => {
-          const m = part.trim().match(/^(\d+)\s+(HP|Atk|Def|SpA|SpD|Spe)$/i);
-          if (m) {
-            const evNum = parseInt(m[1], 10);
-            const key = m[2].toLowerCase();
-            let sp = evToSpEquivalent(evNum);
-            if (sp > budget) sp = budget;
-            slot.sp[key] = sp;
-            budget -= sp;
-          }
-        });
       } else if (line.startsWith("-")) {
         const mvRaw = line.replace(/^-+/, "").trim();
         const foundMove = Object.keys(MOVES_DB).find(
@@ -3010,7 +3049,8 @@ function processAiImageFile(file) {
 
     const img = new Image();
     img.onload = () => {
-      const MAX_DIM = 1024;
+      // Preserve small EV/SP text from screenshots instead of downscaling to 1024px.
+      const MAX_DIM = 2048;
       let w = img.width;
       let h = img.height;
       if (w > MAX_DIM || h > MAX_DIM) {
@@ -3026,8 +3066,11 @@ function processAiImageFile(file) {
       canvas.width = w;
       canvas.height = h;
       canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-      const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.82);
-      applyPreview(compressedDataUrl, "image/jpeg");
+      // PNG avoids JPEG artifacts around digits such as 4, 8, 0 and 6.
+      const preservePng = file.type === "image/png";
+      const outputMime = preservePng ? "image/png" : "image/jpeg";
+      const compressedDataUrl = canvas.toDataURL(outputMime, 0.92);
+      applyPreview(compressedDataUrl, outputMime);
     };
     img.onerror = () => applyPreview(rawDataUrl, file.type || "image/png");
     img.src = rawDataUrl;
@@ -3121,16 +3164,27 @@ async function analyzeTeamImageWithAI() {
   const btnText = document.getElementById("ai-scan-btn-text");
   btn.disabled = true;
 
-  const promptText = `Extract all Pokémon in this VGC Regulation M-C team image into clean Pokémon Showdown paste format ONLY (no markdown, no commentary):
+  const promptText = `Read this VGC Regulation M-C team screenshot and transcribe up to 6 Pokémon into Showdown-style plain text. Output only Pokémon blocks separated by blank lines, no Markdown:
 Species @ Item
 Ability: <Ability>
 Level: 50
+EVs: 252 Atk / 4 SpD / 252 Spe
+SPs: 26 HP / 30 Atk / 1 Def / 4 SpD / 5 Spe
 <Nature> Nature
 - Move 1
 - Move 2
 - Move 3
 - Move 4
-Rules: Use base species + Mega Stone (never "Mega <Species>"; for Mega Floette use "Floette-Eternal @ Floettite" with Ability: Flower Veil). Keep visible items, abilities, natures, and moves exact; infer a competitive Reg M-C Nature only if hidden.`;
+
+CRITICAL RULES FOR EVs AND STAT POINTS:
+1. The EVs and SPs above are ONLY EXAMPLES, not defaults. NEVER copy them unless exactly visible in the image.
+2. If the image EXPLICITLY shows an EV distribution (e.g. 252 Atk / 4 SpD / 252 Spe), add exactly ONE 'EVs:' line for that Pokémon with the visible numbers and labels. Do NOT infer or guess missing EVs.
+3. If the image shows Pokémon Champions STAT POINTS / SP (including +number labels on PokéChampDex stat bars such as +26 HP, +30 Atk), add exactly ONE 'SPs:' line with the numbers shown. If a stat has no +number but others do, treat its SP as 0. Do not confuse final Lv.50 stats (e.g. HP 201, Spe 154) with EVs or SPs.
+4. If there is NO readable EV or SP allocation for a Pokémon, OMIT both lines entirely. Do NOT fill in a popular set, 252/252/4, or zeros as text.
+5. Preserve numeric values exactly as visible; do not pre-convert between EVs and SPs. If both are explicitly displayed, output SPs only.
+6. Keep items, abilities, natures, and four moves exact if shown. Infer a competitive Nature ONLY if hidden. Do not hallucinate individual hidden EVs/SPs.
+7. Use base species + Mega Stone (never 'Mega <Species>' as the input species). Mega Floette is 'Floette-Eternal @ Floettite' with pre-Mega Ability: Flower Veil.
+8. If part of the image is unclear, omit unreadable allocation data rather than inventing it.`;
 
   try {
     let lastError = null;
