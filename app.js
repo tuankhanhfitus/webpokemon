@@ -6,6 +6,9 @@ const STORAGE_KEY_TEAMS = "vgc_mc_teams_v2";
 const STORAGE_KEY_ACTIVE_TEAM = "vgc_mc_active_team_v2";
 const STORAGE_KEY_GEMINI_KEY = "vgc_mc_gemini_key";
 const GEMINI_AI_MODEL = "gemini-3.8-flash";
+const GEMINI_AI_FALLBACK_MODEL = "gemini-3.6-flash";
+// Retry only for temporary server-side overloads. Do not repeat auth or quota failures.
+const GEMINI_RETRY_DELAY_MS = [1000, 2200];
 const STORAGE_KEY_WORKSPACE = "vgc_studio_workspace_v1";
 let activeMainTab = "builder";
 let hasRestoredCalcState = false;
@@ -2771,13 +2774,13 @@ function setAiScanStatus(message, level = "info") {
   el.classList.add(level === "error" ? "text-rose-300" : level === "success" ? "text-emerald-300" : "text-sky-300");
 }
 
-function explainGeminiFailure(status, error) {
+function explainGeminiFailure(status, error, modelName = GEMINI_AI_MODEL) {
   const details = typeof error?.message === "string" ? error.message : "";
   if (status === 401 || status === 403) {
     return `HTTP ${status}: API Key không hợp lệ, bị giới hạn hoặc thiếu quyền sử dụng model. Kiểm tra khóa trong Google AI Studio. ${details}`.trim();
   }
   if (status === 404) {
-    return `HTTP 404: Không tìm thấy endpoint/model, hoặc dự án/API Key chưa được cấp quyền truy cập ${GEMINI_AI_MODEL}. Kiểm tra Models trong Google AI Studio. ${details}`.trim();
+    return `HTTP 404: Không tìm thấy endpoint/model, hoặc dự án/API Key chưa được cấp quyền truy cập ${modelName}. Kiểm tra Models trong Google AI Studio. ${details}`.trim();
   }
   if (status === 429) {
     return `HTTP 429: Đã chạm giới hạn lượt gọi (rate limit) hoặc quota. ${details}`.trim();
@@ -2786,6 +2789,44 @@ function explainGeminiFailure(status, error) {
     return `HTTP ${status}: Dịch vụ Gemini tạm thời không khả dụng. ${details}`.trim();
   }
   return `HTTP ${status}: ${details || "Gemini API trả về lỗi không xác định."}`;
+}
+
+const GEMINI_OVERLOAD_STATUSES = new Set([502, 503, 504]);
+
+function delayGeminiRetry(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Retry transient HTTP 502/503/504 responses, then let the caller attempt a fallback model.
+// Authentication, access and quota errors must not silently trigger retries or fallback.
+async function requestGeminiWithRetry(apiKey, promptText, modelName, attempts) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (attempt > 0) {
+      const backoff = GEMINI_RETRY_DELAY_MS[Math.min(attempt - 1, GEMINI_RETRY_DELAY_MS.length - 1)];
+      setAiScanStatus(`Gemini ${modelName} đang quá tải. Tự thử lại lần ${attempt + 1}/${attempts}...`);
+      await delayGeminiRetry(backoff);
+    }
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey
+      },
+      body: JSON.stringify({
+        model: modelName,
+        store: false,
+        input: [
+          { type: "text", text: promptText },
+          { type: "image", data: aiSelectedImageBase64, mime_type: aiSelectedImageMime }
+        ]
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok || !GEMINI_OVERLOAD_STATUSES.has(response.status) || attempt === attempts - 1) {
+      return { ok: response.ok, status: response.status, data, modelName };
+    }
+  }
+  throw new Error("Không nhận được phản hồi từ dịch vụ Gemini.");
 }
 
 function extractInteractionText(data) {
@@ -2833,27 +2874,21 @@ Level: 50
 - Do NOT include markdown code fences or extra commentary, only the Showdown paste text.`;
 
   try {
-    // Google's documented Interactions API for inline base64 images.
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey
-      },
-      body: JSON.stringify({
-        model: GEMINI_AI_MODEL,
-        store: false,
-        input: [
-          { type: "text", text: promptText },
-          { type: "image", data: aiSelectedImageBase64, mime_type: aiSelectedImageMime }
-        ]
-      })
-    });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(explainGeminiFailure(response.status, data.error));
+    // First try Gemini 3.8; if Google's server is overloaded, use Gemini 3.6.
+    let result = await requestGeminiWithRetry(apiKey, promptText, GEMINI_AI_MODEL, 3);
+    let fallbackUsed = false;
+    if (!result.ok && GEMINI_OVERLOAD_STATUSES.has(result.status)) {
+      fallbackUsed = true;
+      setAiScanStatus(`Gemini 3.8 đang quá tải. Chuyển sang Gemini 3.6 Flash dự phòng...`);
+      result = await requestGeminiWithRetry(apiKey, promptText, GEMINI_AI_FALLBACK_MODEL, 2);
     }
+    if (!result.ok) {
+      const extra = fallbackUsed && GEMINI_OVERLOAD_STATUSES.has(result.status)
+        ? " Đã thử lại và thử model dự phòng nhưng Google vẫn đang quá tải."
+        : "";
+      throw new Error(explainGeminiFailure(result.status, result.data.error, result.modelName) + extra);
+    }
+    const { data } = result;
 
     const rawText = extractInteractionText(data);
     const cleaned = rawText.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "").trim();
@@ -2861,12 +2896,12 @@ Level: 50
       throw new Error("Gemini phản hồi thành công nhưng không trả văn bản. Kiểm tra nội dung ảnh và thử lại.");
     }
     document.getElementById("ai-output-textarea").value = cleaned;
-    setAiScanStatus("Đã quét ảnh thành công.", "success");
+    setAiScanStatus(fallbackUsed ? "Đã quét thành công bằng Gemini 3.6 Flash (dự phòng)." : "Đã quét ảnh thành công bằng Gemini 3.8 Flash.", "success");
     showToast("Quét ảnh đội hình thành công!", "success");
   } catch (err) {
     // Do not log the API key or the input image data.
     console.error("Gemini AI scanner:", err.message);
-    const errorMessage = err instanceof TypeError && /failed to fetch|networkerror/i.test(err.message)
+    const errorMessage = (err instanceof TypeError || err?.name === "TypeError") && /failed to fetch|networkerror/i.test(err.message)
       ? "Không kết nối được tới Gemini. Kiểm tra mạng và Console → Network. Nếu báo CORS, xác nhận app.js mới đã được tải (không còn header Api-Revision)."
       : err.message;
     setAiScanStatus(errorMessage, "error");
