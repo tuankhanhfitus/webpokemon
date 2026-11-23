@@ -50,7 +50,13 @@ const NATURES = {
   Naughty: { plus: "atk", minus: "spd", label: "Naughty (+Atk, -SpD)" },
   Mild:    { plus: "spa", minus: "def", label: "Mild (+SpA, -Def)" },
   Rash:    { plus: "spa", minus: "spd", label: "Rash (+SpA, -SpD)" },
-  Serious: { plus: null,  minus: null,  label: "Serious (Trung tính)" }
+  Gentle:  { plus: "spd", minus: "def", label: "Gentle (+SpD, -Def)" },
+  Lax:     { plus: "def", minus: "spd", label: "Lax (+Def, -SpD)" },
+  Hardy:   { plus: null, minus: null, label: "Hardy (Trung tính)" },
+  Docile:  { plus: null, minus: null, label: "Docile (Trung tính)" },
+  Bashful: { plus: null, minus: null, label: "Bashful (Trung tính)" },
+  Quirky:  { plus: null, minus: null, label: "Quirky (Trung tính)" },
+  Serious: { plus: null, minus: null, label: "Serious (Trung tính)" }
 };
 
 // Full Regulation M-C Legal Pokédex & Mega Evolutions (including Mega Z Forms)

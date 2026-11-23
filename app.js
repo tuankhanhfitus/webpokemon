@@ -915,7 +915,7 @@ function spToEvEquivalent(spVal) {
 function evToSpEquivalent(evVal) {
   const ev = Math.max(0, Math.min(252, parseInt(evVal, 10) || 0));
   if (ev <= 0) return 0;
-  return Math.min(32, Math.max(1, Math.round((ev + 4) / 8)));
+  return Math.min(32, Math.max(1, Math.floor((ev + 4) / 8)));
 }
 
 function getStageMultiplier(stage) {
@@ -1582,10 +1582,16 @@ function renderActiveSlotEditor() {
   const allMoveNames = Object.keys(MOVES_DB).sort();
   movesContainer.innerHTML = [0, 1, 2, 3]
     .map((mIdx) => {
-      const currentMove = mon.moves[mIdx] || "Protect";
+      const currentMove = mon.moves[mIdx] ?? "";
+      if (currentMove && !MOVES_DB[currentMove]) mcMetaVerifiedMove(currentMove);
       const moveMeta = MOVES_DB[currentMove] || { type: "Normal", bp: 0, cat: "Status" };
-      const optionsHtml = allMoveNames
-        .map((mv) => `<option value="${mv}" ${mv === currentMove ? "selected" : ""}>${mv} (${MOVES_DB[mv].type} · ${MOVES_DB[mv].bp || "-"})</option>`)
+      const missingOption = !currentMove
+        ? '<option value="" selected>— Chọn chiêu —</option>'
+        : !MOVES_DB[currentMove]
+          ? `<option value="${escapeHtml(currentMove)}" selected>⚠ ${escapeHtml(currentMove)} (chưa có dữ liệu)</option>`
+          : "";
+      const optionsHtml = missingOption + allMoveNames
+        .map((mv) => `<option value="${escapeHtml(mv)}" ${mv === currentMove ? "selected" : ""}>${escapeHtml(mv)} (${MOVES_DB[mv].type} · ${MOVES_DB[mv].bp || "-"})</option>`)
         .join("");
       return `
         <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 rounded-xl p-1.5">
@@ -1898,188 +1904,263 @@ function formatTeamToShowdown(team, mode = "ranked") {
     .join("\n\n");
 }
 
-// Normalize OCR/AI output to the base species represented in Team Builder.
-// Battle forms ("Mega Floette") are not separate species in the team sheet.
+// Showdown paste parser (Pokémon Champions). Preserve explicitly supplied sets;
+// do not replace unsupported Pokémon/moves/items without telling the user.
+let lastShowdownImportReport = { warnings: [], errors: [], count: 0 };
+let pendingShowdownImport = null;
+
+function importNameKey(value) {
+  return String(value || "").normalize("NFKD").toLowerCase()
+    .replace(/♀/g, "f").replace(/♂/g, "m").replace(/[’‘']/g, "").replace(/[^a-z0-9]/g, "");
+}
+
 function resolveImportedSpecies(rawName, heldItem, knownSpecies) {
   const raw = String(rawName || "").trim();
-  const compact = raw.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]/g, "");
-
-  // Only the Eternal Flower form can Mega Evolve using Floettite.
-  if (["floette", "floetteeternal", "floetteeternalflower", "floettemega", "megafloette", "megaeternalfloette", "floetteeternalmega"].includes(compact)) {
-    return { species: "Floette-Eternal", forcedMega: compact.includes("mega") || heldItem === "Floettite" };
+  const key = importNameKey(raw);
+  const keyed = new Map(knownSpecies.map(name => [importNameKey(name), name]));
+  // Eternal Flower Floette is the only Floette that can use Floettite.
+  if (["floetteeternal", "floetteeternalflower", "floettemega", "megafloette",
+       "floetteeternalmega", "megaeternalfloette"].includes(key) ||
+       (key === "floette" && heldItem === "Floettite")) {
+    return { species: "Floette-Eternal", forcedMega: key.includes("mega") || heldItem === "Floettite", megaStone: "Floettite" };
   }
+  // Exact species (including regional variants) wins over nickname-like parsing.
+  if (keyed.has(key)) return { species: keyed.get(key), forcedMega: false, megaStone: null };
 
-  const exact = knownSpecies.find(s => s.toLowerCase() === raw.toLowerCase());
-  if (exact) return { species: exact, forcedMega: false };
-
-  // Some image scanners write "Mega Raichu" or "Garchomp-Mega-Z" instead
-  // of the base species. Determine the actual Mega form from the stone.
-  const megaRemoved = raw.replace(/^mega[ -]+/i, "")
-    .replace(/[- ]mega(?:[- ]?[xy]|[- ]?z)?$/i, "")
-    .replace(/[- ]mega[- ]?[xy]$/i, "");
-  const canonical = knownSpecies.find(s => s.toLowerCase() === megaRemoved.toLowerCase());
-  if (canonical) return { species: canonical, forcedMega: megaRemoved !== raw };
-
-  const prefix = knownSpecies.find(s => raw.toLowerCase().startsWith(s.toLowerCase() + "-mega"));
-  if (prefix) return { species: prefix, forcedMega: true };
-
-  // Never silently replace an unrecognized Pokémon with Garchomp.
-  return null;
+  // Match the display name of EACH Mega form, not only its base species.
+  // This prevents Raichu-Mega-X from silently becoming Raichu-Mega-Y.
+  for (const species of knownSpecies) {
+    const dex = POKEDEX_MC[species];
+    for (const [stone, mega] of Object.entries(dex.megas || {})) {
+      const megaName = importNameKey(mega.name);
+      const alias = importNameKey("Mega " + mega.name.replace(/-Mega(?:-([XYZ]))?$/i, (_, form) => form ? ` ${form}` : ""));
+      if (key === megaName || key === alias) {
+        return { species, forcedMega: true, megaStone: stone };
+      }
+    }
+  }
+  // Accept other Showdown labels such as "Mega Garchomp Z", "Garchomp Mega Z".
+  const bare = key.replace(/^mega/, "").replace(/mega(?:[xyz])?$/, "");
+  if (keyed.has(bare)) {
+    const species = keyed.get(bare);
+    const dex = POKEDEX_MC[species];
+    if (dex.megas && key.includes("mega")) {
+      const suffix = key.match(/mega([xyz])$/)?.[1];
+      const matchingStone = Object.entries(dex.megas).find(([stone, mega]) =>
+        suffix && (importNameKey(mega.name).endsWith("mega" + suffix) || importNameKey(stone).endsWith(suffix)))?.[0];
+      return { species, forcedMega: true, megaStone: matchingStone || dex.defaultMegaStone };
+    }
+  }
+  // Showdown's formLabel is sometimes a pretty display name, not a dex key.
+  const labelled = knownSpecies.find(name => importNameKey(POKEDEX_MC[name].formLabel) === key);
+  return labelled ? { species: labelled, forcedMega: false, megaStone: null } : null;
 }
 
-// Read allocation lines from a scanned or pasted team sheet. Do not invent SPs
-// when a screenshot only shows final Lv.50 stats or omits EVs entirely.
 function parseScannedStatParts(raw, scale) {
   const result = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
-  let matched = 0;
   const aliases = {
-    hp: "hp", atk: "atk", attack: "atk", def: "def", defense: "def",
-    spa: "spa", spatk: "spa", specialattack: "spa",
-    spd: "spd", spdef: "spd", specialdefense: "spd",
+    hp: "hp", atk: "atk", attack: "atk", def: "def", defense: "def", defence: "def",
+    spa: "spa", spatk: "spa", specialattack: "spa", spattack: "spa",
+    spd: "spd", spdef: "spd", specialdefense: "spd", spdefense: "spd", specialdefence: "spd",
     spe: "spe", speed: "spe"
   };
-  for (const part of raw.split(/\s*[/,;|]\s*/)) {
-    // Supported: "252 SpA", "+26 HP", "SpD: 4", "Speed +32".
-    const p = part.trim();
-    const m = p.match(/^\+?(\d+)\s+([A-Za-z. ]+)$/) ||
-      p.match(/^([A-Za-z. ]+?)\s*[:=+]\s*(\d+)$/);
-    if (!m) continue;
-    const isAmountFirst = /^\d+$/.test(m[1]);
-    const number = Number(isAmountFirst ? m[1] : m[2]);
-    const label = (isAmountFirst ? m[2] : m[1]).toLowerCase().replace(/[^a-z]/g, "");
-    const stat = aliases[label];
-    if (!stat || !Number.isInteger(number) || number < 0) continue;
-    result[stat] = scale === "ev" ? evToSpEquivalent(number) : Math.min(32, number);
-    matched++;
+  let count = 0;
+  const issues = [];
+  let evTotal = 0;
+  for (const part of String(raw || "").split(/\s*[/,;|]\s*/)) {
+    const segment = part.trim();
+    if (!segment) continue;
+    // 252 Atk, +26 HP, SpD: 4, Speed +32, Atk 252.
+    const numFirst = segment.match(/^\+?(\d+)\s+([A-Za-z. ]+)$/);
+    const nameFirst = segment.match(/^([A-Za-z. ]+?)\s*(?:[:=+]\s*|\s+)(\d+)$/);
+    const amount = numFirst ? Number(numFirst[1]) : nameFirst ? Number(nameFirst[2]) : NaN;
+    const label = numFirst?.[2] || nameFirst?.[1] || "";
+    const stat = aliases[label.toLowerCase().replace(/[^a-z]/g, "")];
+    if (!stat || !Number.isSafeInteger(amount) || amount < 0) {
+      issues.push(`Không đọc được điểm chỉ số: ${segment}`);
+      continue;
+    }
+    if ((scale === "ev" && amount > 252) || (scale === "sp" && amount > 32)) {
+      issues.push(`${label.trim()}: ${amount} vượt giới hạn ${scale === "ev" ? "252 EV" : "32 SP"}`);
+      continue;
+    }
+    if (result.__seen?.has(stat)) {
+      issues.push(`Chỉ số ${label.trim()} xuất hiện hai lần`);
+      continue;
+    }
+    if (!result.__seen) Object.defineProperty(result, '__seen', { value: new Set(), enumerable: false });
+    result.__seen.add(stat);
+    evTotal += scale === "ev" ? amount : 0;
+    // At Lv.50 with 31 IV, EV 4–11 => 1 SP, 12–19 => 2 SP, etc.
+    result[stat] = scale === "ev" ? evToSpEquivalent(amount) : amount;
+    count++;
   }
-  return matched ? result : null;
+  if (scale === "ev" && evTotal > 510) issues.push(`Tổng EV ${evTotal} vượt 510`);
+  return { allocation: count ? result : null, issues };
 }
 
-function extractVisibleAllocation(lines) {
+function extractVisibleAllocation(lines, report = null, label = "Pokémon") {
   let fromEvs = null;
   let fromSp = null;
   for (const line of lines) {
     const ev = line.match(/^EVs?\s*:\s*(.+)$/i);
-    if (ev) fromEvs = parseScannedStatParts(ev[1], "ev") || fromEvs;
     const sp = line.match(/^(?:SPs?|Stat\s*Points?)\s*:\s*(.+)$/i);
-    if (sp) fromSp = parseScannedStatParts(sp[1], "sp") || fromSp;
+    if (!ev && !sp) continue;
+    const parsed = parseScannedStatParts((sp || ev)[1], sp ? "sp" : "ev");
+    if (parsed.issues.length && report) report.errors.push(...parsed.issues.map(issue => `${label}: ${issue}`));
+    if (sp) fromSp = parsed.allocation;
+    else fromEvs = parsed.allocation;
   }
-  // SP directly seen in Pokémon Champions takes priority over EV approximations.
   const allocation = fromSp || fromEvs;
   if (!allocation) return null;
-  const total = Object.values(allocation).reduce((a, b) => a + b, 0);
+  const total = STAT_KEYS.reduce((sum, k) => sum + allocation[k], 0);
   if (total > 66) {
-    console.warn("Skipped scanned allocation that exceeds the 66 SP budget.");
+    if (report) report.errors.push(`${label}: tổng ${total} SP vượt 66`);
     return null;
   }
   return allocation;
 }
 
+function parseShowdownHeader(header) {
+  const at = header.indexOf("@");
+  let name = (at < 0 ? header : header.slice(0, at)).trim();
+  const item = at < 0 ? "" : header.slice(at + 1).trim();
+  let gender = "";
+  const genderMatch = name.match(/\s+\(([MF])\)$/i);
+  if (genderMatch) {
+    gender = genderMatch[1].toUpperCase();
+    name = name.slice(0, genderMatch.index).trim();
+  }
+  // Showdown: Nickname (Species), e.g. "Champ (Garchomp) (M)".
+  // Also accept the display form "Floette (Eternal Flower)".
+  const inParen = name.match(/^(.+?)\s+\(([^)]+)\)$/);
+  if (inParen) {
+    const base = inParen[1].trim(), form = inParen[2].trim();
+    const alternate = Object.keys(POKEDEX_MC).find(species =>
+      importNameKey(species) === importNameKey(base + "-" + form));
+    name = /^(?:Eternal(?: Flower)?)$/i.test(form) && /^Floette$/i.test(base)
+      ? "Floette-Eternal" : alternate || form;
+  }
+  return { name, item, gender };
+}
+
 function parseShowdownPasteToSlots(pasteText) {
-  const blocks = pasteText
-    .trim()
-    .split(/\n\s*\n/)
-    .filter((b) => b.trim().length > 0)
-    .slice(0, 6);
-
-  if (blocks.length === 0) return null;
-
+  const report = { warnings: [], errors: [], count: 0 };
+  lastShowdownImportReport = report;
+  const normalized = String(pasteText || "").replace(/^\uFEFF/, "")
+    .replace(/\r\n?/g, "\n").replace(/\u00A0/g, " ").trim();
+  if (!normalized) {
+    report.errors.push("Chưa có nội dung Paste.");
+    return null;
+  }
+  const blocks = normalized.split(/\n\s*\n/).filter(Boolean);
+  if (blocks.length > 6) {
+    report.errors.push(`Có ${blocks.length} khối Pokémon. Một đội hình chỉ chứa tối đa 6 Pokémon.`);
+    return null;
+  }
   const knownSpecies = Object.keys(POKEDEX_MC);
-
-  const parsedSlots = blocks.map((block) => {
-    const slot = createEmptySlot();
-    slot.sp = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
-    slot.moves = [];
-
-    const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
-    if (lines.length === 0) return slot;
-
-    let header = lines[0];
-    if (header.includes("@")) {
-      const parts = header.split("@");
-      header = parts[0].trim();
-      const rawItem = parts.slice(1).join("@").trim();
-      const normalizedItem = REG_MC_ITEM_ALIASES[rawItem] || rawItem;
-      const matchedItem = ITEMS_MC.find((i) => i.toLowerCase() === normalizedItem.toLowerCase());
-      slot.item = matchedItem || "None";
-    } else {
-      slot.item = "None";
+  const slots = [];
+  for (let idx = 0; idx < blocks.length; idx++) {
+    const lines = blocks[idx].split("\n").map(x => x.trim()).filter(Boolean);
+    const header = parseShowdownHeader(lines[0]);
+    const itemAlias = Object.entries(REG_MC_ITEM_ALIASES).find(([key]) => importNameKey(key) === importNameKey(header.item));
+    const matchedItem = ITEMS_MC.find(name => importNameKey(name) === importNameKey(itemAlias ? itemAlias[1] : header.item));
+    const item = matchedItem || "None";
+    const resolved = resolveImportedSpecies(header.name, item, knownSpecies);
+    if (!resolved) {
+      report.errors.push(`Slot ${idx + 1}: không có Pokémon "${header.name}" trong Pokédex hiện tại.`);
+      continue;
     }
-
-    if (header.endsWith("(M)")) {
-      slot.gender = "M";
-      header = header.slice(0, -3).trim();
-    } else if (header.endsWith("(F)")) {
-      slot.gender = "F";
-      header = header.slice(0, -3).trim();
-    } else {
-      slot.gender = "";
-    }
-
-    const parenMatch = header.match(/^(.*?)\(([^)]+)\)$/);
-    let rawSpecies = header;
-    if (parenMatch) {
-      const baseName = parenMatch[1].trim();
-      const annotation = parenMatch[2].trim();
-      // "Floette (Eternal Flower)" is a form label, not a nickname.
-      rawSpecies = /^floette$/i.test(baseName) && /^eternal(?: flower)?$/i.test(annotation)
-        ? "Floette-Eternal" : annotation;
-    }
-
-    const recognized = resolveImportedSpecies(rawSpecies, slot.item, knownSpecies);
-    if (!recognized) return null;
-    slot.species = recognized.species;
-    const dexData = POKEDEX_MC[slot.species];
-
-    if (dexData.megas && (dexData.megas[slot.item] || recognized.forcedMega)) {
-      slot.isMega = true;
-      if (!dexData.megas[slot.item]) slot.item = dexData.defaultMegaStone;
-    } else {
-      slot.isMega = false;
-    }
-
-    // AI emits EVs only if the screenshot visibly contains EVs, or SPs if a
-    // Champions/PokéChampDex stat allocation is visible. Otherwise keep zero SP.
-    const scannedAllocation = extractVisibleAllocation(lines.slice(1));
-    if (scannedAllocation) slot.sp = scannedAllocation;
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.startsWith("Ability:")) {
-        const ab = line.replace("Ability:", "").trim();
-        slot.ability = (slot.species === "Floette-Eternal" && ab === "Fairy Aura")
-          ? "Flower Veil"
-          : (dexData.abilities.includes(ab) ? ab : dexData.abilities[0]);
-      } else if (line.endsWith("Nature")) {
-        const natName = line.replace("Nature", "").trim();
-        if (NATURES[natName]) slot.nature = natName;
-      } else if (line.startsWith("-")) {
-        const mvRaw = line.replace(/^-+/, "").trim();
-        const foundMove = Object.keys(MOVES_DB).find(
-          (m) => m.toLowerCase() === mvRaw.toLowerCase()
-        );
-        if (foundMove && slot.moves.length < 4) {
-          slot.moves.push(foundMove);
+    const dex = POKEDEX_MC[resolved.species];
+    const slotName = `Slot ${idx + 1} (${resolved.species})`;
+    if (header.item && !matchedItem) report.warnings.push(`${slotName}: Item "${header.item}" không có trong danh sách M-C → để trống Item.`);
+    let chosenItem = item;
+    let isMega = Boolean(dex.megas?.[chosenItem]);
+    if (resolved.forcedMega) {
+      const stone = resolved.megaStone || dex.defaultMegaStone;
+      if (stone && dex.megas?.[stone]) {
+        if (item !== stone) {
+          report.warnings.push(`${slotName}: dạng Mega yêu cầu ${stone}; đã đổi Item từ ${header.item || "trống"} sang ${stone}.`);
         }
+        chosenItem = stone;
+        isMega = true;
       }
     }
-
-    while (slot.moves.length < 4) {
-      slot.moves.push(dexData.defaultMoves[slot.moves.length] || "Protect");
+    const slot = {
+      species: resolved.species,
+      gender: header.gender,
+      item: chosenItem,
+      isMega,
+      ability: dex.abilities?.[0] || "",
+      nature: "Serious",
+      sp: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+      moves: []
+    };
+    const allocation = extractVisibleAllocation(lines.slice(1), report, slotName);
+    if (allocation) slot.sp = allocation;
+    let sawAbility = false, sawNature = false;
+    for (const line of lines.slice(1)) {
+      const ability = line.match(/^Ability\s*:\s*(.+)$/i);
+      const nature = line.match(/^(?:(.+?)\s+Nature|Nature\s*:\s*(.+))$/i);
+      const move = line.match(/^-\s*(.+)$/);
+      const ivs = line.match(/^IVs?\s*:\s*(.+)$/i);
+      if (ability) {
+        sawAbility = true;
+        const abilityName = ability[1].trim();
+        const baseAbility = dex.abilities?.find(ab => importNameKey(ab) === importNameKey(abilityName));
+        if (baseAbility) slot.ability = baseAbility;
+        else if (slot.isMega && importNameKey(dex.megas?.[slot.item]?.ability) === importNameKey(abilityName)) {
+          report.warnings.push(`${slotName}: ${abilityName} là Ability sau Mega; đã dùng Ability gốc ${slot.ability}.`);
+        } else {
+          report.warnings.push(`${slotName}: Ability "${abilityName}" không hỗ trợ → dùng ${slot.ability || "mặc định"}.`);
+        }
+      } else if (nature) {
+        sawNature = true;
+        const nat = Object.keys(NATURES).find(n => importNameKey(n) === importNameKey(nature[1] || nature[2]));
+        if (nat) slot.nature = nat;
+        else report.warnings.push(`${slotName}: Nature "${nature[1] || nature[2]}" không hỗ trợ → Serious.`);
+      } else if (move) {
+        const name = move[1].trim();
+        if (slot.moves.length >= 4) {
+          report.warnings.push(`${slotName}: bỏ qua chiêu thứ 5 trở đi: ${name}.`);
+          continue;
+        }
+        const found = Object.keys(MOVES_DB).find(m => importNameKey(m) === importNameKey(name)) ||
+          (typeof mcMetaVerifiedMove === "function" ? mcMetaVerifiedMove(name) : null);
+        if (!found) report.warnings.push(`${slotName}: chiêu "${name}" chưa có dữ liệu, vẫn giữ tên để bạn kiểm tra.`);
+        slot.moves.push(found || name);
+      } else if (ivs && /(?:^|\/)\s*(?!31\s)[0-9]+\s+(?:Atk|SpA|Spe|Def|SpD|HP)\b/i.test(ivs[1])) {
+        report.warnings.push(`${slotName}: IVs không chuẩn 31; Champions Calculator đang cố định 31 IVs.`);
+      } else if (/^Level\s*:\s*(\d+)/i.test(line) && Number(line.match(/\d+/)[0]) !== 50) {
+        report.warnings.push(`${slotName}: Level trong Paste khác 50; công cụ tính chỉ số Lv.50.`);
+      }
     }
-
-    return slot;
-  });
-
-  if (parsedSlots.some(slot => slot === null)) return null;
-  while (parsedSlots.length < 6) {
-    parsedSlots.push(null);
+    if (!sawAbility && dex.abilities?.length > 1) {
+      report.warnings.push(`${slotName}: Paste không ghi Ability → dùng ${slot.ability}.`);
+    }
+    if (!sawNature) report.warnings.push(`${slotName}: Paste không ghi Nature → dùng Serious (trung tính).`);
+    while (slot.moves.length < 4) slot.moves.push("");
+    slots.push(slot);
+    report.count++;
   }
+  if (report.errors.length || slots.length === 0) return null;
+  while (slots.length < 6) slots.push(null);
+  return slots;
+}
 
-  return parsedSlots;
+function showShowdownImportFeedback(messages, kind = "warn") {
+  const el = document.getElementById("modal-import-feedback");
+  if (!el) return;
+  if (!messages.length) { el.textContent = ""; el.classList.add("hidden"); return; }
+  el.textContent = messages.join("\n");
+  el.className = `max-h-32 overflow-y-auto whitespace-pre-line rounded-xl border px-3 py-2 text-xs leading-relaxed ${
+    kind === "error" ? "border-rose-500/50 bg-rose-500/10 text-rose-200" :
+      "border-amber-500/50 bg-amber-500/10 text-amber-200"}`;
 }
 
 function openExportModal(mode = "ranked") {
+  pendingShowdownImport = null;
+  showShowdownImportFeedback([]);
   modalMode = mode;
   const modal = document.getElementById("paste-modal");
   const title = document.getElementById("modal-title");
@@ -2128,36 +2209,65 @@ function updateExportModalTabStyles(mode) {
 }
 
 function openImportModal() {
+  pendingShowdownImport = null;
+  showShowdownImportFeedback([]);
   modalMode = "import";
   const modal = document.getElementById("paste-modal");
   document.getElementById("modal-title").textContent = "Nhập Đội Hình Từ Showdown Paste";
-  document.getElementById("modal-subtitle").textContent = "Dán văn bản Showdown 6 Pokémon vào bên dưới để nạp tự động";
+  document.getElementById("modal-subtitle").textContent = "Dán 1–6 Pokémon; giữ nguyên chiêu và chỉ số. Sau khi nhập, nhấn Lưu ở Team Builder.";
   document.getElementById("modal-export-tabs").classList.add("hidden");
   document.getElementById("modal-action-btn").textContent = "Nạp vào Đội Hình";
-  document.getElementById("modal-paste-textarea").value = "";
+  const input = document.getElementById("modal-paste-textarea");
+  input.value = "";
+  input.oninput = () => {
+    pendingShowdownImport = null;
+    showShowdownImportFeedback([]);
+    document.getElementById("modal-action-btn").textContent = "Nạp vào Đội Hình";
+  };
   modal.classList.remove("hidden");
 }
 
 function closePasteModal() {
+  pendingShowdownImport = null;
+  showShowdownImportFeedback([]);
   document.getElementById("paste-modal").classList.add("hidden");
 }
 
 function handleModalPrimaryAction() {
   const textarea = document.getElementById("modal-paste-textarea");
   if (modalMode === "import") {
-    const slots = parseShowdownPasteToSlots(textarea.value);
-    if (!slots) {
-      showToast("Không nhận diện được dữ liệu Pokémon!", "error");
-      return;
+    const rawText = textarea.value;
+    let slots;
+    if (pendingShowdownImport && pendingShowdownImport.text === rawText) {
+      slots = pendingShowdownImport.slots;
+    } else {
+      pendingShowdownImport = null;
+      slots = parseShowdownPasteToSlots(rawText);
+      const report = lastShowdownImportReport;
+      if (!slots) {
+        showShowdownImportFeedback(report.errors.length ? report.errors : ["Không đọc được đội hình."], "error");
+        showToast("Dữ liệu chưa hợp lệ, xem thông báo trong cửa sổ nhập.", "error");
+        return;
+      }
+      if (report.warnings.length) {
+        pendingShowdownImport = { text: rawText, slots };
+        showShowdownImportFeedback([
+          `Đã đọc ${report.count} Pokémon, nhưng có ${report.warnings.length} điểm cần kiểm tra:`,
+          ...report.warnings, "Nhấn 'Vẫn nhập đội hình' để xác nhận."
+        ]);
+        document.getElementById("modal-action-btn").textContent = "Vẫn nhập đội hình";
+        return;
+      }
     }
     const team = getCurrentTeam();
+    if (!team) return;
     team.slots = slots;
     activeSlotIndex = 0;
-    saveTeamsToStorage();
+    saveTeamsToStorage(); // draft only; manual Save button persists it
     renderTeamRibbon();
     renderActiveSlotEditor();
     closePasteModal();
-    showToast("Đã nhập đội hình thành công!", "success");
+    showToast("Đã nạp Paste vào bản nháp. Nhấn Lưu để giữ đội hình.", "success");
   } else {
     copyTextToClipboard(textarea.value);
   }
@@ -3691,7 +3801,7 @@ function normalizeAiShowdownText(text) {
     const resolved = resolveImportedSpecies(rawSpecies, item, knownSpecies);
     if (!resolved) return block;
     const dex = POKEDEX_MC[resolved.species];
-    if (resolved.forcedMega && dex?.megas && !dex.megas[item]) item = dex.defaultMegaStone;
+    if (resolved.forcedMega && dex?.megas && !dex.megas[item]) item = resolved.megaStone || dex.defaultMegaStone;
     if (resolved.species === "Floette-Eternal" && item === "Floettite") {
       // An OTS/Showdown paste lists the original form's Ability, not its post-Mega one.
       for (let i = 1; i < lines.length; i++) {
@@ -3711,8 +3821,13 @@ function loadAiOutputToBuilder() {
   }
   const slots = parseShowdownPasteToSlots(text);
   if (!slots) {
-    showToast("Không thể đọc định dạng đội hình từ kết quả AI.", "error");
+    showToast(lastShowdownImportReport.errors[0] || "Không thể đọc định dạng đội hình từ kết quả AI.", "error");
     return;
+  }
+  if (lastShowdownImportReport.warnings.length) {
+    // Do not silently rewrite a scanned Item/Ability/Move; show review details.
+    const warning = lastShowdownImportReport.warnings[0];
+    if (!window.confirm(`AI Paste có ${lastShowdownImportReport.warnings.length} điểm cần kiểm tra.\n${warning}\n\nVẫn nạp vào bản nháp?`)) return;
   }
   const team = getCurrentTeam();
   team.slots = slots;
