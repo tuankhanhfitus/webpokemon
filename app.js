@@ -27,6 +27,7 @@ const STAT_LABELS = {
 let currentLang = "vi";
 let teams = [];
 let activeTeamId = null;
+let hasUnsavedTeamChanges = false;
 let activeSlotIndex = 0;
 let modalMode = "ranked"; // 'ranked' | 'ots' | 'import'
 // Keep up to three screenshots for a single Gemini request. A pending queue
@@ -539,6 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderTeamSelector();
   renderTeamRibbon();
   renderActiveSlotEditor();
+  syncTeamSaveStatus();
 
   // Initialize Damage Calc UI
   initCalcWorkspace();
@@ -994,6 +996,7 @@ const I18N_DICT = {
     tabScanner: "AI Quét Ảnh",
     currentTeam: "Đội hình:",
     btnNewTeam: "Tạo mới",
+    btnSaveTeam: "Lưu",
     btnClone: "Nhân bản",
     btnImport: "Nhập Showdown",
     btnExportRank: "Xuất Rank (Full SP/EVs)",
@@ -1015,6 +1018,7 @@ const I18N_DICT = {
     tabScanner: "AI Team Scan",
     currentTeam: "Team:",
     btnNewTeam: "New",
+    btnSaveTeam: "Save",
     btnClone: "Clone",
     btnImport: "Import Paste",
     btnExportRank: "Export Ranked (Full)",
@@ -1130,14 +1134,67 @@ function loadTeamsFromStorage() {
   saveTeamsToStorage();
 }
 
+// Editing changes only the in-memory draft. This function is called by every
+// existing edit flow (Pokémon, moves, items, SP, import and team actions).
+// It MUST NOT write team data to localStorage: only the Save button does that.
 function saveTeamsToStorage() {
+  hasUnsavedTeamChanges = true;
+  syncTeamSaveStatus();
+}
+
+function syncTeamSaveStatus() {
+  const status = document.getElementById("team-save-status");
+  const button = document.getElementById("btn-save-team");
+  if (status) {
+    status.textContent = hasUnsavedTeamChanges ? "Chưa lưu" : "Đã lưu";
+    status.className = hasUnsavedTeamChanges
+      ? "text-[11px] font-bold text-amber-400 whitespace-nowrap"
+      : "text-[11px] font-semibold text-emerald-400 whitespace-nowrap";
+  }
+  if (button) {
+    button.disabled = !hasUnsavedTeamChanges;
+    button.title = hasUnsavedTeamChanges ? "Lưu các thay đổi đội hình" : "Không có thay đổi mới";
+  }
+}
+
+// Save is explicit: one click commits the draft list, including newly created,
+// duplicated or removed teams. Other workspace settings keep their own autosave.
+function saveCurrentTeam() {
+  const current = getCurrentTeam();
+  if (!current) return;
+  const input = document.getElementById("team-name-input");
+  const cleanName = (input?.value ?? current.name).trim() || "Untitled Reg M-C Team";
+  if (current.name !== cleanName) current.name = cleanName;
   try {
     localStorage.setItem(STORAGE_KEY_TEAMS, JSON.stringify(teams));
     localStorage.setItem(STORAGE_KEY_ACTIVE_TEAM, activeTeamId);
+    hasUnsavedTeamChanges = false;
+    renderTeamSelector();
+    syncTeamSaveStatus();
+    showToast("Đã lưu đội hình!", "success");
   } catch (err) {
-    console.warn("Storage save failed:", err);
+    console.warn("Team save failed:", err);
+    hasUnsavedTeamChanges = true;
+    syncTeamSaveStatus();
+    showToast("Không lưu được đội hình trên trình duyệt.", "error");
   }
 }
+
+// Persist a tab/selection preference, but never unsaved team content.
+function persistSavedTeamSelection(id) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY_TEAMS) || "[]");
+    if (Array.isArray(stored) && stored.some(t => t.id === id)) {
+      localStorage.setItem(STORAGE_KEY_ACTIVE_TEAM, id);
+    }
+  } catch (_) { /* optional preference */ }
+}
+
+window.addEventListener("beforeunload", event => {
+  if (!hasUnsavedTeamChanges) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
 
 function getCurrentTeam() {
   return teams.find((t) => t.id === activeTeamId) || teams[0];
@@ -1181,9 +1238,10 @@ function renderTeamSelector() {
 }
 
 function selectTeam(id) {
+  if (!teams.some(t => t.id === id)) return;
   activeTeamId = id;
   activeSlotIndex = 0;
-  saveTeamsToStorage();
+  persistSavedTeamSelection(id);
   renderTeamSelector();
   renderTeamRibbon();
   renderActiveSlotEditor();
@@ -1191,10 +1249,11 @@ function selectTeam(id) {
 
 function renameCurrentTeam(newName) {
   const team = getCurrentTeam();
-  if (!team) return;
-  team.name = newName.trim() || "Untitled Reg M-C Team";
+  if (!team || team.name === newName) return;
+  team.name = newName;
   saveTeamsToStorage();
-  renderTeamSelector();
+  const selectedOption = document.querySelector("#team-selector option:checked");
+  if (selectedOption) selectedOption.textContent = newName.trim() || "Đội hình chưa đặt tên";
 }
 
 function createNewTeam() {
@@ -1213,7 +1272,7 @@ function createNewTeam() {
   renderTeamSelector();
   renderTeamRibbon();
   renderActiveSlotEditor();
-  showToast("Đã tạo đội hình mới!", "success");
+  showToast("Đội hình mới đang chờ lưu. Nhấn Lưu để giữ lại khi F5.", "info");
 }
 
 function duplicateCurrentTeam() {
@@ -1230,7 +1289,7 @@ function duplicateCurrentTeam() {
   renderTeamSelector();
   renderTeamRibbon();
   renderActiveSlotEditor();
-  showToast("Đã nhân bản đội hình!", "success");
+  showToast("Đã nhân bản tạm thời. Nhấn Lưu để giữ lại.", "info");
 }
 
 function deleteCurrentTeam() {
@@ -1245,7 +1304,7 @@ function deleteCurrentTeam() {
   renderTeamSelector();
   renderTeamRibbon();
   renderActiveSlotEditor();
-  showToast("Đã xóa đội hình.", "info");
+  showToast("Đã xóa trong bản nháp. Nhấn Lưu để xác nhận.", "info");
 }
 
 // ============================================================================

@@ -305,3 +305,17 @@ html.light .ai-preview-remove { background: #fff; color: #be123c; }
 html.light .ai-upload-zone .text-slate-200 { color: #27384f !important; }
 
 #ai-preview-list.hidden { display: none !important; }
+
+/* Manual-save controls adjacent to the team name */
+.team-name-save-group { max-width: 100%; }
+.team-save-btn:disabled {
+  opacity: .55;
+  cursor: default;
+  filter: saturate(.55);
+  box-shadow: none;
+}
+.team-save-btn:not(:disabled) { box-shadow: 0 4px 16px rgba(16,185,129,.17); }
+@media (max-width: 420px) {
+  #team-selector { width: 100%; min-width: 0; }
+  .team-name-save-group { width: 100%; }
+}

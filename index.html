@@ -38,7 +38,7 @@
       }
     };
   </script>
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=11" />
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-sky-500/30 selection:text-sky-200">
 
@@ -55,7 +55,6 @@
             <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white">VGC Tactics Studio</h1>
             <span class="hidden md:inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">Champions · Reg M-C</span>
           </div>
-          <p class="text-[11px] text-slate-400 hidden lg:block">66 SP (Max 32/Stat) • Mega Evolution • OTS / Rank • Damage & Speed Calc</p>
         </div>
       </div>
 
@@ -90,10 +89,6 @@
         <button onclick="toggleLanguage()" id="lang-btn" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition">
           VI / EN
         </button>
-        <div class="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Auto Saved</span>
-        </div>
       </div>
     </div>
   </header>
@@ -108,12 +103,19 @@
     <section id="view-builder" class="space-y-5">
 
       <!-- Team Management Bar -->
-      <div class="glass-panel rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div class="glass-panel rounded-2xl p-3.5 sm:p-4 flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2.5 flex-1">
           <label class="text-xs font-semibold uppercase tracking-wider text-slate-400" data-i18n="currentTeam">Đội hình:</label>
           <select id="team-selector" onchange="selectTeam(this.value)" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-white focus:outline-none focus:border-sky-500 min-w-[180px] sm:min-w-[230px]">
           </select>
-          <input type="text" id="team-name-input" onchange="renameCurrentTeam(this.value)" placeholder="Tên đội hình..." class="bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 w-44 sm:w-56" />
+          <div class="team-name-save-group flex flex-1 sm:flex-none items-center gap-2 min-w-0">
+            <input type="text" id="team-name-input" oninput="renameCurrentTeam(this.value)" onkeydown="if(event.key === 'Enter'){event.preventDefault();saveCurrentTeam();}" placeholder="Tên đội hình..." aria-label="Tên đội hình" class="team-name-input bg-slate-900/80 border border-slate-700 rounded-xl px-3 h-10 text-sm text-slate-200 focus:outline-none focus:border-sky-500 w-full sm:w-52 min-w-0" />
+            <button id="btn-save-team" type="button" onclick="saveCurrentTeam()" class="team-save-btn h-10 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-extrabold inline-flex items-center justify-center gap-1.5 shrink-0 transition" title="Lưu đội hình vào trình duyệt">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+              <span data-i18n="btnSaveTeam">Lưu</span>
+            </button>
+          </div>
+          <span id="team-save-status" role="status" aria-live="polite" class="text-[11px] font-semibold text-slate-400 whitespace-nowrap">Đã lưu</span>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
@@ -211,9 +213,8 @@
 
           <!-- 4 Moves -->
           <div>
-            <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center mb-2">
               <label class="text-xs font-semibold uppercase tracking-wider text-slate-400" data-i18n="lblMoves">Bộ chiêu thức (4 Moves)</label>
-              <span class="text-[11px] text-slate-500" data-i18n="moveHint">Chọn bộ 4 chiêu thi đấu chuẩn Reg M-C</span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="moves-inputs-container">
             </div>
@@ -232,7 +233,6 @@
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <div>
               <h2 class="text-sm font-bold text-white" data-i18n="lblStatsTitle">Chỉ số & Phân bổ Stat Points (SP)</h2>
-              <p class="text-[11px] text-slate-400" data-i18n="lblStatsSub">Tối đa 32 SP/chỉ số • Cố định 31 IVs (Lv.50)</p>
             </div>
             <div class="text-right">
               <span class="text-[11px] text-slate-400 block">SP còn lại</span>
@@ -297,7 +297,6 @@
           </div>
         </div>
 
-        <p class="text-[11px] text-amber-300/85 mt-1">Damage Calc giả định Pokémon đầy HP, chiêu spread trúng nhiều mục tiêu; chưa hỗ trợ đầy đủ các chiêu Base Power biến thiên, đa đòn và toàn bộ Ability của Champions. Kết quả không thay thế hoàn toàn Showdown Calc.</p>
 
         <!-- Bottom Calculation Headline & 16 Rolls -->
         <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -648,7 +647,6 @@
                 Copy Text
               </button>
             </div>
-            <p class="text-[11px] text-slate-400">Nếu ảnh có EVs hoặc SP, kết quả sẽ có dòng <code>EVs:</code> hoặc <code>SPs:</code>. Kiểm tra các số trước khi nạp; nếu ảnh không có, SP của Pokémon sẽ là 0.</p>
             <textarea id="ai-output-textarea" rows="11" placeholder="Kết quả đội hình 6 Pokémon chuẩn Showdown sẽ hiển thị tại đây sau khi quét ảnh..." class="w-full flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-slate-200 focus:outline-none focus:border-sky-500"></textarea>
             <button onclick="loadAiOutputToBuilder()" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs sm:text-sm transition shadow-md shadow-emerald-500/20">
               ⚡ Nạp thẳng vào Team Builder
@@ -747,6 +745,6 @@
   <script src="data.js?v=17"></script>
   <script src="champions-roster.js?v=18"></script>
   <script src="champions-bulbapedia.js?v=18"></script>
-  <script src="app.js?v=23"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>
