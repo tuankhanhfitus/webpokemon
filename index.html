@@ -289,7 +289,7 @@
           <!-- Side 1 Moves (P1 -> P2) -->
           <div class="bg-slate-950/75 border border-slate-800 rounded-xl p-3 space-y-1.5">
             <div class="flex items-center justify-between border-b border-slate-800/80 pb-1.5 mb-1">
-              <span id="calc-top-p1-name" class="text-xs sm:text-sm font-extrabold text-sky-400">Garchomp-Mega-Z</span>
+              <span id="calc-top-p1-name" class="text-xs sm:text-sm font-extrabold text-sky-400">Pokémon 1 chưa chọn</span>
               <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Move 1–4 (P1 → P2)</span>
             </div>
             <div id="calc-top-p1-moves" class="space-y-1">
@@ -299,7 +299,7 @@
           <!-- Side 2 Moves (P2 -> P1) -->
           <div class="bg-slate-950/75 border border-slate-800 rounded-xl p-3 space-y-1.5">
             <div class="flex items-center justify-between border-b border-slate-800/80 pb-1.5 mb-1">
-              <span id="calc-top-p2-name" class="text-xs sm:text-sm font-extrabold text-rose-400">Incineroar</span>
+              <span id="calc-top-p2-name" class="text-xs sm:text-sm font-extrabold text-rose-400">Pokémon 2 chưa chọn</span>
               <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Move 1–4 (P2 → P1)</span>
             </div>
             <div id="calc-top-p2-moves" class="space-y-1">
@@ -311,23 +311,19 @@
         <!-- Bottom Calculation Headline & 16 Rolls -->
         <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div class="space-y-1 flex-1">
-            <div id="calc-headline" class="text-sm sm:text-base font-extrabold text-white leading-snug">
-              32 SpA Garchomp-Mega-Z Earth Power vs. 32 HP / 20+ SpD Incineroar: 168 - 198 (83.1 - 98%) -- guaranteed 2HKO
-            </div>
-            <div id="calc-subline" class="text-xs font-mono text-sky-300 break-all">
-              Possible damage amounts: (168, 170, 170, 174, 176, 176, 180, 182, 182, 186, 188, 188, 192, 194, 194, 198)
-            </div>
+            <div id="calc-headline" class="text-sm sm:text-base font-extrabold text-white leading-snug">Chọn Pokémon cho cả hai bên để tính sát thương</div>
+            <div id="calc-subline" class="text-xs font-mono text-sky-300 break-all"></div>
           </div>
 
           <!-- Remaining HP Visual Bar -->
           <div class="w-full lg:w-64 shrink-0 space-y-1">
             <div class="flex justify-between text-[11px] font-semibold">
               <span class="text-slate-400">HP còn lại:</span>
-              <span id="calc-hp-range-text" class="font-mono text-emerald-400">2.0% - 16.9%</span>
+              <span id="calc-hp-range-text" class="font-mono text-emerald-400">—</span>
             </div>
             <div class="w-full h-3.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 relative">
-              <div id="calc-hp-bar-max" class="h-full bg-emerald-500/35 rounded-full transition-all duration-200 absolute top-0 left-0" style="width: 16.9%"></div>
-              <div id="calc-hp-bar-min" class="h-full bg-rose-500 rounded-full transition-all duration-200 relative z-10" style="width: 2.0%"></div>
+              <div id="calc-hp-bar-max" class="h-full bg-emerald-500/35 rounded-full transition-all duration-200 absolute top-0 left-0" style="width: 0%"></div>
+              <div id="calc-hp-bar-min" class="h-full bg-rose-500 rounded-full transition-all duration-200 relative z-10" style="width: 0%"></div>
             </div>
           </div>
         </div>
@@ -337,10 +333,16 @@
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
         <!-- Pokémon 1 Panel (4 cols) -->
-        <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3">
+        <div id="calc-p1-panel" class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3 calc-side-empty">
           <div class="flex items-center justify-between border-b border-slate-800 pb-2">
             <span class="text-xs font-extrabold uppercase tracking-wider text-sky-400">Pokémon 1</span>
+            <button type="button" class="calc-side-clear text-xs px-2.5 py-1 rounded-lg border border-slate-700 text-slate-400 hover:text-rose-400 hover:border-rose-500/50 transition" onclick="clearCalcSide('p1')" title="Bỏ Pokémon đang chọn">✕ Bỏ chọn</button>
           </div>
+
+          <button type="button" class="calc-side-empty-prompt" onclick="openPokemonPicker({ mode: 'calc', side: 'p1' })" aria-label="Chọn Pokémon 1">
+            <span class="calc-empty-plus">+</span>
+            <span>Chọn Pokémon</span>
+          </button>
 
           <!-- Species & Sprite (Visual Picker Trigger) -->
           <div class="flex items-center gap-3">
@@ -350,7 +352,7 @@
             <div class="flex-1 space-y-1.5 min-w-0">
               <div class="flex items-center gap-1.5">
                 <button type="button" onclick="openPokemonPicker({ mode: 'calc', side: 'p1' })" class="flex-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-sky-400 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-bold text-white flex items-center justify-between min-w-0 transition">
-                  <span id="calc-p1-species-label" class="truncate">Garchomp</span>
+                  <span id="calc-p1-species-label" class="truncate">+ Chọn Pokémon</span>
                   <span class="text-slate-400 text-xs ml-1">▾</span>
                 </button>
                 <label class="flex items-center gap-1 text-[11px] font-extrabold text-pink-400 bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-700 cursor-pointer shrink-0">
@@ -491,10 +493,16 @@
         </div>
 
         <!-- Pokémon 2 Panel (4 cols) -->
-        <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3">
+        <div id="calc-p2-panel" class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3 calc-side-empty">
           <div class="flex items-center justify-between border-b border-slate-800 pb-2">
             <span class="text-xs font-extrabold uppercase tracking-wider text-rose-400">Pokémon 2</span>
+            <button type="button" class="calc-side-clear text-xs px-2.5 py-1 rounded-lg border border-slate-700 text-slate-400 hover:text-rose-400 hover:border-rose-500/50 transition" onclick="clearCalcSide('p2')" title="Bỏ Pokémon đang chọn">✕ Bỏ chọn</button>
           </div>
+
+          <button type="button" class="calc-side-empty-prompt" onclick="openPokemonPicker({ mode: 'calc', side: 'p2' })" aria-label="Chọn Pokémon 2">
+            <span class="calc-empty-plus">+</span>
+            <span>Chọn Pokémon</span>
+          </button>
 
           <!-- Species & Sprite (Visual Picker Trigger) -->
           <div class="flex items-center gap-3">
@@ -504,7 +512,7 @@
             <div class="flex-1 space-y-1.5 min-w-0">
               <div class="flex items-center gap-1.5">
                 <button type="button" onclick="openPokemonPicker({ mode: 'calc', side: 'p2' })" class="flex-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-rose-400 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-bold text-white flex items-center justify-between min-w-0 transition">
-                  <span id="calc-p2-species-label" class="truncate">Incineroar</span>
+                  <span id="calc-p2-species-label" class="truncate">+ Chọn Pokémon</span>
                   <span class="text-slate-400 text-xs ml-1">▾</span>
                 </button>
                 <label class="flex items-center gap-1 text-[11px] font-extrabold text-pink-400 bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-700 cursor-pointer shrink-0">
@@ -755,6 +763,6 @@
   <script src="data.js?v=17"></script>
   <script src="champions-roster.js?v=18"></script>
   <script src="champions-bulbapedia.js?v=18"></script>
-  <script src="app.js?v=25"></script>
+  <script src="app.js?v=26"></script>
 </body>
 </html>

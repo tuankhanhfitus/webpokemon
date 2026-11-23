@@ -53,40 +53,9 @@ let calcState = {
     weather: "None",
     terrain: "None"
   },
-  p1: {
-    species: "Garchomp",
-    isMega: true,
-    item: "Garchompite Z",
-    ability: "Rough Skin",
-    nature: "Timid",
-    status: "Healthy",
-    sp: { hp: 2, atk: 0, def: 0, spa: 32, spd: 0, spe: 32 },
-    stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
-    moves: [
-      { name: "Draco Meteor", crit: false },
-      { name: "Earth Power", crit: false },
-      { name: "Flamethrower", crit: false },
-      { name: "Protect", crit: false }
-    ],
-    selectedMoveIdx: 1
-  },
-  p2: {
-    species: "Incineroar",
-    isMega: false,
-    item: "Sitrus Berry",
-    ability: "Intimidate",
-    nature: "Careful",
-    status: "Healthy",
-    sp: { hp: 32, atk: 0, def: 14, spa: 0, spd: 20, spe: 0 },
-    stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
-    moves: [
-      { name: "Fake Out", crit: false },
-      { name: "Flare Blitz", crit: false },
-      { name: "Knock Off", crit: false },
-      { name: "Parting Shot", crit: false }
-    ],
-    selectedMoveIdx: 2
-  }
+  // Both damage slots start empty. A profile is created only after selecting a Pokémon.
+  p1: null,
+  p2: null
 };
 
 // 3-Slot Speed Comparison State (Starts empty with 3 "+ Chọn Pokémon" slots)
@@ -414,20 +383,21 @@ function restoreWorkspaceState() {
   activeSlotIndex = clampWorkspaceNumber(saved.activeSlotIndex, 0, 5);
   activeMainTab = ["builder", "calc", "speed", "scanner"].includes(saved.tab) ? saved.tab : "builder";
   if (saved.calc && typeof saved.calc === "object") {
-    const p1 = sanitizeCalcSide(saved.calc.p1, calcState.p1);
-    const p2 = sanitizeCalcSide(saved.calc.p2, calcState.p2);
-    if (p1 && p2) {
-      calcState.p1 = p1;
-      calcState.p2 = p2;
-      calcState.activeSide = ["p1", "p2"].includes(saved.calc.activeSide) ? saved.calc.activeSide : "p1";
-      const f = saved.calc.field || {};
-      calcState.field = {
-        isDoubles: f.isDoubles !== false,
-        weather: ["None", "Sun", "Rain", "Sand", "Snow"].includes(f.weather) ? f.weather : "None",
-        terrain: ["None", "Electric", "Grassy", "Psychic", "Misty"].includes(f.terrain) ? f.terrain : "None"
-      };
-      hasRestoredCalcState = true;
+    // Migration: old versions auto-populated Garchomp / Incineroar and persisted
+    // those examples even when the user had not selected anything. Reset those
+    // old calculator slots once; subsequent reloads preserve explicit picks.
+    if (saved.calcSelectionSchema === 2) {
+      calcState.p1 = sanitizeCalcSide(saved.calc.p1, null);
+      calcState.p2 = sanitizeCalcSide(saved.calc.p2, null);
     }
+    calcState.activeSide = ["p1", "p2"].includes(saved.calc.activeSide) ? saved.calc.activeSide : "p1";
+    const f = saved.calc.field || {};
+    calcState.field = {
+      isDoubles: f.isDoubles !== false,
+      weather: ["None", "Sun", "Rain", "Sand", "Snow"].includes(f.weather) ? f.weather : "None",
+      terrain: ["None", "Electric", "Grassy", "Psychic", "Misty"].includes(f.terrain) ? f.terrain : "None"
+    };
+    hasRestoredCalcState = true;
   }
   if (Array.isArray(saved.speedSlots) && saved.speedSlots.length === 3) {
     speedSlots = saved.speedSlots.map((card) => {
@@ -456,6 +426,7 @@ function getWorkspaceState() {
     language: currentLang,
     scrollY: Math.max(0, Math.round(window.scrollY || 0)),
     calc: calcState,
+    calcSelectionSchema: 2,
     sideFlags: flags,
     speedSlots,
     speedTrickRoom: Boolean(document.getElementById("speed-trick-room")?.checked)
@@ -2141,8 +2112,10 @@ function getCalcSuggestedSet(species, isMega, megaStone) {
 }
 
 function applyPopularCalcSet(side, species, isMega, megaStone) {
-  const st = calcState[side];
-  if (!st) return;
+  if (side !== "p1" && side !== "p2") return;
+  // Selecting a Pokémon creates this side's stats/build for the first time.
+  // Afterwards "Build phổ biến" can reset that existing profile.
+  const st = calcState[side] || { item: "None", isMega: false };
   const selectedSpecies = species || st.species;
   const selectedMega = isMega === undefined ? st.isMega : Boolean(isMega);
   const dex = POKEDEX_MC[selectedSpecies];
@@ -2152,6 +2125,7 @@ function applyPopularCalcSet(side, species, isMega, megaStone) {
        (dex.megas?.[st.item] ? st.item : dex.defaultMegaStone))
     : null;
   const preset = getCalcSuggestedSet(selectedSpecies, Boolean(selectedStone), selectedStone);
+  calcState[side] = st;
   st.species = selectedSpecies;
   st.isMega = preset.isMega;
   st.item = preset.item;
@@ -2175,14 +2149,20 @@ function markCalcPresetEdited(side) {
 }
 
 function initCalcWorkspace() {
-  if (hasRestoredCalcState) {
-    renderCalcSideUI("p1");
-    renderCalcSideUI("p2");
-    runDamageCalculation();
-    return;
-  }
-  applyPopularCalcSet("p1", calcState.p1.species, calcState.p1.isMega, calcState.p1.item);
-  applyPopularCalcSet("p2", calcState.p2.species, calcState.p2.isMega, calcState.p2.item);
+  // Do not inject sample Pokémon. Restored selections (if any) are displayed;
+  // both sides remain null until the user chooses a species.
+  renderCalcSideUI("p1");
+  renderCalcSideUI("p2");
+  runDamageCalculation();
+}
+
+function clearCalcSide(side) {
+  if (side !== "p1" && side !== "p2") return;
+  activeMoveDropdownId = null;
+  calcState[side] = null;
+  renderCalcSideUI(side);
+  runDamageCalculation();
+  scheduleWorkspaceSave();
 }
 
 function updateCalcSide(side, key, value) {
@@ -2257,6 +2237,19 @@ function selectCalcActiveMove(side, mIdx) {
 
 function renderCalcSideUI(side) {
   const st = calcState[side];
+  const panel = document.getElementById(`calc-${side}-panel`);
+  panel?.classList.toggle("calc-side-empty", !st);
+  if (!st) {
+    // Clear stale content when removing a Pokémon; do not substitute Garchomp.
+    const img = document.getElementById(`calc-${side}-sprite`);
+    if (img) { img.onerror = null; img.removeAttribute("src"); }
+    document.getElementById(`calc-${side}-species-label`).textContent = "+ Chọn Pokémon";
+    document.getElementById(`calc-${side}-types`).replaceChildren();
+    document.getElementById(`calc-${side}-preset-note`).textContent = "";
+    document.getElementById(`calc-${side}-stats-table`).replaceChildren();
+    document.getElementById(`calc-${side}-moves-editor`).replaceChildren();
+    return;
+  }
   const dexData = POKEDEX_MC[st.species] || POKEDEX_MC["Garchomp"];
   const form = getEffectiveForm(st.species, st.isMega, st.item);
 
@@ -2649,6 +2642,25 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
 }
 
 function runDamageCalculation() {
+  if (!calcState.p1 || !calcState.p2) {
+    for (const side of ["p1", "p2"]) {
+      const st = calcState[side];
+      const nameEl = document.getElementById(`calc-top-${side}-name`);
+      const moveEl = document.getElementById(`calc-top-${side}-moves`);
+      if (nameEl) nameEl.textContent = st
+        ? getEffectiveForm(st.species, st.isMega, st.item).displayName
+        : (side === "p1" ? "Pokémon 1 chưa chọn" : "Pokémon 2 chưa chọn");
+      if (moveEl) moveEl.innerHTML = st
+        ? st.moves.map(m => `<div class="calc-pending-move"><span>${escapeHtml(m.name)}</span><span>—</span></div>`).join("")
+        : `<button type="button" class="calc-pending-picker" onclick="openPokemonPicker({ mode: 'calc', side: '${side}' })">+ Chọn Pokémon</button>`;
+    }
+    document.getElementById("calc-headline").textContent = "Chọn Pokémon cho cả hai bên để tính sát thương";
+    document.getElementById("calc-subline").textContent = "";
+    document.getElementById("calc-hp-range-text").textContent = "—";
+    document.getElementById("calc-hp-bar-max").style.width = "0%";
+    document.getElementById("calc-hp-bar-min").style.width = "0%";
+    return;
+  }
   const p1Form = getEffectiveForm(calcState.p1.species, calcState.p1.isMega, calcState.p1.item);
   const p2Form = getEffectiveForm(calcState.p2.species, calcState.p2.isMega, calcState.p2.item);
 
