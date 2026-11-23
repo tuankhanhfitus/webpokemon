@@ -609,7 +609,7 @@
               <h2 class="text-lg sm:text-xl font-extrabold text-white">Quét ảnh đội hình 6 Pokémon ra Showdown</h2>
             </div>
             <p class="text-xs sm:text-sm text-slate-400 mt-1">
-              Tải lên hoặc dán ảnh chụp màn hình team 6 Pokémon Champions Regulation M-C. AI sẽ trích xuất tên Pokémon, Mega Stone/Item, Ability, Nature, 4 chiêu thức và EVs/SP nếu hiện rõ trong ảnh.
+              Tải lên tối đa 3 ảnh của cùng một đội hình (có thể chọn nhiều ảnh cùng lúc hoặc bổ sung sau). AI sẽ tổng hợp tên Pokémon, Item, Ability, Nature, các chiêu thức và EVs/SP nếu hiện rõ trong bất kỳ ảnh nào.
             </p>
           </div>
         </div>
@@ -622,19 +622,17 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Upload Area -->
           <div class="space-y-4">
-            <label for="ai-image-input" class="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-700 hover:border-sky-500 rounded-2xl bg-slate-900/60 cursor-pointer transition overflow-hidden relative group">
-              <img id="ai-preview-img" class="hidden w-full h-full object-contain z-10 p-2" alt="Preview" />
-              <div id="ai-upload-placeholder" class="flex flex-col items-center justify-center p-6 text-center">
-                <div class="w-12 h-12 rounded-full bg-sky-500/15 text-sky-400 flex items-center justify-center mb-3 group-hover:scale-110 transition">
-                  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <p class="text-sm font-semibold text-slate-200">Nhấn để chọn ảnh hoặc dán ảnh (Ctrl+V)</p>
-                <p class="text-xs text-slate-500 mt-1">Hỗ trợ PNG, JPG, WEBP</p>
-              </div>
-              <input id="ai-image-input" type="file" accept="image/*" class="hidden" onchange="handleAiImageSelect(event)" />
+            <label for="ai-image-input" id="ai-upload-zone" class="ai-upload-zone flex flex-col items-center justify-center w-full min-h-[140px] border-2 border-dashed border-slate-700 hover:border-sky-500 rounded-2xl bg-slate-900/60 cursor-pointer transition p-5 text-center group">
+              <span class="text-sky-400 mb-2"><svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.5-4.5a2 2 0 012.8 0L16 16m-2-2 1.5-1.5a2 2 0 012.8 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v5m-2.5-2.5h5"/></svg></span>
+              <span class="text-sm font-semibold text-slate-200">Nhấn để chọn ảnh đội hình (tối đa 3 ảnh)</span>
+              <span id="ai-upload-hint" class="text-xs text-slate-500 mt-1">Chọn thêm ảnh, kéo thả hoặc dán Ctrl+V · PNG, JPG, WEBP</span>
+              <input id="ai-image-input" type="file" accept="image/png,image/jpeg,image/webp" multiple class="hidden" onchange="handleAiImageSelect(event)" />
             </label>
+            <div class="flex items-center justify-between gap-3 text-xs">
+              <span id="ai-image-count" class="font-semibold text-sky-300" aria-live="polite">0/3 ảnh đã chọn</span>
+              <button id="ai-clear-all-btn" type="button" onclick="clearAiImages()" class="hidden px-2.5 py-1 rounded-lg text-rose-300 border border-rose-500/30 hover:bg-rose-500/10">Xóa tất cả ảnh</button>
+            </div>
+            <div id="ai-preview-list" class="hidden grid grid-cols-3 gap-2" aria-label="Các ảnh đã chọn để quét"></div>
 
             <button id="btn-run-ai-scan" onclick="analyzeTeamImageWithAI()" disabled class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-sm text-white shadow-lg shadow-sky-500/20 transition flex items-center justify-center gap-2">
               <span id="ai-scan-btn-text">✨ Quét ảnh nhận diện đội hình</span>
@@ -749,6 +747,6 @@
   <script src="data.js?v=17"></script>
   <script src="champions-roster.js?v=18"></script>
   <script src="champions-bulbapedia.js?v=18"></script>
-  <script src="app.js?v=22"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>

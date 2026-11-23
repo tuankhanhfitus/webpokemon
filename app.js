@@ -29,8 +29,15 @@ let teams = [];
 let activeTeamId = null;
 let activeSlotIndex = 0;
 let modalMode = "ranked"; // 'ranked' | 'ots' | 'import'
-let aiSelectedImageBase64 = null;
-let aiSelectedImageMime = "image/png";
+// Keep up to three screenshots for a single Gemini request. A pending queue
+// reserves each upload slot so rapid multi-file choices cannot exceed the limit.
+const AI_MAX_IMAGES = 3;
+let aiSelectedImages = [];
+let aiQueuedImageCount = 0;
+let aiImageAddQueue = Promise.resolve();
+let aiImageNextId = 1;
+let aiImageGeneration = 0;
+let aiScanBusy = false;
 let activeMoveDropdownId = null;
 
 // Visual Pokémon Picker State
@@ -528,6 +535,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const restoredWorkspace = restoreWorkspaceState();
   populateStaticDropdowns();
   setupItemImagePickers();
+  setupAiImageDropZone();
   renderTeamSelector();
   renderTeamRibbon();
   renderActiveSlotEditor();
@@ -574,12 +582,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!scannerView || scannerView.classList.contains("hidden")) return;
     const items = e.clipboardData?.items;
     if (!items) return;
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const file = item.getAsFile();
-        if (file) processAiImageFile(file);
-        break;
-      }
+    const pastedImages = [...items]
+      .filter(item => item.type.startsWith("image/"))
+      .map(item => item.getAsFile()).filter(Boolean);
+    if (pastedImages.length) {
+      e.preventDefault();
+      processAiImageFiles(pastedImages);
     }
   });
 });
@@ -3028,54 +3036,172 @@ function saveGeminiKey(val) {
 }
 
 function handleAiImageSelect(event) {
-  const file = event.target.files?.[0];
-  if (file) processAiImageFile(file);
+  // Multiple selections append to the current gallery instead of replacing it.
+  const files = [...(event.target.files || [])];
+  event.target.value = ""; // Re-selecting the same file is allowed.
+  processAiImageFiles(files);
 }
 
 function processAiImageFile(file) {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const rawDataUrl = e.target.result;
-    const applyPreview = (finalDataUrl, mimeType) => {
-      aiSelectedImageMime = mimeType;
-      aiSelectedImageBase64 = finalDataUrl.split(",")[1];
-      const preview = document.getElementById("ai-preview-img");
-      const placeholder = document.getElementById("ai-upload-placeholder");
-      preview.src = finalDataUrl;
-      preview.classList.remove("hidden");
-      placeholder.classList.add("hidden");
-      document.getElementById("btn-run-ai-scan").disabled = false;
-    };
+  // Backwards-compatible entry point for existing paste integrations.
+  return processAiImageFiles([file]);
+}
 
-    const img = new Image();
-    img.onload = () => {
-      // Preserve small EV/SP text from screenshots instead of downscaling to 1024px.
-      const MAX_DIM = 2048;
-      let w = img.width;
-      let h = img.height;
-      if (w > MAX_DIM || h > MAX_DIM) {
-        if (w > h) {
-          h = Math.round((h * MAX_DIM) / w);
-          w = MAX_DIM;
-        } else {
-          w = Math.round((w * MAX_DIM) / h);
-          h = MAX_DIM;
-        }
+function readAiImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      reject(new Error("Chỉ hỗ trợ ảnh PNG, JPG hoặc WEBP."));
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      reject(new Error("Mỗi ảnh phải nhỏ hơn hoặc bằng 15 MB."));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Không đọc được ảnh " + (file.name || "đã chọn") + "."));
+    reader.onload = () => {
+      const rawDataUrl = reader.result;
+      if (typeof rawDataUrl !== "string" || !rawDataUrl.includes(",")) {
+        reject(new Error("Dữ liệu ảnh không hợp lệ."));
+        return;
       }
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-      // PNG avoids JPEG artifacts around digits such as 4, 8, 0 and 6.
-      const preservePng = file.type === "image/png";
-      const outputMime = preservePng ? "image/png" : "image/jpeg";
-      const compressedDataUrl = canvas.toDataURL(outputMime, 0.92);
-      applyPreview(compressedDataUrl, outputMime);
+      const finish = (dataUrl, mimeType) => resolve({
+        name: file.name || "Ảnh dán",
+        mimeType,
+        base64: dataUrl.slice(dataUrl.indexOf(",") + 1),
+        previewUrl: dataUrl
+      });
+      const image = new Image();
+      image.onload = () => {
+        try {
+          // Preserve small EV/SP numbers across all three uploaded screenshots.
+          const maxDim = 2048;
+          const scale = Math.min(1, maxDim / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+          canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+          const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
+          finish(canvas.toDataURL(mimeType, 0.92), mimeType);
+        } catch (error) {
+          // A supported source image may still be readable without canvas conversion.
+          finish(rawDataUrl, file.type);
+        }
+      };
+      image.onerror = () => finish(rawDataUrl, file.type);
+      image.src = rawDataUrl;
     };
-    img.onerror = () => applyPreview(rawDataUrl, file.type || "image/png");
-    img.src = rawDataUrl;
-  };
-  reader.readAsDataURL(file);
+    reader.readAsDataURL(file);
+  });
+}
+
+function processAiImageFiles(files) {
+  if (aiScanBusy) {
+    showToast("Đợi lượt quét hiện tại hoàn tất trước khi thêm ảnh.", "warn");
+    return aiImageAddQueue;
+  }
+  const valid = [...files].filter(Boolean);
+  const slots = AI_MAX_IMAGES - aiSelectedImages.length - aiQueuedImageCount;
+  if (slots <= 0) {
+    showToast("Chỉ được chọn tối đa 3 ảnh mỗi lần quét.", "warn");
+    return aiImageAddQueue;
+  }
+  if (valid.length > slots) {
+    showToast(`Chỉ thêm được ${slots} ảnh nữa (tối đa ${AI_MAX_IMAGES} ảnh).`, "warn");
+  }
+  for (const file of valid.slice(0, slots)) {
+    const generation = aiImageGeneration;
+    aiQueuedImageCount++;
+    aiImageAddQueue = aiImageAddQueue.then(async () => {
+      const image = await readAiImageFile(file);
+      if (generation !== aiImageGeneration) return; // Cleared while reading.
+      aiSelectedImages.push({ id: aiImageNextId++, ...image });
+      setAiScanStatus("");
+    }).catch(error => {
+      showToast(error.message || "Không thêm được ảnh.", "error");
+      setAiScanStatus(error.message || "Không thêm được ảnh.", "error");
+    }).finally(() => {
+      aiQueuedImageCount--;
+      renderAiImageGallery();
+    });
+  }
+  renderAiImageGallery();
+  return aiImageAddQueue;
+}
+
+function removeAiImage(id) {
+  if (aiScanBusy) return;
+  aiSelectedImages = aiSelectedImages.filter(image => image.id !== id);
+  renderAiImageGallery();
+}
+
+function clearAiImages() {
+  if (aiScanBusy) return;
+  aiImageGeneration++;
+  aiSelectedImages = [];
+  renderAiImageGallery();
+  setAiScanStatus("");
+}
+
+function renderAiImageGallery() {
+  const gallery = document.getElementById("ai-preview-list");
+  const input = document.getElementById("ai-image-input");
+  const counter = document.getElementById("ai-image-count");
+  const hint = document.getElementById("ai-upload-hint");
+  const clearButton = document.getElementById("ai-clear-all-btn");
+  const scanButton = document.getElementById("btn-run-ai-scan");
+  const usedSlots = aiSelectedImages.length + aiQueuedImageCount;
+  const full = usedSlots >= AI_MAX_IMAGES;
+  if (counter) counter.textContent = `${aiSelectedImages.length}/${AI_MAX_IMAGES} ảnh đã chọn` +
+    (aiQueuedImageCount ? ` · đang xử lý ${aiQueuedImageCount}` : "");
+  if (hint) hint.textContent = full ? "Đã đủ 3 ảnh · xóa ảnh để chọn ảnh khác" :
+    "Chọn thêm ảnh, kéo thả hoặc dán Ctrl+V · PNG, JPG, WEBP";
+  if (input) input.disabled = full || aiScanBusy;
+  if (clearButton) {
+    clearButton.classList.toggle("hidden", aiSelectedImages.length === 0);
+    clearButton.disabled = aiScanBusy;
+  }
+  if (scanButton) scanButton.disabled = aiScanBusy || aiQueuedImageCount > 0 || aiSelectedImages.length === 0;
+  if (!gallery) return;
+  gallery.replaceChildren();
+  gallery.classList.toggle("hidden", aiSelectedImages.length === 0);
+  aiSelectedImages.forEach((image, idx) => {
+    const tile = document.createElement("div");
+    tile.className = "ai-preview-tile";
+    const img = document.createElement("img");
+    img.src = image.previewUrl;
+    img.alt = `Ảnh ${idx + 1}: ${image.name}`;
+    img.loading = "lazy";
+    const number = document.createElement("span");
+    number.className = "ai-preview-index";
+    number.textContent = `Ảnh ${idx + 1}`;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "ai-preview-remove";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", `Xóa ảnh ${idx + 1}`);
+    remove.title = "Xóa ảnh này";
+    remove.disabled = aiScanBusy;
+    remove.addEventListener("click", () => removeAiImage(image.id));
+    tile.append(img, number, remove);
+    gallery.appendChild(tile);
+  });
+}
+
+function setupAiImageDropZone() {
+  const zone = document.getElementById("ai-upload-zone");
+  if (!zone) return;
+  zone.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    if (!aiScanBusy) zone.classList.add("ai-drop-active");
+  });
+  zone.addEventListener("dragleave", () => zone.classList.remove("ai-drop-active"));
+  zone.addEventListener("drop", (event) => {
+    event.preventDefault();
+    zone.classList.remove("ai-drop-active");
+    if (event.dataTransfer?.files?.length) processAiImageFiles(event.dataTransfer.files);
+  });
+  renderAiImageGallery();
 }
 
 function setAiScanStatus(message, level = "info") {
@@ -3112,7 +3238,7 @@ function waitMs(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function callGeminiInteractionsOnce(apiKey, modelName, promptText) {
+async function callGeminiInteractionsOnce(apiKey, modelName, promptText, images) {
   // Google's documented Interactions API for inline base64 images.
   const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
     method: "POST",
@@ -3128,7 +3254,9 @@ async function callGeminiInteractionsOnce(apiKey, modelName, promptText) {
       },
       input: [
         { type: "text", text: promptText },
-        { type: "image", data: aiSelectedImageBase64, mime_type: aiSelectedImageMime }
+        ...images.map(image => ({
+          type: "image", data: image.base64, mime_type: image.mimeType
+        }))
       ]
     })
   });
@@ -3154,17 +3282,23 @@ async function analyzeTeamImageWithAI() {
     showToast("Vui lòng nhập Gemini API Key trước khi quét!", "warn");
     return;
   }
-  if (!aiSelectedImageBase64) {
-    showToast("Vui lòng chọn hoặc dán ảnh đội hình!", "warn");
+  if (!aiSelectedImages.length) {
+    showToast("Vui lòng chọn hoặc dán 1–3 ảnh đội hình!", "warn");
+    return;
+  }
+  if (aiQueuedImageCount > 0) {
+    showToast("Ảnh đang được xử lý, hãy quét khi đã đủ ảnh.", "warn");
     return;
   }
 
   const btn = document.getElementById("btn-run-ai-scan");
-  if (btn.disabled) return; // Prevent two requests for the same image.
+  if (aiScanBusy || btn.disabled) return;
+  const imagesForRequest = aiSelectedImages.map(({ base64, mimeType }) => ({ base64, mimeType }));
   const btnText = document.getElementById("ai-scan-btn-text");
-  btn.disabled = true;
+  aiScanBusy = true;
+  renderAiImageGallery();
 
-  const promptText = `Read this VGC Regulation M-C team screenshot and transcribe up to 6 Pokémon into Showdown-style plain text. Output only Pokémon blocks separated by blank lines, no Markdown:
+  const promptText = `Read ALL ${imagesForRequest.length} supplied VGC Regulation M-C screenshots together as evidence for ONE Pokémon team, and transcribe up to 6 UNIQUE Pokémon into Showdown-style plain text. Some screenshots may show the same Pokémon or different parts of its build: merge those details by species/form and item instead of duplicating Pokémon. Use the clearest close-up for unreadable text. Never invent a value that is not visible in any screenshot. Output only Pokémon blocks separated by blank lines, no Markdown:
 Species @ Item
 Ability: <Ability>
 Level: 50
@@ -3194,9 +3328,9 @@ CRITICAL RULES FOR EVs AND STAT POINTS:
       const maxAttempts = 2;
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         btnText.textContent = `⏳ ${modelName} đang phân tích (lần ${attempt}/${maxAttempts})...`;
-        setAiScanStatus(`Đang gửi ảnh tới ${modelName} (lần thử ${attempt}/${maxAttempts})...`);
+        setAiScanStatus(`Đang gửi ${imagesForRequest.length} ảnh tới ${modelName} (lần thử ${attempt}/${maxAttempts})...`);
 
-        const res = await callGeminiInteractionsOnce(apiKey, modelName, promptText);
+        const res = await callGeminiInteractionsOnce(apiKey, modelName, promptText, imagesForRequest);
         if (res.response.ok) {
           data = res.data;
           lastError = null;
@@ -3236,7 +3370,8 @@ CRITICAL RULES FOR EVs AND STAT POINTS:
     setAiScanStatus(errorMessage, "error");
     showToast("Quét AI thất bại. Xem thông báo dưới nút Quét ảnh.", "error");
   } finally {
-    btn.disabled = false;
+    aiScanBusy = false;
+    renderAiImageGallery();
     btnText.textContent = "✨ Quét ảnh nhận diện đội hình";
   }
 }
