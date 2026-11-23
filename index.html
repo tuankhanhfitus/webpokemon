@@ -347,6 +347,11 @@
             </div>
           </div>
 
+          <div class="flex items-center justify-between gap-2 text-[10px] -mt-1">
+            <span id="calc-p1-preset-note" class="text-sky-300/90 truncate" title="Nguồn build"></span>
+            <button type="button" onclick="applyPopularCalcSet('p1')" title="Nạp lại build mẫu cho Pokémon đang chọn" class="shrink-0 px-2 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-300 font-semibold">↻ Build phổ biến</button>
+          </div>
+
           <!-- Item, Ability, Nature, Status -->
           <div class="grid grid-cols-2 gap-2 text-xs">
             <div>
@@ -494,6 +499,11 @@
               </div>
               <div id="calc-p2-types" class="flex items-center gap-1"></div>
             </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 text-[10px] -mt-1">
+            <span id="calc-p2-preset-note" class="text-sky-300/90 truncate" title="Nguồn build"></span>
+            <button type="button" onclick="applyPopularCalcSet('p2')" title="Nạp lại build mẫu cho Pokémon đang chọn" class="shrink-0 px-2 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-300 font-semibold">↻ Build phổ biến</button>
           </div>
 
           <!-- Item, Ability, Nature, Status -->
@@ -722,7 +732,7 @@
     </div>
   </div>
 
-  <script src="data.js?v=4"></script>
-  <script src="app.js?v=4"></script>
+  <script src="data.js?v=5"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

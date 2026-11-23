@@ -1256,6 +1256,8 @@ const ITEMS_MC = [
   "Wide Lens",
   "Eviolite",
   "Iron Ball",
+  "White Herb",
+  "Chople Berry",
   "Abomasite",
   "Absolite Z",
   "Absolite",
@@ -1428,7 +1430,54 @@ const MOVES_DB = {
   "Dazzling Gleam":   { bp: 80,  type: "Fairy",    cat: "Special",  spread: true },
   "Moonblast":        { bp: 95,  type: "Fairy",    cat: "Special",  spread: false },
   "Play Rough":       { bp: 90,  type: "Fairy",    cat: "Physical", spread: false, contact: true },
+  "Ancient Power": { bp: 60, type: "Rock", cat: "Special", spread: false },
+  "Darkest Lariat": { bp: 85, type: "Dark", cat: "Physical", spread: false },
+  "Steel Beam": { bp: 140, type: "Steel", cat: "Special", spread: false },
+  "Ice Fang": { bp: 65, type: "Ice", cat: "Physical", spread: false },
+  "Struggle Bug": { bp: 50, type: "Bug", cat: "Special", spread: true },
+  "Overheat": { bp: 130, type: "Fire", cat: "Special", spread: false },
+  "Leaf Storm": { bp: 130, type: "Grass", cat: "Special", spread: false },
+  "Sleep Powder": { bp: 0, type: "Grass", cat: "Status", spread: false },
+  "Detect": { bp: 0, type: "Fighting", cat: "Status", spread: false },
+  "Hyper Beam": { bp: 150, type: "Normal", cat: "Special", spread: false },
+  "Quick Attack": { bp: 40, type: "Normal", cat: "Physical", spread: false },
+  "Swords Dance": { bp: 0, type: "Normal", cat: "Status", spread: false },
   "Spirit Break":     { bp: 75,  type: "Fairy",    cat: "Physical", spread: false, contact: true }
+};
+
+
+// Most-used individual item / ability / spread / moves, Pokemon Showdown October 2026
+// Regulation M-C Doubles, 1760 weighting. The top choices are statistical marginals:
+// they are NOT guaranteed to form one exact tournament team set.
+// https://www.smogon.com/stats/2026-10/moveset/gen9championsvgc2026regmc-1760.txt
+const CALC_POPULAR_SETS_MC = {
+  "Sneasler": {"item": "White Herb", "ability": "Unburden", "nature": "Adamant", "sp": {"hp": 2, "atk": 32, "def": 0, "spa": 0, "spd": 0, "spe": 32}, "moves": ["Close Combat", "Dire Claw", "Fake Out", "Protect"]},
+  "Kingambit": {"item": "Chople Berry", "ability": "Defiant", "nature": "Brave", "sp": {"hp": 32, "atk": 32, "def": 0, "spa": 0, "spd": 2, "spe": 0}, "moves": ["Kowtow Cleave", "Sucker Punch", "Iron Head", "Low Kick"]},
+  "Basculegion": {"item": "Focus Sash", "ability": "Adaptability", "nature": "Brave", "sp": {"hp": 2, "atk": 32, "def": 32, "spa": 0, "spd": 0, "spe": 0}, "moves": ["Last Respects", "Aqua Jet", "Wave Crash", "Protect"]},
+  "Charizard::Charizardite Y": {"item": "Charizardite Y", "ability": "Drought", "nature": "Quiet", "sp": {"hp": 32, "atk": 0, "def": 2, "spa": 32, "spd": 0, "spe": 0}, "moves": ["Heat Wave", "Weather Ball", "Protect", "Ancient Power"]},
+  "Rillaboom": {"item": "Miracle Seed", "ability": "Grassy Surge", "nature": "Adamant", "sp": {"hp": 32, "atk": 32, "def": 0, "spa": 0, "spd": 0, "spe": 2}, "moves": ["Grassy Glide", "Fake Out", "Wood Hammer", "U-turn"]},
+  "Incineroar": {"item": "Sitrus Berry", "ability": "Intimidate", "nature": "Adamant", "sp": {"hp": 32, "atk": 14, "def": 10, "spa": 0, "spd": 10, "spe": 0}, "moves": ["Fake Out", "Parting Shot", "Flare Blitz", "Darkest Lariat"]},
+  "Garchomp": {"item": "Choice Scarf", "ability": "Rough Skin", "nature": "Adamant", "sp": {"hp": 2, "atk": 32, "def": 0, "spa": 0, "spd": 0, "spe": 32}, "moves": ["Dragon Claw", "Rock Slide", "Stomping Tantrum", "Earthquake"]},
+  "Farigiraf": {"item": "Sitrus Berry", "ability": "Armor Tail", "nature": "Quiet", "sp": {"hp": 10, "atk": 0, "def": 13, "spa": 30, "spd": 13, "spe": 0}, "moves": ["Trick Room", "Psychic", "Thunderbolt", "Helping Hand"]},
+  "Archaludon": {"item": "Leftovers", "ability": "Stamina", "nature": "Bold", "sp": {"hp": 30, "atk": 0, "def": 1, "spa": 1, "spd": 19, "spe": 15}, "moves": ["Protect", "Electro Shot", "Dragon Pulse", "Flash Cannon"]},
+  "Indeedee-F": {"item": "Rocky Helmet", "ability": "Psychic Surge", "nature": "Bold", "sp": {"hp": 32, "atk": 0, "def": 32, "spa": 0, "spd": 2, "spe": 0}, "moves": ["Follow Me", "Helping Hand", "Psychic", "Trick Room"]},
+  "Dragonite::Dragoninite": {"item": "Dragoninite", "ability": "Multiscale", "nature": "Modest", "sp": {"hp": 25, "atk": 0, "def": 0, "spa": 32, "spd": 0, "spe": 9}, "moves": ["Dragon Pulse", "Heat Wave", "Tailwind", "Extreme Speed"]},
+  "Gardevoir::Gardevoirite": {"item": "Gardevoirite", "ability": "Pixilate", "nature": "Quiet", "sp": {"hp": 16, "atk": 0, "def": 18, "spa": 32, "spd": 0, "spe": 0}, "moves": ["Hyper Voice", "Psychic", "Protect", "Trick Room"]},
+  "Pelipper": {"item": "Sitrus Berry", "ability": "Drizzle", "nature": "Bold", "sp": {"hp": 32, "atk": 0, "def": 10, "spa": 17, "spd": 7, "spe": 0}, "moves": ["Weather Ball", "Hurricane", "Wide Guard", "Tailwind"]},
+  "Gholdengo": {"item": "Life Orb", "ability": "Good as Gold", "nature": "Modest", "sp": {"hp": 7, "atk": 0, "def": 8, "spa": 32, "spd": 0, "spe": 19}, "moves": ["Make It Rain", "Shadow Ball", "Protect", "Nasty Plot"]},
+  "Whimsicott": {"item": "Focus Sash", "ability": "Prankster", "nature": "Timid", "sp": {"hp": 2, "atk": 0, "def": 0, "spa": 32, "spd": 0, "spe": 32}, "moves": ["Tailwind", "Moonblast", "Encore", "Protect"]},
+  "Salamence::Salamencite": {"item": "Salamencite", "ability": "Aerilate", "nature": "Timid", "sp": {"hp": 2, "atk": 0, "def": 0, "spa": 32, "spd": 0, "spe": 32}, "moves": ["Protect", "Hyper Voice", "Tailwind", "Draco Meteor"]},
+  "Garchomp::Garchompite Z": {"item": "Garchompite Z", "ability": "Levitate", "nature": "Modest", "sp": {"hp": 2, "atk": 0, "def": 0, "spa": 32, "spd": 0, "spe": 32}, "moves": ["Protect", "Power Gem", "Earth Power", "Dragon Pulse"]},
+  "Armarouge": {"item": "Focus Sash", "ability": "Weak Armor", "nature": "Modest", "sp": {"hp": 0, "atk": 0, "def": 0, "spa": 32, "spd": 2, "spe": 32}, "moves": ["Expanding Force", "Armor Cannon", "Protect", "Wide Guard"]},
+  "Venusaur": {"item": "Focus Sash", "ability": "Chlorophyll", "nature": "Modest", "sp": {"hp": 2, "atk": 0, "def": 0, "spa": 32, "spd": 0, "spe": 32}, "moves": ["Sludge Bomb", "Protect", "Leaf Storm", "Sleep Powder"]},
+  "Lucario::Lucarionite Z": {"item": "Lucarionite Z", "ability": "Aura Guard", "nature": "Modest", "sp": {"hp": 2, "atk": 0, "def": 0, "spa": 32, "spd": 0, "spe": 32}, "moves": ["Aura Sphere", "Flash Cannon", "Protect", "Steel Beam"]},
+  "Excadrill": {"item": "Focus Sash", "ability": "Sand Rush", "nature": "Adamant", "sp": {"hp": 2, "atk": 32, "def": 0, "spa": 0, "spd": 0, "spe": 32}, "moves": ["Iron Head", "Protect", "High Horsepower", "Rock Slide"]},
+  "Aerodactyl::Aerodactylite": {"item": "Aerodactylite", "ability": "Tough Claws", "nature": "Jolly", "sp": {"hp": 0, "atk": 32, "def": 0, "spa": 0, "spd": 2, "spe": 32}, "moves": ["Rock Slide", "Dual Wingbeat", "Tailwind", "Ice Fang"]},
+  "Torkoal": {"item": "Charcoal", "ability": "Drought", "nature": "Quiet", "sp": {"hp": 32, "atk": 0, "def": 0, "spa": 32, "spd": 2, "spe": 0}, "moves": ["Eruption", "Protect", "Weather Ball", "Earth Power"]},
+  "Absol::Absolite Z": {"item": "Absolite Z", "ability": "Sharpness", "nature": "Jolly", "sp": {"hp": 2, "atk": 32, "def": 0, "spa": 0, "spd": 0, "spe": 32}, "moves": ["Night Slash", "Shadow Claw", "Close Combat", "Protect"]},
+  "Aerodactyl": {"item": "Focus Sash", "ability": "Unnerve", "nature": "Jolly", "sp": {"hp": 2, "atk": 32, "def": 0, "spa": 0, "spd": 0, "spe": 32}, "moves": ["Rock Slide", "Tailwind", "Protect", "Wide Guard"]},
+  "Ceruledge": {"item": "Grassy Seed", "ability": "Flash Fire", "nature": "Adamant", "sp": {"hp": 31, "atk": 7, "def": 24, "spa": 0, "spd": 3, "spe": 1}, "moves": ["Bitter Blade", "Protect", "Shadow Sneak", "Swords Dance"]},
+  "Mawile::Mawilite": {"item": "Mawilite", "ability": "Huge Power", "nature": "Brave", "sp": {"hp": 32, "atk": 32, "def": 0, "spa": 0, "spd": 2, "spe": 0}, "moves": ["Play Rough", "Sucker Punch", "Protect", "Iron Head"]},
 };
 
 // Default Starter Meta Team for Regulation M-C

@@ -427,14 +427,8 @@ function selectPokemonFromPicker(species, isMega, megaStone) {
       renderActiveSlotEditor();
     }
   } else if (target.mode === "calc") {
-    const side = target.side || "p1";
-    updateCalcSide(side, "species", species);
-    if (isMega) {
-      updateCalcSide(side, "isMega", true);
-      if (megaStone) updateCalcSide(side, "item", megaStone);
-    } else {
-      updateCalcSide(side, "isMega", false);
-    }
+    // Set the full species/form profile atomically so the old set cannot leak.
+    applyPopularCalcSet(target.side || "p1", species, Boolean(isMega), megaStone);
   } else if (target.mode === "speed") {
     const slotIdx = target.slotIdx ?? 0;
     const dexData = POKEDEX_MC[species] || POKEDEX_MC["Arcanine"];
@@ -1271,46 +1265,124 @@ function pickMoveFromDropdown(side, mIdx, moveName) {
 // SHOWDOWN-STYLE DAMAGE CALCULATOR ENGINE
 // ============================================================================
 
-function initCalcWorkspace() {
-  renderCalcSideUI("p1");
-  renderCalcSideUI("p2");
+
+// Popular-set loader: the calculator uses Champions SP (0–32 / 66 total), not classic EVs.
+function getCalcSuggestedSet(species, isMega, megaStone) {
+  const dex = POKEDEX_MC[species] || POKEDEX_MC.Garchomp;
+  const stone = isMega && dex.megas
+    ? (megaStone && dex.megas[megaStone] ? megaStone : dex.defaultMegaStone)
+    : null;
+  const form = stone ? dex.megas[stone] : null;
+  const key = stone ? `${species}::${stone}` : species;
+  const popular = CALC_POPULAR_SETS_MC[key];
+  if (popular) {
+    return {
+      ...popular, sp: { ...popular.sp }, moves: [...popular.moves],
+      isMega: Boolean(stone), source: 'smogon', formKey: key
+    };
+  }
+
+  // Clear, non-statistical fallback for species/forms without published curated sets.
+  // Apply 66 SP defensibly; do not present these as verified top usage builds.
+  const stats = form ? form.base : dex.base;
+  const defaultMoves = [...(dex.defaultMoves || ['Protect'])].slice(0, 4);
+  const special = stats.spa > stats.atk;
+  const supportCount = defaultMoves.filter(m => MOVES_DB[m]?.cat === 'Status').length;
+  const defensive = supportCount >= 2 && Math.max(stats.def, stats.spd) >= 100;
+  const sp = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+  let nature;
+  if (defensive) {
+    nature = stats.def >= stats.spd ? 'Bold' : 'Calm';
+    sp.hp = 32;
+    sp[stats.def >= stats.spd ? 'def' : 'spd'] = 32;
+    sp[stats.def >= stats.spd ? 'spd' : 'def'] = 2;
+  } else {
+    const attackKey = special ? 'spa' : 'atk';
+    const speedy = stats.spe >= 100;
+    nature = special ? (speedy ? 'Timid' : 'Modest') : (speedy ? 'Jolly' : 'Adamant');
+    sp.hp = 2;
+    sp[attackKey] = 32;
+    sp.spe = 32;
+  }
+  return {
+    item: stone || (defensive ? 'Sitrus Berry' : 'Life Orb'),
+    ability: form ? form.ability : dex.abilities[0],
+    nature, sp,
+    moves: [...defaultMoves, ...Array(4).fill('Protect')].slice(0, 4),
+    isMega: Boolean(stone), source: 'suggested', formKey: key
+  };
+}
+
+function applyPopularCalcSet(side, species, isMega, megaStone) {
+  const st = calcState[side];
+  if (!st) return;
+  const selectedSpecies = species || st.species;
+  const selectedMega = isMega === undefined ? st.isMega : Boolean(isMega);
+  const dex = POKEDEX_MC[selectedSpecies];
+  if (!dex) return;
+  const selectedStone = selectedMega
+    ? ((megaStone && dex.megas?.[megaStone]) ? megaStone :
+       (dex.megas?.[st.item] ? st.item : dex.defaultMegaStone))
+    : null;
+  const preset = getCalcSuggestedSet(selectedSpecies, Boolean(selectedStone), selectedStone);
+  st.species = selectedSpecies;
+  st.isMega = preset.isMega;
+  st.item = preset.item;
+  st.ability = preset.ability;
+  st.nature = preset.nature;
+  st.sp = { ...preset.sp };
+  st.moves = preset.moves.map(name => ({ name, crit: false }));
+  st.selectedMoveIdx = st.moves.findIndex(m => MOVES_DB[m.name]?.cat !== 'Status');
+  if (st.selectedMoveIdx < 0) st.selectedMoveIdx = 0;
+  st.stages = { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+  st.status = 'Healthy';
+  st.presetSource = preset.source;
+  st.presetEdited = false;
+  activeMoveDropdownId = null;
+  renderCalcSideUI(side);
   runDamageCalculation();
+}
+
+function markCalcPresetEdited(side) {
+  if (calcState[side]) calcState[side].presetEdited = true;
+}
+
+function initCalcWorkspace() {
+  applyPopularCalcSet("p1", calcState.p1.species, calcState.p1.isMega, calcState.p1.item);
+  applyPopularCalcSet("p2", calcState.p2.species, calcState.p2.isMega, calcState.p2.item);
 }
 
 function updateCalcSide(side, key, value) {
   const st = calcState[side];
   if (!st) return;
 
-  if (key === "species") {
-    const dexData = POKEDEX_MC[value];
-    st.species = value;
-    st.ability = dexData.abilities[0];
-    st.moves = dexData.defaultMoves.map((m) => ({ name: m, crit: false }));
-    st.selectedMoveIdx = 0;
-    if (dexData.megas) {
-      st.isMega = true;
-      st.item = dexData.defaultMegaStone;
-    } else {
-      st.isMega = false;
+  if (key === 'species') {
+    // Choosing a species from the base list means base form, not automatic Mega.
+    applyPopularCalcSet(side, value, false, null);
+    return;
+  }
+  if (key === 'isMega') {
+    applyPopularCalcSet(side, st.species, Boolean(value),
+      value ? (POKEDEX_MC[st.species].megas?.[st.item] ? st.item : null) : null);
+    return;
+  }
+  if (key === 'item') {
+    const dex = POKEDEX_MC[st.species];
+    const stone = Boolean(dex?.megas?.[value]);
+    if (stone && (value !== st.item || !st.isMega)) {
+      applyPopularCalcSet(side, st.species, true, value);
+      return;
     }
-  } else if (key === "isMega") {
-    const dexData = POKEDEX_MC[st.species];
-    st.isMega = Boolean(value && dexData.megas);
-    if (st.isMega && (!st.item || !dexData.megas[st.item])) {
-      st.item = dexData.defaultMegaStone;
+    if (!stone && st.isMega) {
+      // Non-Mega item switches the form back to base, but keep the chosen item.
+      applyPopularCalcSet(side, st.species, false, null);
     }
-  } else if (key === "item") {
     st.item = value;
-    const dexData = POKEDEX_MC[st.species];
-    if (dexData && dexData.megas && dexData.megas[value]) {
-      st.isMega = true;
-    } else {
-      st.isMega = false;
-    }
   } else {
     st[key] = value;
   }
 
+  markCalcPresetEdited(side);
   renderCalcSideUI(side);
   runDamageCalculation();
 }
@@ -1318,6 +1390,7 @@ function updateCalcSide(side, key, value) {
 function updateCalcStatSP(side, statKey, rawVal) {
   const val = Math.max(0, Math.min(32, parseInt(rawVal, 10) || 0));
   calcState[side].sp[statKey] = val;
+  markCalcPresetEdited(side);
   renderCalcSideUI(side);
   runDamageCalculation();
 }
@@ -1329,6 +1402,7 @@ function updateCalcStage(side, statKey, rawStage) {
 
 function updateCalcMove(side, mIdx, moveName) {
   calcState[side].moves[mIdx].name = moveName;
+  markCalcPresetEdited(side);
   calcState.activeSide = side;
   calcState[side].selectedMoveIdx = mIdx;
   renderCalcSideUI(side);
@@ -1356,6 +1430,17 @@ function renderCalcSideUI(side) {
   setImgElementForm(document.getElementById(`calc-${side}-sprite`), form);
   const spLabel = document.getElementById(`calc-${side}-species-label`);
   if (spLabel) spLabel.textContent = st.species;
+
+  const presetLabel = document.getElementById(`calc-${side}-preset-note`);
+  if (presetLabel) {
+    const kind = st.presetSource === 'smogon'
+      ? 'Meta · Smogon 10/2026, 1760+'
+      : 'Build gợi ý · chưa có thống kê';
+    presetLabel.textContent = kind + (st.presetEdited ? ' · đã chỉnh tay' : '');
+    presetLabel.title = st.presetSource === 'smogon'
+      ? 'Item, Ability, Nature, SP và các chiêu có tần suất dùng cao. Không chắc chắn là một set của cùng một người chơi.'
+      : 'Dựa trên chỉ số và các chiêu mặc định, không phải bộ phổ biến nhất được xác minh.';
+  }
 
   const megaChk = document.getElementById(`calc-${side}-mega`);
   megaChk.checked = form.isMegaActive;
