@@ -2762,6 +2762,43 @@ function processAiImageFile(file) {
   reader.readAsDataURL(file);
 }
 
+function setAiScanStatus(message, level = "info") {
+  const el = document.getElementById("ai-scan-status");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle("hidden", !message);
+  el.classList.remove("text-rose-300", "text-emerald-300", "text-sky-300");
+  el.classList.add(level === "error" ? "text-rose-300" : level === "success" ? "text-emerald-300" : "text-sky-300");
+}
+
+function explainGeminiFailure(status, error) {
+  const details = typeof error?.message === "string" ? error.message : "";
+  if (status === 401 || status === 403) {
+    return `HTTP ${status}: API Key không hợp lệ, bị giới hạn hoặc thiếu quyền sử dụng model. Kiểm tra khóa trong Google AI Studio. ${details}`.trim();
+  }
+  if (status === 404) {
+    return `HTTP 404: Không tìm thấy endpoint/model, hoặc dự án/API Key chưa được cấp quyền truy cập ${GEMINI_AI_MODEL}. Kiểm tra Models trong Google AI Studio. ${details}`.trim();
+  }
+  if (status === 429) {
+    return `HTTP 429: Đã chạm giới hạn lượt gọi (rate limit) hoặc quota. ${details}`.trim();
+  }
+  if (status >= 500) {
+    return `HTTP ${status}: Dịch vụ Gemini tạm thời không khả dụng. ${details}`.trim();
+  }
+  return `HTTP ${status}: ${details || "Gemini API trả về lỗi không xác định."}`;
+}
+
+function extractInteractionText(data) {
+  if (typeof data?.output_text === "string" && data.output_text.trim()) {
+    return data.output_text;
+  }
+  // Interactions can also expose the model output in steps.
+  const modelSteps = (data?.steps || []).filter((step) => step.type === "model_output");
+  return modelSteps.flatMap((step) => step.content || [])
+    .filter((part) => part.type === "text" && typeof part.text === "string")
+    .map((part) => part.text).join("\n");
+}
+
 async function analyzeTeamImageWithAI() {
   const apiKey = document.getElementById("ai-api-key").value.trim();
   if (!apiKey) {
@@ -2774,9 +2811,11 @@ async function analyzeTeamImageWithAI() {
   }
 
   const btn = document.getElementById("btn-run-ai-scan");
+  if (btn.disabled) return; // Prevent two requests for the same image.
   const btnText = document.getElementById("ai-scan-btn-text");
   btn.disabled = true;
   btnText.textContent = "⏳ Gemini 3.8 Flash đang phân tích ảnh...";
+  setAiScanStatus("Đang gửi ảnh tới Gemini 3.8 Flash (Interactions API)...");
 
   const promptText = `You are a competitive Pokémon VGC Regulation M-C team parser.
 Extract all Pokémon visible in this team image and output ONLY clean Pokémon Showdown paste format.
@@ -2794,51 +2833,42 @@ Level: 50
 - Do NOT include markdown code fences or extra commentary, only the Showdown paste text.`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_AI_MODEL}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: promptText },
-                {
-                  inline_data: {
-                    mime_type: aiSelectedImageMime,
-                    data: aiSelectedImageBase64
-                  }
-                }
-              ]
-            }
-          ]
-        })
-      }
-    );
+    // Google's documented Interactions API for inline base64 images.
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+        "Api-Revision": "2026-05-20"
+      },
+      body: JSON.stringify({
+        model: GEMINI_AI_MODEL,
+        store: false,
+        input: [
+          { type: "text", text: promptText },
+          { type: "image", data: aiSelectedImageBase64, mime_type: aiSelectedImageMime }
+        ]
+      })
+    });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.error?.message || "Lỗi kết nối Gemini API");
+      throw new Error(explainGeminiFailure(response.status, data.error));
     }
 
-    // Gemini 3.8 có thể trả về nhiều phần nội dung; bỏ phần suy luận nếu có.
-    const rawText = (data.candidates?.[0]?.content?.parts || [])
-      .filter((part) => typeof part.text === "string" && !part.thought)
-      .map((part) => part.text)
-      .join("\n");
+    const rawText = extractInteractionText(data);
     const cleaned = rawText.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "").trim();
     if (!cleaned) {
-      const reason = data.candidates?.[0]?.finishReason;
-      throw new Error(reason ? `Gemini chưa trả văn bản (finishReason: ${reason}).` : "Gemini chưa trả về nội dung đội hình.");
+      throw new Error("Gemini phản hồi thành công nhưng không trả văn bản. Kiểm tra nội dung ảnh và thử lại.");
     }
     document.getElementById("ai-output-textarea").value = cleaned;
+    setAiScanStatus("Đã quét ảnh thành công.", "success");
     showToast("Quét ảnh đội hình thành công!", "success");
   } catch (err) {
-    showToast("Lỗi AI: " + err.message, "error");
+    // Do not log the API key or the input image data.
+    console.error("Gemini AI scanner:", err.message);
+    setAiScanStatus(err.message, "error");
+    showToast("Quét AI thất bại. Xem thông báo dưới nút Quét ảnh.", "error");
   } finally {
     btn.disabled = false;
     btnText.textContent = "✨ Quét ảnh nhận diện đội hình";

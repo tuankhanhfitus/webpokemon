@@ -605,7 +605,7 @@
         <div class="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div class="flex items-center gap-2">
-              <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">Gemini Vision AI</span>
+              <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">Gemini 3.8 Flash Vision</span>
               <h2 class="text-lg sm:text-xl font-extrabold text-white">Quét ảnh đội hình 6 Pokémon ra Showdown</h2>
             </div>
             <p class="text-xs sm:text-sm text-slate-400 mt-1">
@@ -615,7 +615,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1.5">Gemini API Key (Lưu cục bộ trên trình duyệt của bạn, an toàn khi đẩy lên GitHub Public)</label>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5">Gemini API Key (lưu trên trình duyệt này; không chia sẻ khóa API)</label>
           <input type="password" id="ai-api-key" onchange="saveGeminiKey(this.value)" placeholder="Nhập khóa AIzaSy... của bạn" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-sky-500" />
         </div>
 
@@ -639,6 +639,7 @@
             <button id="btn-run-ai-scan" onclick="analyzeTeamImageWithAI()" disabled class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-sm text-white shadow-lg shadow-sky-500/20 transition flex items-center justify-center gap-2">
               <span id="ai-scan-btn-text">✨ Quét ảnh nhận diện đội hình</span>
             </button>
+            <p id="ai-scan-status" role="status" aria-live="polite" class="hidden text-xs text-sky-300 whitespace-pre-wrap break-words"></p>
           </div>
 
           <!-- Extracted Showdown Paste Output -->
@@ -738,6 +739,6 @@
   </div>
 
   <script src="data.js?v=10"></script>
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
