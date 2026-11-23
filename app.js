@@ -5,8 +5,8 @@
 const STORAGE_KEY_TEAMS = "vgc_mc_teams_v2";
 const STORAGE_KEY_ACTIVE_TEAM = "vgc_mc_active_team_v2";
 const STORAGE_KEY_GEMINI_KEY = "vgc_mc_gemini_key";
-const GEMINI_AI_MODEL = "gemini-3.8-flash";
-const GEMINI_FALLBACK_MODELS = [GEMINI_AI_MODEL, "gemini-2.5-flash"];
+const GEMINI_AI_MODEL = "gemini-3.5-flash-lite";
+const GEMINI_FALLBACK_MODELS = [GEMINI_AI_MODEL, "gemini-3.8-flash"];
 const STORAGE_KEY_WORKSPACE = "vgc_studio_workspace_v1";
 let activeMainTab = "builder";
 let hasRestoredCalcState = false;
@@ -2826,17 +2826,43 @@ function handleAiImageSelect(event) {
 }
 
 function processAiImageFile(file) {
-  aiSelectedImageMime = file.type || "image/png";
   const reader = new FileReader();
   reader.onload = (e) => {
-    const dataUrl = e.target.result;
-    aiSelectedImageBase64 = dataUrl.split(",")[1];
-    const preview = document.getElementById("ai-preview-img");
-    const placeholder = document.getElementById("ai-upload-placeholder");
-    preview.src = dataUrl;
-    preview.classList.remove("hidden");
-    placeholder.classList.add("hidden");
-    document.getElementById("btn-run-ai-scan").disabled = false;
+    const rawDataUrl = e.target.result;
+    const applyPreview = (finalDataUrl, mimeType) => {
+      aiSelectedImageMime = mimeType;
+      aiSelectedImageBase64 = finalDataUrl.split(",")[1];
+      const preview = document.getElementById("ai-preview-img");
+      const placeholder = document.getElementById("ai-upload-placeholder");
+      preview.src = finalDataUrl;
+      preview.classList.remove("hidden");
+      placeholder.classList.add("hidden");
+      document.getElementById("btn-run-ai-scan").disabled = false;
+    };
+
+    const img = new Image();
+    img.onload = () => {
+      const MAX_DIM = 1024;
+      let w = img.width;
+      let h = img.height;
+      if (w > MAX_DIM || h > MAX_DIM) {
+        if (w > h) {
+          h = Math.round((h * MAX_DIM) / w);
+          w = MAX_DIM;
+        } else {
+          w = Math.round((w * MAX_DIM) / h);
+          h = MAX_DIM;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.82);
+      applyPreview(compressedDataUrl, "image/jpeg");
+    };
+    img.onerror = () => applyPreview(rawDataUrl, file.type || "image/png");
+    img.src = rawDataUrl;
   };
   reader.readAsDataURL(file);
 }
@@ -2886,6 +2912,9 @@ async function callGeminiInteractionsOnce(apiKey, modelName, promptText) {
     body: JSON.stringify({
       model: modelName,
       store: false,
+      generation_config: {
+        temperature: 0.1
+      },
       input: [
         { type: "text", text: promptText },
         { type: "image", data: aiSelectedImageBase64, mime_type: aiSelectedImageMime }
@@ -2924,10 +2953,7 @@ async function analyzeTeamImageWithAI() {
   const btnText = document.getElementById("ai-scan-btn-text");
   btn.disabled = true;
 
-  const promptText = `You are a competitive Pokémon VGC Regulation M-C team parser.
-Extract all Pokémon visible in this team image and output ONLY clean Pokémon Showdown paste format.
-Rules:
-- Format each Pokémon cleanly:
+  const promptText = `Extract all Pokémon in this VGC Regulation M-C team image into clean Pokémon Showdown paste format ONLY (no markdown, no commentary):
 Species @ Item
 Ability: <Ability>
 Level: 50
@@ -2936,19 +2962,14 @@ Level: 50
 - Move 2
 - Move 3
 - Move 4
-- Identify the base/alternate species form, not just its Mega battle form.
-- CRITICAL FLOETTE RULE: If the image says "Mega Floette", output "Floette-Eternal @ Floettite", NEVER "Mega Floette" or plain "Floette". Its pre-Mega ability is Flower Veil; Fairy Aura is the ability after Mega Evolution.
-- For all Mega Pokémon, output base species @ correct Mega Stone (e.g., Raichu @ Raichunite Y), never "Mega Raichu" as a separate species.
-- Preserve clearly shown items, abilities, natures and moves exactly. Do not invent a different set when those details are visible.
-- If Nature is not visible in the screenshot, infer a reasonable competitive Regulation M-C Nature and do not label that choice as verified.
-- Do NOT include markdown code fences or extra commentary, only the Showdown paste text.`;
+Rules: Use base species + Mega Stone (never "Mega <Species>"; for Mega Floette use "Floette-Eternal @ Floettite" with Ability: Flower Veil). Keep visible items, abilities, natures, and moves exact; infer a competitive Reg M-C Nature only if hidden.`;
 
   try {
     let lastError = null;
     let data = null;
 
     for (const modelName of GEMINI_FALLBACK_MODELS) {
-      const maxAttempts = 3;
+      const maxAttempts = 2;
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         btnText.textContent = `⏳ ${modelName} đang phân tích (lần ${attempt}/${maxAttempts})...`;
         setAiScanStatus(`Đang gửi ảnh tới ${modelName} (lần thử ${attempt}/${maxAttempts})...`);
@@ -2965,7 +2986,7 @@ Level: 50
           break;
         }
 
-        const delay = attempt * 1500;
+        const delay = attempt * 600;
         setAiScanStatus(`${modelName} đang quá tải (${res.response.status}), thử lại sau ${delay / 1000}s...`);
         await waitMs(delay);
       }
