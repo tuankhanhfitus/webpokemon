@@ -613,7 +613,7 @@ const POKEDEX_MC = {
     abilities: ["Levitate"],
     defaultMoves: ["Psychic", "Dazzling Gleam", "Trick Room", "Protect"],
     megas: {
-      "Chimechonite": {
+      "Chimechite": {
         name: "Chimecho-Mega",
         sprite: "chimecho-mega",
         fallbackSprite: "chimecho",
@@ -622,7 +622,7 @@ const POKEDEX_MC = {
         ability: "Levitate"
       }
     },
-    defaultMegaStone: "Chimechonite"
+    defaultMegaStone: "Chimechite"
   },
   "Cinderace": {
     dex: 815,
@@ -721,7 +721,7 @@ const POKEDEX_MC = {
     abilities: ["Sand Rush", "Mold Breaker"],
     defaultMoves: ["High Horsepower", "Iron Head", "Rock Slide", "Protect"],
     megas: {
-      "Excadrillite": {
+      "Excadrite": {
         name: "Excadrill-Mega",
         sprite: "excadrill-mega",
         fallbackSprite: "excadrill",
@@ -730,7 +730,7 @@ const POKEDEX_MC = {
         ability: "Sand Rush"
       }
     },
-    defaultMegaStone: "Excadrillite"
+    defaultMegaStone: "Excadrite"
   },
   "Farigiraf": {
     dex: 981,
@@ -859,7 +859,7 @@ const POKEDEX_MC = {
     abilities: ["Emergency Exit"],
     defaultMoves: ["First Impression", "Liquidation", "Close Combat", "Protect"],
     megas: {
-      "Golisopodite": {
+      "Golisopite": {
         name: "Golisopod-Mega",
         sprite: "golisopod-mega",
         fallbackSprite: "golisopod",
@@ -868,7 +868,7 @@ const POKEDEX_MC = {
         ability: "Tough Claws"
       }
     },
-    defaultMegaStone: "Golisopodite"
+    defaultMegaStone: "Golisopite"
   },
   "Greninja": {
     dex: 658,
@@ -1220,47 +1220,101 @@ const POKEDEX_MC = {
   }
 };
 
-// Held Items & Mega Stones in Regulation M-C
-const ITEMS_MC = [
-  "None",
-  "Focus Sash",
-  "Life Orb",
-  "Choice Scarf",
-  "Choice Band",
-  "Choice Specs",
-  "Assault Vest",
-  "Sitrus Berry",
-  "Safety Goggles",
-  "Clear Amulet",
-  "Covert Cloak",
-  "Leftovers",
-  "Rocky Helmet",
-  "Booster Energy",
-  "Light Clay",
-  "Psychic Seed",
-  "Grassy Seed",
-  "Electric Seed",
-  "Misty Seed",
+// Pokémon Champions Regulation M-C: held items verified Nov 23, 2026.
+// Sources: https://champforge.app/en/regulations/m-c (85 regular items + 81 Mega Stones, Meowsticite cross-checked with Pokémon Zone)
+//          https://www.pokemon-zone.com/champions/items/
+// "None" is a UI choice, not a battle item.
+const REG_MC_HELD_ITEMS = [
+  "Air Balloon",
+  "Aspear Berry",
+  "Babiri Berry",
+  "Big Root",
+  "Binding Band",
+  "Black Belt",
   "Black Glasses",
+  "Bright Powder",
   "Charcoal",
-  "Mystic Water",
-  "Miracle Seed",
-  "Fairy Feather",
-  "Spell Tag",
-  "Sharp Beak",
-  "Dragon Fang",
-  "Magnet",
-  "Never-Melt Ice",
-  "Silk Scarf",
-  "Expert Belt",
-  "Wide Lens",
-  "Eviolite",
-  "Iron Ball",
-  "White Herb",
+  "Charti Berry",
+  "Cheri Berry",
+  "Chesto Berry",
+  "Chilan Berry",
+  "Choice Scarf",
   "Chople Berry",
+  "Coba Berry",
+  "Colbur Berry",
+  "Damp Rock",
+  "Dragon Fang",
+  "Eject Button",
+  "Electric Seed",
+  "Expert Belt",
+  "Fairy Feather",
+  "Focus Band",
+  "Focus Sash",
+  "Grassy Seed",
+  "Haban Berry",
+  "Hard Stone",
+  "Heat Rock",
+  "Icy Rock",
+  "Iron Ball",
+  "Kasib Berry",
+  "Kebia Berry",
+  "King's Rock",
+  "Leek",
+  "Leftovers",
+  "Leppa Berry",
+  "Life Orb",
+  "Light Ball",
+  "Light Clay",
+  "Lum Berry",
+  "Magnet",
+  "Mental Herb",
+  "Metal Coat",
+  "Metronome",
+  "Miracle Seed",
+  "Misty Seed",
+  "Muscle Band",
+  "Mystic Water",
+  "Never-Melt Ice",
+  "Normal Gem",
+  "Occa Berry",
+  "Oran Berry",
+  "Passho Berry",
+  "Payapa Berry",
+  "Pecha Berry",
+  "Persim Berry",
+  "Poison Barb",
+  "Psychic Seed",
+  "Quick Claw",
+  "Rawst Berry",
+  "Red Card",
+  "Rindo Berry",
+  "Rocky Helmet",
+  "Roseli Berry",
+  "Scope Lens",
+  "Sharp Beak",
+  "Shed Shell",
+  "Shell Bell",
+  "Shuca Berry",
+  "Silk Scarf",
+  "Silver Powder",
+  "Sitrus Berry",
+  "Smooth Rock",
+  "Soft Sand",
+  "Spell Tag",
+  "Tanga Berry",
+  "Terrain Extender",
+  "Twisted Spoon",
+  "Wacan Berry",
+  "White Herb",
+  "Wide Lens",
+  "Wise Glasses",
+  "Yache Berry",
+  "Zoom Lens"
+];
+const REG_MC_MEGA_STONES = [
   "Abomasite",
-  "Absolite Z",
   "Absolite",
+  "Absolite Z",
   "Aerodactylite",
   "Aggronite",
   "Alakazite",
@@ -1275,36 +1329,72 @@ const ITEMS_MC = [
   "Blazikenite",
   "Cameruptite",
   "Chandelurite",
-  "Charizardite Y",
   "Charizardite X",
+  "Charizardite Y",
   "Chesnaughtite",
-  "Chimechonite",
+  "Chimechite",
   "Clefablite",
+  "Crabominite",
   "Delphoxite",
+  "Dragalgite",
   "Dragoninite",
-  "Excadrillite",
+  "Drampanite",
+  "Eelektrossite",
+  "Emboarite",
+  "Excadrite",
+  "Falinksite",
+  "Feraligite",
+  "Floettite",
+  "Froslassite",
   "Galladite",
-  "Garchompite Z",
   "Garchompite",
+  "Garchompite Z",
   "Gardevoirite",
   "Gengarite",
+  "Glalitite",
   "Glimmoranite",
-  "Golisopodite",
+  "Golisopite",
+  "Golurkite",
   "Greninjite",
   "Gyaradosite",
   "Hawluchanite",
+  "Heracronite",
+  "Houndoominite",
   "Kangaskhanite",
-  "Lucarionite Z",
+  "Lopunnite",
   "Lucarionite",
+  "Lucarionite Z",
+  "Malamarite",
+  "Manectite",
   "Mawilite",
+  "Medichamite",
+  "Meganiumite",
+  "Meowsticite",
   "Metagrossite",
-  "Raichunite Y",
+  "Pidgeotite",
+  "Pinsirite",
+  "Pyroarite",
   "Raichunite X",
+  "Raichunite Y",
+  "Sablenite",
   "Salamencite",
+  "Sceptilite",
   "Scizorite",
+  "Scolipite",
+  "Scovillainite",
+  "Scraftinite",
+  "Sharpedonite",
+  "Skarmorite",
+  "Slowbronite",
+  "Staraptite",
+  "Starminite",
+  "Steelixite",
+  "Swampertite",
   "Tyranitarite",
-  "Venusaurite"
+  "Venusaurite",
+  "Victreebelite"
 ];
+const ITEMS_MC = ["None", ...REG_MC_HELD_ITEMS, ...REG_MC_MEGA_STONES];
 
 // Competitive VGC Moves Database
 const MOVES_DB = {
@@ -1484,7 +1574,6 @@ const CALC_POPULAR_SETS_MC = {
 const DEFAULT_SAMPLE_TEAM = [
   {
     species: "Garchomp",
-    nickname: "",
     gender: "M",
     item: "Garchompite Z",
     ability: "Rough Skin",
@@ -1495,7 +1584,6 @@ const DEFAULT_SAMPLE_TEAM = [
   },
   {
     species: "Sneasler",
-    nickname: "",
     gender: "F",
     item: "Focus Sash",
     ability: "Unburden",
@@ -1506,9 +1594,8 @@ const DEFAULT_SAMPLE_TEAM = [
   },
   {
     species: "Rillaboom",
-    nickname: "",
     gender: "M",
-    item: "Assault Vest",
+    item: "Miracle Seed",
     ability: "Grassy Surge",
     nature: "Adamant",
     isMega: false,
@@ -1517,9 +1604,8 @@ const DEFAULT_SAMPLE_TEAM = [
   },
   {
     species: "Incineroar",
-    nickname: "",
     gender: "M",
-    item: "Safety Goggles",
+    item: "Sitrus Berry",
     ability: "Intimidate",
     nature: "Careful",
     isMega: false,
@@ -1528,7 +1614,6 @@ const DEFAULT_SAMPLE_TEAM = [
   },
   {
     species: "Kingambit",
-    nickname: "",
     gender: "M",
     item: "Black Glasses",
     ability: "Defiant",
@@ -1539,7 +1624,6 @@ const DEFAULT_SAMPLE_TEAM = [
   },
   {
     species: "Gholdengo",
-    nickname: "",
     gender: "",
     item: "Life Orb",
     ability: "Good as Gold",

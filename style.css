@@ -204,3 +204,6 @@ input[type="range"].sp-slider::-moz-range-thumb {
   background-color: #0284c7;
   color: #ffffff;
 }
+/* Keep native range accessible but ensure drag is continuous on mouse/touch. */
+.speed-sp-drag-slider { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.speed-sp-drag-slider:active { cursor: grabbing; }

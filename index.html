@@ -27,7 +27,7 @@
       }
     };
   </script>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-sky-500/30 selection:text-sky-200">
 
@@ -135,43 +135,36 @@
 
         <!-- Left Column: Identity, Mega, Item, Ability, Moves (7 cols) -->
         <div class="lg:col-span-7 glass-panel rounded-2xl p-4 sm:p-5 space-y-5">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-            <div class="flex items-center gap-4">
+          <!-- Pokémon identity: full-width species selector, balanced control heights, no nickname -->
+          <div class="flex flex-col xl:flex-row xl:items-center gap-3 border-b border-slate-800 pb-4">
+            <div class="flex items-center gap-4 flex-1 min-w-0 w-full">
               <button type="button" onclick="openPokemonPicker({ mode: 'builder' })" title="Nhấn để chọn Pokémon từ bảng ảnh" class="w-20 h-20 rounded-2xl bg-slate-900 hover:bg-slate-800/90 border border-slate-700/80 hover:border-sky-400 flex items-center justify-center relative overflow-hidden shrink-0 transition group">
                 <img id="editor-sprite" src="" alt="Pokemon" class="w-16 h-16 object-contain z-10 group-hover:scale-105 transition" />
                 <div class="absolute inset-0 bg-gradient-to-t from-sky-500/10 to-transparent"></div>
               </button>
-              <div class="space-y-1.5 flex-1">
+              <div class="space-y-1.5 flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
                   <label class="text-[11px] font-bold uppercase tracking-wider text-sky-400">Slot <span id="editor-slot-num">1</span></label>
                   <div id="editor-types" class="flex items-center gap-1.5"></div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <button type="button" id="builder-species-btn" onclick="openPokemonPicker({ mode: 'builder' })"
-                      class="w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-sky-500 rounded-xl px-3 py-1.5 text-sm font-bold text-white flex items-center justify-between transition">
-                      <span id="builder-species-label">Garchomp</span>
-                      <span class="text-slate-400 text-xs">▾</span>
-                    </button>
-                  </div>
-                  <div>
-                    <input type="text" id="input-nickname" oninput="updateActivePokemon('nickname', this.value)" placeholder="Biệt danh (Nickname)..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-sky-500" />
-                  </div>
-                </div>
+                <button type="button" id="builder-species-btn" onclick="openPokemonPicker({ mode: 'builder' })"
+                  class="w-full h-11 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-sky-500 rounded-xl px-3 text-sm font-bold text-white flex items-center justify-between gap-2 min-w-0 transition">
+                  <span id="builder-species-label" class="truncate">Garchomp</span>
+                  <span class="text-slate-400 text-xs shrink-0">▾</span>
+                </button>
               </div>
             </div>
-
-            <!-- Level, Gender, Mega Evolution Toggle -->
-            <div class="flex items-center gap-2 self-start sm:self-center">
-              <div class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 flex items-center gap-1">
-                <span class="text-[11px] text-slate-400 font-semibold">Lv.50</span>
+            <!-- Equal-sized control boxes on both desktop and mobile -->
+            <div class="grid grid-cols-3 gap-2 w-full xl:w-[264px] shrink-0">
+              <div class="h-11 w-full bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center">
+                <span class="text-xs text-slate-400 font-semibold">Lv.50</span>
               </div>
-              <select id="input-gender" onchange="updateActivePokemon('gender', this.value)" class="bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs font-semibold text-slate-200 focus:outline-none">
-                <option value="">-</option>
+              <select id="input-gender" onchange="updateActivePokemon('gender', this.value)" aria-label="Giới tính Pokémon" class="h-11 w-full min-w-0 bg-slate-900 border border-slate-700 rounded-xl px-2 text-sm font-semibold text-slate-200 focus:outline-none text-center">
+                <option value="">–</option>
                 <option value="M">♂</option>
                 <option value="F">♀</option>
               </select>
-              <button id="btn-mega" onclick="toggleMegaForm()" class="px-3 py-1.5 rounded-xl border text-xs font-extrabold transition flex items-center gap-1" title="Tiến hóa Mega">
+              <button id="btn-mega" onclick="toggleMegaForm()" class="h-11 w-full justify-center px-2 rounded-xl border text-xs font-extrabold transition flex items-center gap-1" title="Tiến hóa Mega">
                 <span>🧬</span> <span>MEGA</span>
               </button>
             </div>
@@ -179,19 +172,19 @@
 
           <!-- Item, Ability, Quick SP Preset -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
+            <div class="min-w-0">
               <label class="block text-xs font-semibold text-slate-400 mb-1" data-i18n="lblItem">Vật phẩm (Item)</label>
-              <select id="sel-item" onchange="updateActivePokemon('item', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-white focus:outline-none focus:border-sky-500">
+              <select id="sel-item" onchange="updateActivePokemon('item', this.value)" class="w-full min-w-0 h-11 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-white focus:outline-none focus:border-sky-500">
               </select>
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-1" data-i18n="lblAbility">Đặc tính (Ability)</label>
-              <select id="sel-ability" onchange="updateActivePokemon('ability', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-white focus:outline-none focus:border-sky-500">
+              <select id="sel-ability" onchange="updateActivePokemon('ability', this.value)" class="w-full min-w-0 h-11 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-white focus:outline-none focus:border-sky-500">
               </select>
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-1" data-i18n="lblPreset">Preset SP nhanh (Max 66)</label>
-              <select id="sel-preset" onchange="applySpPreset(this.value); this.value='';" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-slate-200 focus:outline-none focus:border-sky-500">
+              <select id="sel-preset" onchange="applySpPreset(this.value); this.value='';" class="w-full min-w-0 h-11 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-slate-200 focus:outline-none focus:border-sky-500">
                 <option value="">-- Chọn mẫu SP --</option>
                 <option value="phys_sweeper">32 Atk / 32 Spe / 2 HP</option>
                 <option value="spec_sweeper">32 SpA / 32 Spe / 2 HP</option>
@@ -732,7 +725,7 @@
     </div>
   </div>
 
-  <script src="data.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="data.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

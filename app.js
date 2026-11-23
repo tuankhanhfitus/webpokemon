@@ -57,7 +57,7 @@ let calcState = {
   p2: {
     species: "Incineroar",
     isMega: false,
-    item: "Safety Goggles",
+    item: "Sitrus Berry",
     ability: "Intimidate",
     nature: "Careful",
     status: "Healthy",
@@ -538,7 +538,6 @@ function cloneDeep(obj) {
 function createEmptySlot() {
   return {
     species: "Incineroar",
-    nickname: "",
     gender: "M",
     item: "Sitrus Berry",
     ability: "Intimidate",
@@ -547,6 +546,36 @@ function createEmptySlot() {
     sp: { hp: 32, atk: 0, def: 14, spa: 0, spd: 20, spe: 0 },
     moves: ["Fake Out", "Flare Blitz", "Knock Off", "Parting Shot"]
   };
+}
+
+const REG_MC_ITEM_ALIASES = Object.freeze({
+  Chimechonite: "Chimechite",
+  Excadrillite: "Excadrite",
+  Golisopodite: "Golisopite"
+});
+
+function migrateSavedRegMcItems(teamList) {
+  let changed = 0;
+  for (const team of teamList) {
+    for (const mon of team.slots || []) {
+      if (!mon) continue;
+      // Old builds could have items from Scarlet/Violet not obtainable in Champions M-C.
+      const original = mon.item || "None";
+      const corrected = REG_MC_ITEM_ALIASES[original] || original;
+      const next = ITEMS_MC.includes(corrected) ? corrected : "None";
+      if (mon.item !== next) {
+        mon.item = next;
+        changed++;
+      }
+      // Preserve the intended Mega form whenever its legacy stone was renamed.
+      const dex = POKEDEX_MC[mon.species];
+      if (mon.isMega && dex?.megas && !dex.megas[mon.item]) {
+        mon.item = dex.defaultMegaStone;
+        changed++;
+      }
+    }
+  }
+  return changed;
 }
 
 function loadTeamsFromStorage() {
@@ -558,6 +587,11 @@ function loadTeamsFromStorage() {
       if (Array.isArray(parsed) && parsed.length > 0) {
         teams = parsed;
         activeTeamId = teams.some((t) => t.id === savedActive) ? savedActive : teams[0].id;
+        const updatedItems = migrateSavedRegMcItems(teams);
+        if (updatedItems) {
+          saveTeamsToStorage();
+          showToast(`Đã cập nhật ${updatedItems} vật phẩm sang danh sách M-C. Hãy kiểm tra lại đội hình.`, "warn");
+        }
         return;
       }
     }
@@ -596,7 +630,10 @@ function getCurrentPokemon() {
 }
 
 function populateStaticDropdowns() {
-  const itemsHtml = ITEMS_MC.map((it) => `<option value="${it}">${it}</option>`).join("");
+  const toOptions = (items) => items.map(it => `<option value="${it}">${it}</option>`).join("");
+  const itemsHtml = `<option value="None">— Không có vật phẩm —</option>` +
+    `<optgroup label="Vật phẩm M-C (${REG_MC_HELD_ITEMS.length})">${toOptions(REG_MC_HELD_ITEMS)}</optgroup>` +
+    `<optgroup label="Mega Stone M-C (${REG_MC_MEGA_STONES.length})">${toOptions(REG_MC_MEGA_STONES)}</optgroup>`;
   ["sel-item", "calc-p1-item", "calc-p2-item"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = itemsHtml;
@@ -746,7 +783,6 @@ function renderActiveSlotEditor() {
   const speciesLabelEl = document.getElementById("builder-species-label");
   if (speciesLabelEl) speciesLabelEl.textContent = mon.species;
 
-  document.getElementById("input-nickname").value = mon.nickname || "";
   document.getElementById("input-gender").value = mon.gender || "";
   document.getElementById("sel-item").value = mon.item || "None";
   document.getElementById("sel-nature").value = mon.nature || "Serious";
@@ -768,12 +804,12 @@ function renderActiveSlotEditor() {
   const btnMega = document.getElementById("btn-mega");
   if (dexData.megas) {
     btnMega.disabled = false;
-    btnMega.className = `px-3 py-1.5 rounded-xl border text-xs font-extrabold transition flex items-center gap-1 ${
+    btnMega.className = `h-11 w-full justify-center px-2 rounded-xl border text-xs font-extrabold transition flex items-center gap-1 ${
       form.isMegaActive ? "mega-btn-active" : "mega-btn-ready"
     }`;
   } else {
     btnMega.disabled = true;
-    btnMega.className = "px-3 py-1.5 rounded-xl border text-xs font-extrabold transition flex items-center gap-1 mega-btn-disabled";
+    btnMega.className = "h-11 w-full justify-center px-2 rounded-xl border text-xs font-extrabold transition flex items-center gap-1 mega-btn-disabled";
   }
 
   const movesContainer = document.getElementById("moves-inputs-container");
@@ -958,9 +994,7 @@ function formatTeamToShowdown(team, mode = "ranked") {
     .map((mon) => {
       const lines = [];
       const genderStr = mon.gender ? ` (${mon.gender})` : "";
-      const nameStr = mon.nickname && mon.nickname.trim()
-        ? `${mon.nickname.trim()} (${mon.species})${genderStr}`
-        : `${mon.species}${genderStr}`;
+      const nameStr = `${mon.species}${genderStr}`;
       const itemStr = mon.item && mon.item !== "None" ? ` @ ${mon.item}` : "";
       lines.push(`${nameStr}${itemStr}`);
 
@@ -1015,8 +1049,9 @@ function parseShowdownPasteToSlots(pasteText) {
       const parts = header.split("@");
       header = parts[0].trim();
       const rawItem = parts.slice(1).join("@").trim();
-      const matchedItem = ITEMS_MC.find((i) => i.toLowerCase() === rawItem.toLowerCase());
-      slot.item = matchedItem || rawItem;
+      const normalizedItem = REG_MC_ITEM_ALIASES[rawItem] || rawItem;
+      const matchedItem = ITEMS_MC.find((i) => i.toLowerCase() === normalizedItem.toLowerCase());
+      slot.item = matchedItem || "None";
     } else {
       slot.item = "None";
     }
@@ -1034,7 +1069,6 @@ function parseShowdownPasteToSlots(pasteText) {
     const parenMatch = header.match(/^(.*?)\(([^)]+)\)$/);
     let rawSpecies = header;
     if (parenMatch) {
-      slot.nickname = parenMatch[1].trim();
       rawSpecies = parenMatch[2].trim();
     }
 
