@@ -5,6 +5,12 @@
 const STORAGE_KEY_TEAMS = "vgc_mc_teams_v2";
 const STORAGE_KEY_ACTIVE_TEAM = "vgc_mc_active_team_v2";
 const STORAGE_KEY_GEMINI_KEY = "vgc_mc_gemini_key";
+const STORAGE_KEY_WORKSPACE = "vgc_studio_workspace_v1";
+let activeMainTab = "builder";
+let hasRestoredCalcState = false;
+let hasRestoredSpeedState = false;
+let isRestoringWorkspace = false;
+let workspaceSaveTimer = null;
 
 const STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"];
 const STAT_LABELS = {
@@ -105,7 +111,13 @@ function toggleAppTheme() {
 
 function getItemIconUrl(item) {
   if (!item || item === "None") return "assets/no-item.svg";
-  if (REG_MC_MEGA_STONES.includes(item)) return "assets/mega-stone.svg";
+  // Champions Mega Stone artwork (48×48) collected from Bulbapedia.
+  // https://github.com/KevinToodlepoot/pokemon-champions-sprites
+  // Use the exact lower-case, hyphen-separated item name, including Z/X/Y variants.
+  if (REG_MC_MEGA_STONES.includes(item)) {
+    const slug = item.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return `https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/${slug}.png`;
+  }
   const irregular = {
     "Black Glasses": "blackglasses", "Bright Powder": "brightpowder",
     "King's Rock": "kings-rock", "Never-Melt Ice": "never-melt-ice",
@@ -291,12 +303,176 @@ window.addEventListener("scroll", (e) => {
 }, true);
 
 // ============================================================================
+// WORKSPACE SESSION PERSISTENCE (F5 / PAGE RELOAD)
+// ============================================================================
+// Team data and UI theme already have separate storage keys. Save ONLY the
+// currently selected UI workspace here (never API keys, scanned images, etc.).
+function getSavedWorkspace() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY_WORKSPACE) || "null");
+    return data && data.version === 1 && typeof data === "object" ? data : null;
+  } catch (_) { return null; }
+}
+
+function clampWorkspaceNumber(value, min, max, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : fallback;
+}
+
+function sanitizeCalcSide(saved, fallback) {
+  if (!saved || typeof saved !== "object" || !POKEDEX_MC[saved.species]) return null;
+  const dex = POKEDEX_MC[saved.species];
+  const isMega = Boolean(saved.isMega && dex.megas);
+  const stone = isMega && dex.megas?.[saved.item] ? saved.item : dex.defaultMegaStone;
+  let item = typeof saved.item === "string" && ITEMS_MC.includes(saved.item) ? saved.item : "None";
+  if (isMega) item = stone || "None";
+  const suggested = getCalcSuggestedSet(saved.species, isMega, item);
+  const out = {
+    ...fallback, species: saved.species, isMega: Boolean(isMega && stone), item,
+    ability: typeof saved.ability === "string" ? saved.ability : suggested.ability,
+    nature: NATURES[saved.nature] ? saved.nature : suggested.nature,
+    status: ["Healthy", "Burned", "Paralyzed", "Poisoned", "Badly Poisoned", "Asleep", "Frozen"].includes(saved.status)
+      ? saved.status : "Healthy",
+    sp: {}, stages: {}, moves: [],
+    selectedMoveIdx: clampWorkspaceNumber(saved.selectedMoveIdx, 0, 3),
+    presetSource: saved.presetSource === "smogon" ? "smogon" : "suggested",
+    presetEdited: Boolean(saved.presetEdited)
+  };
+  for (const key of STAT_KEYS) {
+    out.sp[key] = clampWorkspaceNumber(saved.sp?.[key], 0, 32);
+    if (key !== "hp") out.stages[key] = clampWorkspaceNumber(saved.stages?.[key], -6, 6);
+  }
+  // An invalid or out-of-budget imported state is reset to a legal sample set.
+  if (Object.values(out.sp).reduce((a, b) => a + b, 0) > 66) out.sp = { ...suggested.sp };
+  for (let i = 0; i < 4; ++i) {
+    const raw = saved.moves?.[i];
+    const name = raw && MOVES_DB[raw.name] ? raw.name : suggested.moves[i];
+    out.moves.push({ name: MOVES_DB[name] ? name : "Protect", crit: Boolean(raw?.crit) });
+  }
+  return out;
+}
+
+function restoreWorkspaceState() {
+  const saved = getSavedWorkspace();
+  if (!saved) return null;
+  isRestoringWorkspace = true;
+  activeSlotIndex = clampWorkspaceNumber(saved.activeSlotIndex, 0, 5);
+  activeMainTab = ["builder", "calc", "speed", "scanner"].includes(saved.tab) ? saved.tab : "builder";
+  if (saved.calc && typeof saved.calc === "object") {
+    const p1 = sanitizeCalcSide(saved.calc.p1, calcState.p1);
+    const p2 = sanitizeCalcSide(saved.calc.p2, calcState.p2);
+    if (p1 && p2) {
+      calcState.p1 = p1;
+      calcState.p2 = p2;
+      calcState.activeSide = ["p1", "p2"].includes(saved.calc.activeSide) ? saved.calc.activeSide : "p1";
+      const f = saved.calc.field || {};
+      calcState.field = {
+        isDoubles: f.isDoubles !== false,
+        weather: ["None", "Sun", "Rain", "Sand", "Snow"].includes(f.weather) ? f.weather : "None",
+        terrain: ["None", "Electric", "Grassy", "Psychic", "Misty"].includes(f.terrain) ? f.terrain : "None"
+      };
+      hasRestoredCalcState = true;
+    }
+  }
+  if (Array.isArray(saved.speedSlots) && saved.speedSlots.length === 3) {
+    speedSlots = saved.speedSlots.map((card) => {
+      if (!card || !POKEDEX_MC[card.species]) return null;
+      const cleaned = createSpeedCardObj(card.species, card);
+      cleaned.sp = clampWorkspaceNumber(card.sp, 0, 32);
+      cleaned.stage = clampWorkspaceNumber(card.stage, -6, 6);
+      cleaned.natureMode = ["minus", "neutral", "plus"].includes(card.natureMode) ? card.natureMode : "neutral";
+      cleaned.megaStone = POKEDEX_MC[card.species].megas?.[card.megaStone] ? card.megaStone : POKEDEX_MC[card.species].defaultMegaStone || null;
+      return cleaned;
+    });
+    hasRestoredSpeedState = true;
+  }
+  return saved;
+}
+
+function getWorkspaceState() {
+  const flags = {};
+  document.querySelectorAll('#view-calc input[type="checkbox"][id^="side-"]').forEach(el => {
+    flags[el.id] = el.checked;
+  });
+  return {
+    version: 1,
+    tab: activeMainTab,
+    activeSlotIndex,
+    language: currentLang,
+    scrollY: Math.max(0, Math.round(window.scrollY || 0)),
+    calc: calcState,
+    sideFlags: flags,
+    speedSlots,
+    speedTrickRoom: Boolean(document.getElementById("speed-trick-room")?.checked)
+  };
+}
+
+function saveWorkspaceNow() {
+  if (isRestoringWorkspace) return;
+  clearTimeout(workspaceSaveTimer);
+  workspaceSaveTimer = null;
+  try { localStorage.setItem(STORAGE_KEY_WORKSPACE, JSON.stringify(getWorkspaceState())); }
+  catch (_) { /* private browsing or disabled storage: the app remains usable */ }
+}
+
+function scheduleWorkspaceSave() {
+  if (isRestoringWorkspace) return;
+  clearTimeout(workspaceSaveTimer);
+  workspaceSaveTimer = setTimeout(saveWorkspaceNow, 140);
+}
+
+function finishWorkspaceRestore(saved) {
+  if (saved) {
+    // Field buttons also need active styling when restored, not only data values.
+    setCalcFormat(calcState.field.isDoubles);
+    setFieldOption("weather", calcState.field.weather);
+    setFieldOption("terrain", calcState.field.terrain);
+    if (saved.sideFlags && typeof saved.sideFlags === "object") {
+      Object.entries(saved.sideFlags).forEach(([id, checked]) => {
+        if (!id.startsWith("side-")) return;
+        const el = document.getElementById(id);
+        if (el && el.type === "checkbox") el.checked = Boolean(checked);
+      });
+    }
+    const trick = document.getElementById("speed-trick-room");
+    if (trick) trick.checked = Boolean(saved.speedTrickRoom);
+    if (saved.language === "en") setAppLanguage("en");
+  }
+  switchMainTab(activeMainTab);
+  runDamageCalculation();
+  renderSpeedComparisonCards();
+  isRestoringWorkspace = false;
+
+  // Native browser restoration happens before some hidden tabs become visible;
+  // restore after the correct tab's layout has been rendered.
+  if (saved && Number.isFinite(Number(saved.scrollY))) {
+    const y = Math.max(0, Number(saved.scrollY));
+    try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
+    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+    setTimeout(() => window.scrollTo(0, y), 180);
+  }
+}
+
+function setupWorkspaceAutosave() {
+  // Delegation survives repeated render of controls and drag sliders.
+  document.addEventListener("click", scheduleWorkspaceSave);
+  document.addEventListener("change", scheduleWorkspaceSave);
+  document.addEventListener("input", (event) => {
+    if (event.target.matches('input[type="range"],input[type="number"],select')) scheduleWorkspaceSave();
+  });
+  window.addEventListener("scroll", scheduleWorkspaceSave, { passive: true });
+  window.addEventListener("pagehide", saveWorkspaceNow);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) saveWorkspaceNow(); });
+}
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
   applyAppTheme(document.documentElement.classList.contains("light") ? "light" : "dark");
   loadTeamsFromStorage();
+  const restoredWorkspace = restoreWorkspaceState();
   populateStaticDropdowns();
   setupItemImagePickers();
   renderTeamSelector();
@@ -308,6 +484,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize 3-Slot Speed Workspace
   initSpeedWorkspace();
+  finishWorkspaceRestore(restoredWorkspace);
+  setupWorkspaceAutosave();
 
   // Load saved Gemini API Key
   const savedKey = localStorage.getItem(STORAGE_KEY_GEMINI_KEY);
@@ -665,6 +843,8 @@ function selectPokemonFromPicker(species, isMega, megaStone) {
 // ============================================================================
 
 function switchMainTab(tabName) {
+  if (!["builder", "calc", "speed", "scanner"].includes(tabName)) return;
+  activeMainTab = tabName;
   activeMoveDropdownId = null;
   const tabs = ["builder", "calc", "speed", "scanner"];
   tabs.forEach((t) => {
@@ -734,13 +914,18 @@ const I18N_DICT = {
   }
 };
 
-function toggleLanguage() {
-  currentLang = currentLang === "vi" ? "en" : "vi";
+function setAppLanguage(lang) {
+  currentLang = lang === "en" ? "en" : "vi";
   const dict = I18N_DICT[currentLang];
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     const key = el.getAttribute("data-i18n");
     if (dict[key]) el.textContent = dict[key];
   });
+ }
+
+function toggleLanguage() {
+  setAppLanguage(currentLang === "vi" ? "en" : "vi");
+  scheduleWorkspaceSave();
   showToast(currentLang === "vi" ? "Đã chuyển sang Tiếng Việt" : "Switched to English");
 }
 
@@ -1600,6 +1785,12 @@ function markCalcPresetEdited(side) {
 }
 
 function initCalcWorkspace() {
+  if (hasRestoredCalcState) {
+    renderCalcSideUI("p1");
+    renderCalcSideUI("p2");
+    runDamageCalculation();
+    return;
+  }
   applyPopularCalcSet("p1", calcState.p1.species, calcState.p1.isMega, calcState.p1.item);
   applyPopularCalcSet("p2", calcState.p2.species, calcState.p2.isMega, calcState.p2.item);
 }
@@ -2157,7 +2348,7 @@ function createSpeedCardObj(species = "Arcanine", overrides = {}) {
 }
 
 function initSpeedWorkspace() {
-  speedSlots = [null, null, null];
+  if (!hasRestoredSpeedState) speedSlots = [null, null, null];
   renderSpeedComparisonCards();
 }
 
