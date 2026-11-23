@@ -141,10 +141,8 @@ document.addEventListener("DOMContentLoaded", () => {
 // ============================================================================
 
 function getSpriteUrl(spriteSlug) {
-  const folder = spriteSlug.endsWith("-megaz")
-    ? "gen5"
-    : "dex";
-
+  // Mega Z sprites are hosted in Showdown's gen5 folder, not dex.
+  const folder = spriteSlug.endsWith("-megaz") ? "gen5" : "dex";
   return `https://play.pokemonshowdown.com/sprites/${folder}/${spriteSlug}.png`;
 }
 
@@ -474,7 +472,6 @@ function switchMainTab(tabName) {
   });
 
   if (tabName === "calc") {
-    refreshCalcTeamDropdowns();
     runDamageCalculation();
   } else if (tabName === "speed") {
     renderSpeedComparisonCards();
@@ -498,8 +495,6 @@ const I18N_DICT = {
     lblPreset: "Preset SP nhanh (Max 66)",
     lblMoves: "Bộ chiêu thức (4 Moves)",
     moveHint: "Chọn bộ 4 chiêu thi đấu chuẩn Reg M-C",
-    btnSendAtk: "Sang Damage Calc",
-    btnSendSpeed: "Sang Đo Speed",
     btnClearSlot: "Đặt lại Slot",
     lblStatsTitle: "Chỉ số & Phân bổ Stat Points (SP)",
     lblStatsSub: "Tối đa 32 SP/chỉ số • Cố định 31 IVs (Lv.50)",
@@ -521,8 +516,6 @@ const I18N_DICT = {
     lblPreset: "Quick SP Preset (Max 66)",
     lblMoves: "Moveset (4 Moves)",
     moveHint: "Select 4 Reg M-C legal moves",
-    btnSendAtk: "To Damage Calc",
-    btnSendSpeed: "To Speed Check",
     btnClearSlot: "Reset Slot",
     lblStatsTitle: "Stats & Stat Points (SP)",
     lblStatsSub: "Max 32 SP/stat • Fixed 31 IVs (Lv.50)",
@@ -962,28 +955,6 @@ function clearCurrentSlot() {
   showToast("Đã đặt lại Slot #" + (activeSlotIndex + 1));
 }
 
-function sendCurrentToCalc(side = "p1") {
-  const mon = getCurrentPokemon();
-  if (!mon) return;
-  applyPokemonObjectToCalcSide(side, mon);
-  switchMainTab("calc");
-  showToast(`Đã nạp ${mon.species} sang Damage Calc!`, "success");
-}
-
-function sendCurrentToSpeed() {
-  const mon = getCurrentPokemon();
-  if (!mon) return;
-  const card = createSpeedCardFromMon(mon);
-  const emptyIdx = speedSlots.findIndex((s) => s === null);
-  if (emptyIdx !== -1) {
-    speedSlots[emptyIdx] = card;
-  } else {
-    speedSlots[0] = card;
-  }
-  switchMainTab("speed");
-  showToast(`Đã nạp ${mon.species} vào ô so sánh Speed!`, "success");
-}
-
 // ============================================================================
 // SHOWDOWN EXPORT & IMPORT (OTS KEEPS NATURE, HIDES EVs/SP)
 // ============================================================================
@@ -1301,57 +1272,9 @@ function pickMoveFromDropdown(side, mIdx, moveName) {
 // ============================================================================
 
 function initCalcWorkspace() {
-  refreshCalcTeamDropdowns();
   renderCalcSideUI("p1");
   renderCalcSideUI("p2");
   runDamageCalculation();
-}
-
-function refreshCalcTeamDropdowns() {
-  const team = getCurrentTeam();
-  if (!team) return;
-  const opts = `<option value="">Nạp từ Team...</option>` +
-    team.slots
-      .map((mon, idx) => {
-        const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
-        return `<option value="${idx}">Slot ${idx + 1}: ${form.displayName}</option>`;
-      })
-      .join("");
-  ["calc-p1-team-slot", "calc-p2-team-slot"].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = opts;
-  });
-}
-
-function applyPokemonObjectToCalcSide(side, mon) {
-  calcState[side] = {
-    species: mon.species,
-    isMega: !!mon.isMega,
-    item: mon.item || "None",
-    ability: mon.ability || POKEDEX_MC[mon.species].abilities[0],
-    nature: mon.nature || "Serious",
-    status: "Healthy",
-    sp: { ...mon.sp },
-    stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
-    moves: (mon.moves || ["Protect", "Protect", "Protect", "Protect"]).map((m) => ({
-      name: m,
-      crit: false
-    })),
-    selectedMoveIdx: 0
-  };
-  const dmgIdx = calcState[side].moves.findIndex((m) => (MOVES_DB[m.name]?.bp || 0) > 0);
-  if (dmgIdx !== -1) calcState[side].selectedMoveIdx = dmgIdx;
-
-  renderCalcSideUI(side);
-  runDamageCalculation();
-}
-
-function loadTeamSlotToCalc(side, slotIdxStr) {
-  if (slotIdxStr === "") return;
-  const idx = parseInt(slotIdxStr, 10);
-  const team = getCurrentTeam();
-  if (!team || !team.slots[idx]) return;
-  applyPokemonObjectToCalcSide(side, team.slots[idx]);
 }
 
 function updateCalcSide(side, key, value) {
@@ -1596,232 +1519,208 @@ function getTypeEffectiveness(moveType, defTypes) {
   return mult;
 }
 
+// Round to nearest integer, breaking exact half ties down (Pokemon damage rounding).
+function roundHalfDown(value) {
+  const whole = Math.floor(value);
+  return whole + (value - whole > 0.5000000001 ? 1 : 0);
+}
+
+// Chain Gen 5+ fixed-point final damage modifiers at 4096 precision.
+function chainFinalModifiers(modifiers) {
+  return modifiers.reduce((chained, multiplier) => {
+    const next = Math.round(multiplier * 4096);
+    return Math.floor((chained * next + 2048) / 4096);
+  }, 4096);
+}
+
+function isGroundedForCalc(pokemon, form) {
+  return !form.types.includes("Flying") && pokemon.ability !== "Levitate" && pokemon.item !== "Air Balloon";
+}
+
 function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   const atk = calcState[atkSideKey];
   const def = calcState[defSideKey];
   const atkForm = getEffectiveForm(atk.species, atk.isMega, atk.item);
   const defForm = getEffectiveForm(def.species, def.isMega, def.item);
-
   const defMaxHp = calculateLv50Stat("hp", defForm.base.hp, def.sp.hp, def.nature);
   const moveMeta = MOVES_DB[moveObj.name] || { bp: 0, type: "Normal", cat: "Status", spread: false };
 
+  const noDamage = (message) => ({
+    rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0,
+    defMaxHp, koText: message
+  });
   if (moveMeta.cat === "Status" || !moveMeta.bp || moveMeta.bp <= 0) {
-    return {
-      rolls: Array(16).fill(0),
-      min: 0,
-      max: 0,
-      minPct: 0,
-      maxPct: 0,
-      defMaxHp,
-      koText: "Status Move (0%)"
-    };
+    return noDamage("Status Move (0%)");
+  }
+  if (document.getElementById(`side-${defSideKey}-protect`)?.checked && moveObj.name !== "Feint") {
+    return noDamage("Blocked by Protect");
   }
 
-  const defProtect = document.getElementById(`side-${defSideKey}-protect`)?.checked;
-  if (defProtect && moveObj.name !== "Feint") {
-    return {
-      rolls: Array(16).fill(0),
-      min: 0,
-      max: 0,
-      minPct: 0,
-      maxPct: 0,
-      defMaxHp,
-      koText: "Blocked by Protect"
-    };
-  }
-
+  const weather = calcState.field.weather;
+  const terrain = calcState.field.terrain;
   let effType = moveMeta.type;
   let bp = moveMeta.bp;
-  let abilityBoost = 1.0;
-
-  if (effType === "Normal" && (atk.ability === "Pixilate" || atk.ability === "Aerilate" || atk.ability === "Refrigerate")) {
-    effType = atk.ability === "Pixilate" ? "Fairy" : atk.ability === "Aerilate" ? "Flying" : "Ice";
-    abilityBoost *= 1.2;
-  }
-  if (moveObj.name === "Weather Ball" && calcState.field.weather !== "None") {
-    const wMap = { Sun: "Fire", Rain: "Water", Sand: "Rock", Snow: "Ice" };
-    effType = wMap[calcState.field.weather] || "Normal";
-  }
-
-  if (effType === "Ground" && def.ability === "Levitate") {
-    return { rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0, defMaxHp, koText: "Immune (Levitate)" };
-  }
-  if (effType === "Fire" && def.ability === "Flash Fire") {
-    return { rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0, defMaxHp, koText: "Immune (Flash Fire)" };
-  }
-  if (effType === "Electric" && def.ability === "Lightning Rod") {
-    return { rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0, defMaxHp, koText: "Immune (Lightning Rod)" };
-  }
-
-  const typeMult = getTypeEffectiveness(effType, defForm.types);
-  if (typeMult === 0) {
-    return { rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0, defMaxHp, koText: "Immune (0x)" };
-  }
-
+  const attackerGrounded = isGroundedForCalc(atk, atkForm);
+  const defenderGrounded = isGroundedForCalc(def, defForm);
+  const ignoresDefAbility = ["Mold Breaker", "Teravolt", "Turboblaze"].includes(atk.ability);
+  const defensiveAbility = ignoresDefAbility ? "" : def.ability;
   const isPhys = moveMeta.cat === "Physical";
   const isBodyPress = moveObj.name === "Body Press";
+
+  const bpModifiers = [];
+  if (effType === "Normal" && ["Pixilate", "Aerilate", "Refrigerate"].includes(atk.ability)) {
+    effType = { Pixilate: "Fairy", Aerilate: "Flying", Refrigerate: "Ice" }[atk.ability];
+    bpModifiers.push(1.2);
+  }
+  if (moveObj.name === "Weather Ball" && weather !== "None") {
+    effType = { Sun: "Fire", Rain: "Water", Sand: "Rock", Snow: "Ice" }[weather] || "Normal";
+    bp *= 2;
+  }
+  if (moveObj.name === "Facade" && atk.status !== "Healthy") bp *= 2;
+  if (moveObj.name === "Acrobatics" && (!atk.item || atk.item === "None")) bp *= 2;
+  if (moveObj.name === "Expanding Force" && terrain === "Psychic" && attackerGrounded) {
+    bpModifiers.push(1.5);
+  }
+  if (atk.ability === "Tough Claws" && moveMeta.contact) bpModifiers.push(1.3);
+  if (atk.ability === "Sharpness" && moveMeta.slicing) bpModifiers.push(1.5);
+  if (atk.ability === "Water Bubble" && effType === "Water") bpModifiers.push(2);
+  if (atk.ability === "Technician" && bp <= 60) bpModifiers.push(1.5);
+  if (atk.ability === "Mega Launcher" && ["Aura Sphere", "Water Pulse", "Dark Pulse", "Dragon Pulse"].includes(moveObj.name)) {
+    bpModifiers.push(1.5);
+  }
+  if (attackerGrounded && (
+    (terrain === "Electric" && effType === "Electric") ||
+    (terrain === "Grassy" && effType === "Grass") ||
+    (terrain === "Psychic" && effType === "Psychic")
+  )) bpModifiers.push(1.3);
+  if (defenderGrounded && terrain === "Grassy" && ["Earthquake", "Bulldoze", "Magnitude"].includes(moveObj.name)) {
+    bpModifiers.push(0.5);
+  }
+  if (defenderGrounded && terrain === "Misty" && effType === "Dragon") bpModifiers.push(0.5);
+  if (["Solar Beam", "Solar Blade"].includes(moveObj.name) && ["Rain", "Sand", "Snow"].includes(weather)) {
+    bpModifiers.push(0.5);
+  }
+  // Chain BP multipliers first (fixed-point), then round the final power once.
+  if (document.getElementById(`side-${atkSideKey}-hh`)?.checked) bpModifiers.push(1.5);
+  if (bpModifiers.length) bp = Math.max(1, roundHalfDown(bp * chainFinalModifiers(bpModifiers) / 4096));
+
+  // Ground/ability immunities (unless the attacker's ability suppresses them).
+  if (effType === "Ground" && (def.item === "Air Balloon" || defensiveAbility === "Levitate")) {
+    return noDamage("Immune (Air Balloon / Levitate)");
+  }
+  const immunities = {
+    Fire: ["Flash Fire", "Well-Baked Body"],
+    Water: ["Water Absorb", "Storm Drain", "Dry Skin"],
+    Electric: ["Volt Absorb", "Lightning Rod", "Motor Drive"],
+    Grass: ["Sap Sipper"],
+    Ground: ["Earth Eater"]
+  };
+  if ((immunities[effType] || []).includes(defensiveAbility)) return noDamage("Immune (Ability)");
+
+  let typeMult = getTypeEffectiveness(effType, defForm.types);
+  if (atk.ability === "Scrappy" && ["Normal", "Fighting"].includes(effType) && defForm.types.includes("Ghost")) {
+    typeMult = getTypeEffectiveness(effType, defForm.types.filter((type) => type !== "Ghost"));
+  }
+  if (typeMult === 0) return noDamage("Immune (0x)");
+
   const atkStatKey = isBodyPress ? "def" : isPhys ? "atk" : "spa";
   const defStatKey = isPhys ? "def" : "spd";
-
-  let rawA = calculateLv50Stat(atkStatKey, atkForm.base[atkStatKey], atk.sp[atkStatKey], atk.nature);
-  let rawD = calculateLv50Stat(defStatKey, defForm.base[defStatKey], def.sp[defStatKey], def.nature);
-
+  const rawA = calculateLv50Stat(atkStatKey, atkForm.base[atkStatKey], atk.sp[atkStatKey], atk.nature);
+  const rawD = calculateLv50Stat(defStatKey, defForm.base[defStatKey], def.sp[defStatKey], def.nature);
   let atkStage = atk.stages[atkStatKey] || 0;
   let defStage = def.stages[defStatKey] || 0;
   if (moveObj.crit) {
-    if (atkStage < 0) atkStage = 0;
-    if (defStage > 0) defStage = 0;
+    atkStage = Math.max(0, atkStage);
+    defStage = Math.min(0, defStage);
   }
-
   let A = Math.floor(rawA * getStageMultiplier(atkStage));
   let D = Math.floor(rawD * getStageMultiplier(defStage));
 
   if (isPhys && atk.item === "Choice Band") A = Math.floor(A * 1.5);
   if (!isPhys && atk.item === "Choice Specs") A = Math.floor(A * 1.5);
-  if (isPhys && atk.ability === "Huge Power") A = Math.floor(A * 2);
+  if (isPhys && ["Huge Power", "Pure Power"].includes(atk.ability)) A *= 2;
+  if (isPhys && atk.ability === "Hustle") A = Math.floor(A * 1.5);
+  if (isPhys && atk.ability === "Guts" && atk.status !== "Healthy") A = Math.floor(A * 1.5);
+  if (!isPhys && atk.ability === "Solar Power" && weather === "Sun") A = Math.floor(A * 1.5);
+  if (["Fire", "Ice"].includes(effType) && defensiveAbility === "Thick Fat") A = Math.floor(A * 0.5);
+
   if (!isPhys && def.item === "Assault Vest") D = Math.floor(D * 1.5);
-  if (def.item === "Eviolite") D = Math.floor(D * 1.5);
-  if (calcState.field.weather === "Sand" && defForm.types.includes("Rock") && !isPhys) {
-    D = Math.floor(D * 1.5);
-  }
-  if (calcState.field.weather === "Snow" && defForm.types.includes("Ice") && isPhys) {
-    D = Math.floor(D * 1.5);
-  }
+  if (def.item === "Eviolite") D = Math.floor(D * 1.5); // assumes eligible holder
+  if (weather === "Sand" && defForm.types.includes("Rock") && !isPhys) D = Math.floor(D * 1.5);
+  if (weather === "Snow" && defForm.types.includes("Ice") && isPhys) D = Math.floor(D * 1.5);
+  if (isPhys && defensiveAbility === "Fur Coat") D *= 2;
 
-  if (atk.ability === "Tough Claws" && moveMeta.contact) abilityBoost *= 1.3;
-  if (atk.ability === "Sharpness" && moveMeta.slicing) abilityBoost *= 1.5;
-  if (atk.ability === "Water Bubble" && effType === "Water") abilityBoost *= 2.0;
-  if (atk.ability === "Technician" && bp <= 60) abilityBoost *= 1.5;
-  if (atk.ability === "Mega Launcher" && ["Aura Sphere", "Water Pulse", "Dark Pulse", "Dragon Pulse"].includes(moveObj.name)) {
-    abilityBoost *= 1.5;
+  // Level 50 base damage; modifiers below must be applied in the correct order.
+  let baseDamage = Math.floor(Math.floor(22 * bp * A / Math.max(1, D)) / 50) + 2;
+  const isSpread = moveObj.name === "Expanding Force"
+    ? terrain === "Psychic" && attackerGrounded
+    : Boolean(moveMeta.spread);
+  if (calcState.field.isDoubles && isSpread) baseDamage = roundHalfDown(baseDamage * 0.75);
+  if (weather === "Sun") {
+    if (effType === "Fire") baseDamage = roundHalfDown(baseDamage * 1.5);
+    if (effType === "Water") baseDamage = roundHalfDown(baseDamage * 0.5);
+  } else if (weather === "Rain") {
+    if (effType === "Water") baseDamage = roundHalfDown(baseDamage * 1.5);
+    if (effType === "Fire") baseDamage = roundHalfDown(baseDamage * 0.5);
   }
-  if (atk.ability === "Solar Power" && calcState.field.weather === "Sun" && !isPhys) {
-    A = Math.floor(A * 1.5);
-  }
-  if (def.ability === "Thick Fat" && (effType === "Fire" || effType === "Ice")) {
-    abilityBoost *= 0.5;
-  }
-  if (def.ability === "Heatproof" && effType === "Fire") {
-    abilityBoost *= 0.5;
-  }
-  if (def.ability === "Multiscale") {
-    abilityBoost *= 0.5;
-  }
-  if (def.ability === "Filter" && typeMult > 1) {
-    abilityBoost *= 0.75;
-  }
+  if (moveObj.crit) baseDamage = roundHalfDown(baseDamage * 1.5);
 
-  bp = Math.max(1, Math.floor(bp * abilityBoost));
+  const stabMult = atkForm.types.includes(effType)
+    ? (atk.ability === "Adaptability" ? 2 : 1.5) : 1;
+  const isBurnedWeakened = isPhys && atk.status === "Burned" &&
+    atk.ability !== "Guts" && moveObj.name !== "Facade";
 
-  let baseDamage = Math.floor(Math.floor(Math.floor((2 * 50) / 5 + 2) * bp * A / Math.max(1, D)) / 50) + 2;
-
-  if (calcState.field.isDoubles && moveMeta.spread) {
-    baseDamage = Math.floor(baseDamage * 0.75);
-  }
-
-  if (calcState.field.weather === "Sun") {
-    if (effType === "Fire") baseDamage = Math.floor(baseDamage * 1.5);
-    if (effType === "Water") baseDamage = Math.floor(baseDamage * 0.5);
-  } else if (calcState.field.weather === "Rain") {
-    if (effType === "Water") baseDamage = Math.floor(baseDamage * 1.5);
-    if (effType === "Fire") baseDamage = Math.floor(baseDamage * 0.5);
-  }
-
-  if (moveObj.crit) {
-    baseDamage = Math.floor(baseDamage * 1.5);
-  }
-
-  const hasStab = atkForm.types.includes(effType);
-  const stabMult = hasStab ? (atk.ability === "Adaptability" ? 2.0 : 1.5) : 1.0;
-  const burnMult = isPhys && atk.status === "Burned" ? 0.5 : 1.0;
-
-  let terrainMult = 1.0;
-  if (calcState.field.terrain === "Electric" && effType === "Electric" && !atkForm.types.includes("Flying") && atk.ability !== "Levitate") {
-    terrainMult = 1.3;
-  } else if (calcState.field.terrain === "Grassy" && effType === "Grass" && !atkForm.types.includes("Flying") && atk.ability !== "Levitate") {
-    terrainMult = 1.3;
-  } else if (calcState.field.terrain === "Psychic" && effType === "Psychic" && !atkForm.types.includes("Flying") && atk.ability !== "Levitate") {
-    terrainMult = 1.3;
-  } else if (calcState.field.terrain === "Misty" && effType === "Dragon") {
-    terrainMult = 0.5;
-  }
-
-  const hhActive = document.getElementById(`side-${atkSideKey}-hh`)?.checked;
-  const hhMult = hhActive ? 1.5 : 1.0;
-
-  const fgActive = document.getElementById(`side-${defSideKey}-friendguard`)?.checked;
-  const fgMult = fgActive ? 0.75 : 1.0;
-
+  const finalMods = [];
   const reflectOn = document.getElementById(`side-${defSideKey}-reflect`)?.checked;
   const lsOn = document.getElementById(`side-${defSideKey}-lightscreen`)?.checked;
   const veilOn = document.getElementById(`side-${defSideKey}-auroraveil`)?.checked;
-
-  let screenMult = 1.0;
-  if (!moveObj.crit && atk.ability !== "Infiltrator") {
-    if ((isPhys && (reflectOn || veilOn)) || (!isPhys && (lsOn || veilOn))) {
-      screenMult = calcState.field.isDoubles ? 2732 / 4096 : 0.5;
-    }
+  if (!moveObj.crit && atk.ability !== "Infiltrator" &&
+      ((isPhys && (reflectOn || veilOn)) || (!isPhys && (lsOn || veilOn)))) {
+    finalMods.push(calcState.field.isDoubles ? 2732 / 4096 : 0.5);
   }
-
-  let itemDmgMult = 1.0;
-  if (atk.item === "Life Orb") itemDmgMult *= 1.3;
-  if (atk.item === "Expert Belt" && typeMult > 1) itemDmgMult *= 1.2;
+  if (document.getElementById(`side-${defSideKey}-friendguard`)?.checked) finalMods.push(0.75);
+  if (atk.item === "Life Orb") finalMods.push(1.3);
+  if (atk.item === "Expert Belt" && typeMult > 1) finalMods.push(1.2);
 
   const typeItems = {
-    "Black Glasses": "Dark",
-    "Charcoal": "Fire",
-    "Mystic Water": "Water",
-    "Miracle Seed": "Grass",
-    "Fairy Feather": "Fairy",
-    "Spell Tag": "Ghost",
-    "Sharp Beak": "Flying",
-    "Dragon Fang": "Dragon",
-    "Magnet": "Electric",
-    "Never-Melt Ice": "Ice",
-    "Silk Scarf": "Normal"
+    "Black Glasses": "Dark", Charcoal: "Fire", "Mystic Water": "Water",
+    "Miracle Seed": "Grass", "Fairy Feather": "Fairy", "Spell Tag": "Ghost",
+    "Sharp Beak": "Flying", "Dragon Fang": "Dragon", Magnet: "Electric",
+    "Never-Melt Ice": "Ice", "Silk Scarf": "Normal"
   };
-  if (typeItems[atk.item] === effType) {
-    itemDmgMult *= 1.2;
+  if (typeItems[atk.item] === effType) finalMods.push(1.2);
+  if (defensiveAbility === "Filter" && typeMult > 1) finalMods.push(0.75);
+  if (defensiveAbility === "Solid Rock" && typeMult > 1) finalMods.push(0.75);
+  if (defensiveAbility === "Multiscale" || defensiveAbility === "Shadow Shield") {
+    finalMods.push(0.5); // assumes defender is at full HP in this calculator
   }
+  if (defensiveAbility === "Heatproof" && effType === "Fire") finalMods.push(0.5);
+  if (defensiveAbility === "Water Bubble" && effType === "Fire") finalMods.push(0.5);
+  const finalModifier = chainFinalModifiers(finalMods);
 
   const rolls = [];
   for (let r = 85; r <= 100; r++) {
-    let d = Math.floor((baseDamage * r) / 100);
-    d = Math.floor(d * stabMult);
+    let d = Math.floor(baseDamage * r / 100);
+    if (stabMult !== 1) d = roundHalfDown(d * stabMult);
     d = Math.floor(d * typeMult);
-    d = Math.floor(d * burnMult);
-    d = Math.floor(d * terrainMult);
-    d = Math.floor(d * hhMult);
-    d = Math.floor(d * screenMult);
-    d = Math.floor(d * fgMult);
-    d = Math.floor(d * itemDmgMult);
+    if (isBurnedWeakened) d = Math.floor(d * 0.5);
+    d = roundHalfDown(d * finalModifier / 4096);
     rolls.push(Math.max(1, d));
   }
 
-  const min = rolls[0];
-  const max = rolls[15];
-  const minPct = Number(((min / defMaxHp) * 100).toFixed(1));
-  const maxPct = Number(((max / defMaxHp) * 100).toFixed(1));
-
+  const min = rolls[0], max = rolls[15];
+  const minPct = Number((min / defMaxHp * 100).toFixed(1));
+  const maxPct = Number((max / defMaxHp * 100).toFixed(1));
   let koText = "possible 5HKO+";
-  if (min >= defMaxHp) {
-    koText = "guaranteed OHKO";
-  } else if (max >= defMaxHp) {
-    const ohkoRolls = rolls.filter((v) => v >= defMaxHp).length;
-    const pct = ((ohkoRolls / 16) * 100).toFixed(1);
+  if (min >= defMaxHp) koText = "guaranteed OHKO";
+  else if (max >= defMaxHp) {
+    const pct = (rolls.filter((v) => v >= defMaxHp).length / 16 * 100).toFixed(1);
     koText = `${pct}% chance to OHKO`;
-  } else if (min * 2 >= defMaxHp) {
-    koText = "guaranteed 2HKO";
-  } else if (max * 2 >= defMaxHp) {
-    koText = "possible 2HKO";
-  } else if (min * 3 >= defMaxHp) {
-    koText = "guaranteed 3HKO";
-  } else if (max * 3 >= defMaxHp) {
-    koText = "possible 3HKO";
-  } else if (max * 4 >= defMaxHp) {
-    koText = "possible 4HKO";
-  }
-
+  } else if (min * 2 >= defMaxHp) koText = "guaranteed 2HKO";
+  else if (max * 2 >= defMaxHp) koText = "possible 2HKO";
+  else if (min * 3 >= defMaxHp) koText = "guaranteed 3HKO";
+  else if (max * 3 >= defMaxHp) koText = "possible 3HKO";
+  else if (max * 4 >= defMaxHp) koText = "possible 4HKO";
   return { rolls, min, max, minPct, maxPct, defMaxHp, koText };
 }
 
@@ -1882,7 +1781,7 @@ function runDamageCalculation() {
   const aForm = atkKey === "p1" ? p1Form : p2Form;
   const dForm = defKey === "p1" ? p1Form : p2Form;
   const moveMeta = MOVES_DB[activeMove.name] || { cat: "Physical" };
-  const atkStatUsed = moveMeta.cat === "Physical" ? "atk" : "spa";
+  const atkStatUsed = activeMove.name === "Body Press" ? "def" : moveMeta.cat === "Physical" ? "atk" : "spa";
   const defStatUsed = moveMeta.cat === "Physical" ? "def" : "spd";
 
   const atkNatSign = NATURES[atk.nature]?.plus === atkStatUsed ? "+" : NATURES[atk.nature]?.minus === atkStatUsed ? "-" : "";
@@ -1919,19 +1818,6 @@ function createSpeedCardObj(species = "Arcanine", overrides = {}) {
   };
 }
 
-function createSpeedCardFromMon(mon) {
-  const dexData = POKEDEX_MC[mon.species] || POKEDEX_MC["Arcanine"];
-  const nat = NATURES[mon.nature] || NATURES.Serious;
-  const natureMode = nat.plus === "spe" ? "plus" : nat.minus === "spe" ? "minus" : "neutral";
-  return createSpeedCardObj(mon.species, {
-    isMega: Boolean(mon.isMega && dexData.megas),
-    megaStone: mon.item,
-    sp: mon.sp?.spe || 0,
-    natureMode,
-    choiceScarf: mon.item === "Choice Scarf"
-  });
-}
-
 function initSpeedWorkspace() {
   speedSlots = [null, null, null];
   renderSpeedComparisonCards();
@@ -1941,16 +1827,6 @@ function clearAllSpeedSlots() {
   speedSlots = [null, null, null];
   renderSpeedComparisonCards();
   showToast("Đã xóa toàn bộ ô so sánh Speed.");
-}
-
-function loadTop3TeamToSpeedCards() {
-  const team = getCurrentTeam();
-  if (!team) return;
-  speedSlots = [0, 1, 2].map((idx) =>
-    team.slots[idx] ? createSpeedCardFromMon(team.slots[idx]) : null
-  );
-  renderSpeedComparisonCards();
-  showToast("Đã nạp 3 Pokémon đầu từ Team sang Đo Speed!", "success");
 }
 
 function removeSpeedSlot(slotIdx) {

@@ -214,16 +214,8 @@
             </div>
           </div>
 
-          <!-- Quick Actions: Send to Damage Calc & Speed Checker -->
-          <div class="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
-            <div class="flex flex-wrap items-center gap-2">
-              <button onclick="sendCurrentToCalc('p1')" class="px-3 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-xs font-semibold text-sky-300 transition">
-                ⚔️ <span data-i18n="btnSendAtk">Sang Damage Calc</span>
-              </button>
-              <button onclick="sendCurrentToSpeed()" class="px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-semibold text-emerald-300 transition">
-                ⚡ <span data-i18n="btnSendSpeed">Sang Đo Speed</span>
-              </button>
-            </div>
+          <!-- Reset the selected slot (independent of the other workspaces). -->
+          <div class="pt-2 border-t border-slate-800/80 flex justify-end">
             <button onclick="clearCurrentSlot()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-400 hover:text-slate-200 transition" data-i18n="btnClearSlot">
               Đặt lại Slot
             </button>
@@ -300,6 +292,8 @@
           </div>
         </div>
 
+        <p class="text-[11px] text-amber-300/85 mt-1">Damage Calc giả định Pokémon đầy HP, chiêu spread trúng nhiều mục tiêu; chưa hỗ trợ đầy đủ các chiêu Base Power biến thiên, đa đòn và toàn bộ Ability của Champions. Kết quả không thay thế hoàn toàn Showdown Calc.</p>
+
         <!-- Bottom Calculation Headline & 16 Rolls -->
         <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div class="space-y-1 flex-1">
@@ -332,9 +326,6 @@
         <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3">
           <div class="flex items-center justify-between border-b border-slate-800 pb-2">
             <span class="text-xs font-extrabold uppercase tracking-wider text-sky-400">Pokémon 1</span>
-            <select id="calc-p1-team-slot" onchange="loadTeamSlotToCalc('p1', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
-              <option value="">Nạp từ Team...</option>
-            </select>
           </div>
 
           <!-- Species & Sprite (Visual Picker Trigger) -->
@@ -484,9 +475,6 @@
         <div class="lg:col-span-4 glass-panel rounded-2xl p-4 space-y-3">
           <div class="flex items-center justify-between border-b border-slate-800 pb-2">
             <span class="text-xs font-extrabold uppercase tracking-wider text-rose-400">Pokémon 2</span>
-            <select id="calc-p2-team-slot" onchange="loadTeamSlotToCalc('p2', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200">
-              <option value="">Nạp từ Team...</option>
-            </select>
           </div>
 
           <!-- Species & Sprite (Visual Picker Trigger) -->
@@ -578,9 +566,6 @@
             <input type="checkbox" id="speed-trick-room" onchange="renderSpeedComparisonCards()" />
             <span>Trick Room</span>
           </label>
-          <button onclick="loadTop3TeamToSpeedCards()" class="px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition">
-            ⚡ Nạp 3 con từ Team
-          </button>
           <button onclick="clearAllSpeedSlots()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition">
             Xóa tất cả
           </button>
@@ -737,7 +722,7 @@
     </div>
   </div>
 
-  <script src="data.js"></script>
-  <script src="app.js?v=3"></script>
+  <script src="data.js?v=4"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
