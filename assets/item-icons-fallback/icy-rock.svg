@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" aria-label="Icy Rock">
+<rect x="1" y="1" width="46" height="46" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+<path d="M10 31 16 14 32 10 40 27 31 39 15 38Z" fill="#94a3b8" stroke="#e2e8f0" stroke-width="1.4"/><path d="M16 14 29 22 40 27M29 22 31 39" fill="none" stroke="#475569" stroke-width="1.6"/>
+<rect x="5" y="35" width="38" height="10" rx="4" fill="#061123" opacity=".93"/>
+<text x="24" y="43" font-family="Arial,sans-serif" font-weight="700" font-size="8" fill="#fff" text-anchor="middle">IR</text>
+</svg>

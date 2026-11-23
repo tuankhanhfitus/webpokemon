@@ -111,37 +111,82 @@ function toggleAppTheme() {
   try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch (_) { /* optional */ }
 }
 
-function getItemIconUrl(item) {
-  if (!item || item === "None") return "assets/no-item.svg";
-  // Champions Mega Stone artwork (48×48) collected from Bulbapedia.
-  // https://github.com/KevinToodlepoot/pokemon-champions-sprites
-  // Use the exact lower-case, hyphen-separated item name, including Z/X/Y variants.
-  if (REG_MC_MEGA_STONES.includes(item)) {
-    const slug = item.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    return `https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/${slug}.png`;
+// Regulation M-C item icon source, including all 85 held items and 81 Mega Stones:
+// https://github.com/KevinToodlepoot/pokemon-champions-sprites
+// Unlike Showdown's /itemicons/ directory, this archive includes the four
+// Terrain Seeds, new Mega Stones and other Champions-specific artwork.
+const ITEM_IMAGE_REPO = "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/";
+const ITEM_IMAGE_POKEAPI = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/";
+const ITEM_IMAGE_POKEMONDB = "https://img.pokemondb.net/sprites/items/";
+const ITEM_IMAGE_RESOLVED = new Map();
+const ITEM_IMAGE_ALIASES = Object.freeze({
+  "King's Rock": "kings-rock"
+});
+const ITEM_IMAGE_ALTERNATIVE_SLUGS = Object.freeze({
+  "Black Glasses": "blackglasses", "Bright Powder": "brightpowder",
+  "Never-Melt Ice": "nevermeltice", "Silver Powder": "silverpowder",
+  "Twisted Spoon": "twistedspoon"
+});
+
+function getItemImageSlug(item) {
+  if (ITEM_IMAGE_ALIASES[item]) return ITEM_IMAGE_ALIASES[item];
+  return String(item).toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function getItemIconCandidates(item) {
+  if (!item || item === "None") return ["assets/no-item.svg"];
+  const slug = getItemImageSlug(item);
+  const isMega = REG_MC_MEGA_STONES.includes(item);
+  const urls = [ITEM_IMAGE_REPO + slug + ".png"];
+  // A small number of older sprite collections use alternate item IDs.
+  const alias = ITEM_IMAGE_ALTERNATIVE_SLUGS[item];
+  if (alias && alias !== slug) urls.push(ITEM_IMAGE_REPO + alias + ".png");
+  if (!isMega) {
+    urls.push(ITEM_IMAGE_POKEAPI + (alias || slug) + ".png");
+    if (alias && alias !== slug) urls.push(ITEM_IMAGE_POKEAPI + slug + ".png");
+    urls.push(ITEM_IMAGE_POKEMONDB + slug + ".png");
   }
-  const irregular = {
-    "Black Glasses": "blackglasses", "Bright Powder": "brightpowder",
-    "King's Rock": "kings-rock", "Never-Melt Ice": "never-melt-ice",
-    "Silver Powder": "silverpowder", "Twisted Spoon": "twistedspoon",
-    "Miracle Seed": "miracle-seed", "Spell Tag": "spell-tag"
-  };
-  const slug = irregular[item] || item.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  return `https://play.pokemonshowdown.com/sprites/itemicons/${slug}.png`;
+  // Guaranteed on-site, per-item local illustration if external sources fail.
+  // These SVGs are labelled illustrations, not official artwork.
+  urls.push(`assets/item-icons-fallback/${slug}.svg`);
+  return [...new Set(urls)];
+}
+
+function getItemIconUrl(item) {
+  return ITEM_IMAGE_RESOLVED.get(item) || getItemIconCandidates(item)[0];
 }
 
 function itemIconFallback(item) {
-  return REG_MC_MEGA_STONES.includes(item) ? "assets/mega-stone.svg" :
-    item === "None" ? "assets/no-item.svg" : "assets/item-placeholder.svg";
+  if (!item || item === "None") return "assets/no-item.svg";
+  return `assets/item-icons-fallback/${getItemImageSlug(item)}.svg`;
 }
 
 function makeItemIcon(item, sizeClass = "") {
   const img = document.createElement("img");
   img.className = "item-sprite " + sizeClass;
-  img.alt = "";
+  img.alt = ""; // The adjacent text already provides the item's accessible name.
   img.loading = "lazy";
-  img.src = getItemIconUrl(item);
-  img.onerror = () => { img.onerror = null; img.src = itemIconFallback(item); };
+  img.decoding = "async";
+  const candidates = getItemIconCandidates(item);
+  const cached = ITEM_IMAGE_RESOLVED.get(item);
+  let currentIndex = cached ? candidates.indexOf(cached) : 0;
+  if (currentIndex < 0) currentIndex = 0;
+  img.onerror = () => {
+    currentIndex++;
+    if (currentIndex < candidates.length) {
+      img.src = candidates[currentIndex];
+    } else {
+      img.onerror = null;
+      img.src = itemIconFallback(item);
+    }
+  };
+  img.onload = () => {
+    if (img.naturalWidth > 0) ITEM_IMAGE_RESOLVED.set(item, candidates[currentIndex]);
+  };
+  img.src = candidates[currentIndex];
   return img;
 }
 
@@ -1219,7 +1264,7 @@ function renderTeamRibbon() {
           <div class="min-w-0 flex-1">
             <div class="flex items-center justify-between gap-1">
               <span class="text-[10px] font-bold text-slate-500">#${idx + 1}</span>
-              <span class="text-[10px] font-mono ${usedSp === 66 ? "text-emerald-400" : "text-amber-400"}">${usedSp}/66 SP</span>
+              <span data-team-sp-usage class="text-[10px] font-mono ${usedSp === 66 ? "text-emerald-400" : "text-amber-400"}">${usedSp}/66 SP</span>
             </div>
             <div class="text-xs font-extrabold text-white truncate">${escapeHtml(form.displayName)}</div>
             <div class="text-[11px] text-slate-400 truncate">${escapeHtml(mon.item || "No Item")}</div>
@@ -1340,18 +1385,25 @@ function renderBuilderStatsTable() {
     const natMark = nat.plus === k ? `<span class="text-rose-400 font-bold">+</span>` : nat.minus === k ? `<span class="text-sky-400 font-bold">-</span>` : "";
 
     return `
-      <div class="grid grid-cols-12 gap-1.5 items-center bg-slate-900/60 px-2.5 py-1.5 rounded-xl border border-slate-800/80">
+      <div data-builder-sp-row="${k}" class="grid grid-cols-12 gap-1.5 items-center bg-slate-900/60 px-2.5 py-1.5 rounded-xl border border-slate-800/80">
         <div class="col-span-2 text-xs font-bold text-slate-200">${STAT_LABELS[k]}${natMark}</div>
         <div class="col-span-1 text-center font-mono text-xs text-slate-400">${baseVal}</div>
         <div class="col-span-5 flex items-center gap-1.5">
-          <input type="range" min="0" max="32" value="${spVal}" oninput="updateStatSP('${k}', this.value)" class="sp-slider w-full" />
-          <input type="number" min="0" max="32" value="${spVal}" onchange="updateStatSP('${k}', this.value)" class="w-11 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center font-mono text-xs font-bold text-sky-300" />
+          <input data-builder-sp-slider type="range" min="0" max="32" step="1" value="${spVal}"
+            oninput="updateStatSP('${k}', this.value)"
+            onpointerdown="beginBuilderSpDrag(event, '${k}')"
+            onpointermove="moveBuilderSpDrag(event)"
+            onpointerup="endBuilderSpDrag(event)"
+            onpointercancel="endBuilderSpDrag(event)"
+            class="sp-slider w-full builder-sp-drag-slider" aria-label="${STAT_LABELS[k]} Stat Points" />
+          <input data-builder-sp-number type="number" min="0" max="32" step="1" value="${spVal}" onchange="updateStatSP('${k}', this.value)" class="w-11 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center font-mono text-xs font-bold text-sky-300" />
         </div>
-        <div class="col-span-2 text-center font-mono text-[11px] text-slate-400">${evEq}</div>
-        <div class="col-span-2 text-right font-mono text-sm font-extrabold text-white">${finalStat}</div>
+        <div data-builder-ev-value class="col-span-2 text-center font-mono text-[11px] text-slate-400">${evEq}</div>
+        <div data-builder-final-stat class="col-span-2 text-right font-mono text-sm font-extrabold text-white">${finalStat}</div>
       </div>
     `;
   }).join("");
+  updateBuilderSpLive();
 }
 
 function changeActiveSpecies(newSpecies) {
@@ -1417,20 +1469,99 @@ function toggleMegaForm() {
   renderActiveSlotEditor();
 }
 
-function updateStatSP(statKey, rawValue) {
+// Builder sliders stay mounted throughout a drag. Recreating #stats-rows-container
+// in oninput destroys the grabbed thumb, so Chrome only moves one step at a time.
+// Update labels and the selected ribbon count IN PLACE instead.
+function updateBuilderSpLive() {
   const mon = getCurrentPokemon();
   if (!mon) return;
-  let val = Math.max(0, Math.min(32, parseInt(rawValue, 10) || 0));
+  const form = getEffectiveForm(mon.species, mon.isMega, mon.item);
+  const used = STAT_KEYS.reduce((sum, key) => sum + (mon.sp[key] || 0), 0);
+  const remaining = 66 - used;
 
-  const otherSum = STAT_KEYS.reduce((acc, k) => (k === statKey ? acc : acc + (mon.sp[k] || 0)), 0);
-  const maxAllowed = Math.max(0, 66 - otherSum);
-  if (val > maxAllowed) {
-    val = maxAllowed;
+  const badge = document.getElementById("sp-remaining-badge");
+  if (badge) {
+    badge.textContent = `${remaining} / 66`;
+    badge.className = `font-mono text-sm font-bold ${
+      remaining === 0 ? "text-emerald-400" : remaining > 0 ? "text-amber-400" : "text-rose-400"
+    }`;
   }
+
+  STAT_KEYS.forEach((key) => {
+    const row = document.querySelector(`[data-builder-sp-row="${key}"]`);
+    if (!row) return;
+    const sp = mon.sp[key] || 0;
+    const slider = row.querySelector("[data-builder-sp-slider]");
+    const number = row.querySelector("[data-builder-sp-number]");
+    const ev = row.querySelector("[data-builder-ev-value]");
+    const final = row.querySelector("[data-builder-final-stat]");
+    if (slider) {
+      if (slider.value !== String(sp)) slider.value = String(sp);
+      const percentage = (sp / 32) * 100;
+      const isLight = document.documentElement.classList.contains("light");
+      const unfilled = isLight ? "#d8e2ee" : "#1e293b";
+      slider.style.background = `linear-gradient(to right, #38bdf8 0%, #38bdf8 ${percentage}%, ${unfilled} ${percentage}%, ${unfilled} 100%)`;
+    }
+    if (number && number.value !== String(sp)) number.value = String(sp);
+    if (ev) ev.textContent = String(spToEvEquivalent(sp));
+    if (final) final.textContent = String(calculateLv50Stat(key, form.base[key], sp, mon.nature));
+  });
+
+  // Only the SP count in the active team slot needs changing — leave sprites alone.
+  const ribbonCount = document.querySelectorAll("#team-slots-ribbon [data-team-sp-usage]")[activeSlotIndex];
+  if (ribbonCount) {
+    ribbonCount.textContent = `${used}/66 SP`;
+    ribbonCount.classList.toggle("text-emerald-400", used === 66);
+    ribbonCount.classList.toggle("text-amber-400", used !== 66);
+  }
+}
+
+function updateStatSP(statKey, rawValue) {
+  const mon = getCurrentPokemon();
+  if (!mon || !STAT_KEYS.includes(statKey)) return;
+  const parsed = Number(rawValue);
+  let val = Number.isFinite(parsed) ? Math.round(parsed) : (mon.sp[statKey] || 0);
+  val = Math.min(32, Math.max(0, val));
+  const otherSum = STAT_KEYS.reduce((sum, key) => sum + (key === statKey ? 0 : (mon.sp[key] || 0)), 0);
+  val = Math.min(val, Math.max(0, 66 - otherSum));
   mon.sp[statKey] = val;
   saveTeamsToStorage();
-  renderTeamRibbon();
-  renderBuilderStatsTable();
+  updateBuilderSpLive();
+}
+
+// Full pointer capture also supports long mouse, pen and touch drags.
+// Keyboard arrow keys continue to work through the range's native oninput.
+let builderSpPointerDrag = null;
+
+function setBuilderSpFromPointer(input, statKey, clientX) {
+  const rect = input.getBoundingClientRect();
+  const radius = 8;
+  const width = Math.max(1, rect.width - 2 * radius);
+  const ratio = Math.min(1, Math.max(0, (clientX - rect.left - radius) / width));
+  updateStatSP(statKey, Math.round(ratio * 32));
+}
+
+function beginBuilderSpDrag(event, statKey) {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  const input = event.currentTarget;
+  event.preventDefault();
+  builderSpPointerDrag = { input, statKey, pointerId: event.pointerId };
+  input.setPointerCapture(event.pointerId);
+  setBuilderSpFromPointer(input, statKey, event.clientX);
+}
+
+function moveBuilderSpDrag(event) {
+  const drag = builderSpPointerDrag;
+  if (!drag || drag.pointerId !== event.pointerId || drag.input !== event.currentTarget) return;
+  event.preventDefault();
+  setBuilderSpFromPointer(drag.input, drag.statKey, event.clientX);
+}
+
+function endBuilderSpDrag(event) {
+  const drag = builderSpPointerDrag;
+  if (!drag || drag.pointerId !== event.pointerId || drag.input !== event.currentTarget) return;
+  builderSpPointerDrag = null;
+  if (drag.input.hasPointerCapture(event.pointerId)) drag.input.releasePointerCapture(event.pointerId);
 }
 
 function applySpPreset(presetKey) {

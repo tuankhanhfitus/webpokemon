@@ -1,0 +1,837 @@
+{
+  "source": "https://github.com/KevinToodlepoot/pokemon-champions-sprites",
+  "item_count": 85,
+  "mega_stones": 81,
+  "items": [
+    {
+      "name": "Air Balloon",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/air-balloon.png",
+      "offline_fallback": "assets/item-icons-fallback/air-balloon.svg"
+    },
+    {
+      "name": "Aspear Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/aspear-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/aspear-berry.svg"
+    },
+    {
+      "name": "Babiri Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/babiri-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/babiri-berry.svg"
+    },
+    {
+      "name": "Big Root",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/big-root.png",
+      "offline_fallback": "assets/item-icons-fallback/big-root.svg"
+    },
+    {
+      "name": "Binding Band",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/binding-band.png",
+      "offline_fallback": "assets/item-icons-fallback/binding-band.svg"
+    },
+    {
+      "name": "Black Belt",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/black-belt.png",
+      "offline_fallback": "assets/item-icons-fallback/black-belt.svg"
+    },
+    {
+      "name": "Black Glasses",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/black-glasses.png",
+      "offline_fallback": "assets/item-icons-fallback/black-glasses.svg"
+    },
+    {
+      "name": "Bright Powder",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/bright-powder.png",
+      "offline_fallback": "assets/item-icons-fallback/bright-powder.svg"
+    },
+    {
+      "name": "Charcoal",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/charcoal.png",
+      "offline_fallback": "assets/item-icons-fallback/charcoal.svg"
+    },
+    {
+      "name": "Charti Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/charti-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/charti-berry.svg"
+    },
+    {
+      "name": "Cheri Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/cheri-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/cheri-berry.svg"
+    },
+    {
+      "name": "Chesto Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/chesto-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/chesto-berry.svg"
+    },
+    {
+      "name": "Chilan Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/chilan-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/chilan-berry.svg"
+    },
+    {
+      "name": "Choice Scarf",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/choice-scarf.png",
+      "offline_fallback": "assets/item-icons-fallback/choice-scarf.svg"
+    },
+    {
+      "name": "Chople Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/chople-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/chople-berry.svg"
+    },
+    {
+      "name": "Coba Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/coba-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/coba-berry.svg"
+    },
+    {
+      "name": "Colbur Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/colbur-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/colbur-berry.svg"
+    },
+    {
+      "name": "Damp Rock",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/damp-rock.png",
+      "offline_fallback": "assets/item-icons-fallback/damp-rock.svg"
+    },
+    {
+      "name": "Dragon Fang",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/dragon-fang.png",
+      "offline_fallback": "assets/item-icons-fallback/dragon-fang.svg"
+    },
+    {
+      "name": "Eject Button",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/eject-button.png",
+      "offline_fallback": "assets/item-icons-fallback/eject-button.svg"
+    },
+    {
+      "name": "Electric Seed",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/electric-seed.png",
+      "offline_fallback": "assets/item-icons-fallback/electric-seed.svg"
+    },
+    {
+      "name": "Expert Belt",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/expert-belt.png",
+      "offline_fallback": "assets/item-icons-fallback/expert-belt.svg"
+    },
+    {
+      "name": "Fairy Feather",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/fairy-feather.png",
+      "offline_fallback": "assets/item-icons-fallback/fairy-feather.svg"
+    },
+    {
+      "name": "Focus Band",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/focus-band.png",
+      "offline_fallback": "assets/item-icons-fallback/focus-band.svg"
+    },
+    {
+      "name": "Focus Sash",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/focus-sash.png",
+      "offline_fallback": "assets/item-icons-fallback/focus-sash.svg"
+    },
+    {
+      "name": "Grassy Seed",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/grassy-seed.png",
+      "offline_fallback": "assets/item-icons-fallback/grassy-seed.svg"
+    },
+    {
+      "name": "Haban Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/haban-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/haban-berry.svg"
+    },
+    {
+      "name": "Hard Stone",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/hard-stone.png",
+      "offline_fallback": "assets/item-icons-fallback/hard-stone.svg"
+    },
+    {
+      "name": "Heat Rock",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/heat-rock.png",
+      "offline_fallback": "assets/item-icons-fallback/heat-rock.svg"
+    },
+    {
+      "name": "Icy Rock",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/icy-rock.png",
+      "offline_fallback": "assets/item-icons-fallback/icy-rock.svg"
+    },
+    {
+      "name": "Iron Ball",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/iron-ball.png",
+      "offline_fallback": "assets/item-icons-fallback/iron-ball.svg"
+    },
+    {
+      "name": "Kasib Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/kasib-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/kasib-berry.svg"
+    },
+    {
+      "name": "Kebia Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/kebia-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/kebia-berry.svg"
+    },
+    {
+      "name": "King's Rock",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/kings-rock.png",
+      "offline_fallback": "assets/item-icons-fallback/kings-rock.svg"
+    },
+    {
+      "name": "Leek",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/leek.png",
+      "offline_fallback": "assets/item-icons-fallback/leek.svg"
+    },
+    {
+      "name": "Leftovers",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/leftovers.png",
+      "offline_fallback": "assets/item-icons-fallback/leftovers.svg"
+    },
+    {
+      "name": "Leppa Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/leppa-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/leppa-berry.svg"
+    },
+    {
+      "name": "Life Orb",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/life-orb.png",
+      "offline_fallback": "assets/item-icons-fallback/life-orb.svg"
+    },
+    {
+      "name": "Light Ball",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/light-ball.png",
+      "offline_fallback": "assets/item-icons-fallback/light-ball.svg"
+    },
+    {
+      "name": "Light Clay",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/light-clay.png",
+      "offline_fallback": "assets/item-icons-fallback/light-clay.svg"
+    },
+    {
+      "name": "Lum Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/lum-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/lum-berry.svg"
+    },
+    {
+      "name": "Magnet",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/magnet.png",
+      "offline_fallback": "assets/item-icons-fallback/magnet.svg"
+    },
+    {
+      "name": "Mental Herb",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/mental-herb.png",
+      "offline_fallback": "assets/item-icons-fallback/mental-herb.svg"
+    },
+    {
+      "name": "Metal Coat",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/metal-coat.png",
+      "offline_fallback": "assets/item-icons-fallback/metal-coat.svg"
+    },
+    {
+      "name": "Metronome",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/metronome.png",
+      "offline_fallback": "assets/item-icons-fallback/metronome.svg"
+    },
+    {
+      "name": "Miracle Seed",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/miracle-seed.png",
+      "offline_fallback": "assets/item-icons-fallback/miracle-seed.svg"
+    },
+    {
+      "name": "Misty Seed",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/misty-seed.png",
+      "offline_fallback": "assets/item-icons-fallback/misty-seed.svg"
+    },
+    {
+      "name": "Muscle Band",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/muscle-band.png",
+      "offline_fallback": "assets/item-icons-fallback/muscle-band.svg"
+    },
+    {
+      "name": "Mystic Water",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/mystic-water.png",
+      "offline_fallback": "assets/item-icons-fallback/mystic-water.svg"
+    },
+    {
+      "name": "Never-Melt Ice",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/never-melt-ice.png",
+      "offline_fallback": "assets/item-icons-fallback/never-melt-ice.svg"
+    },
+    {
+      "name": "Normal Gem",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/normal-gem.png",
+      "offline_fallback": "assets/item-icons-fallback/normal-gem.svg"
+    },
+    {
+      "name": "Occa Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/occa-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/occa-berry.svg"
+    },
+    {
+      "name": "Oran Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/oran-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/oran-berry.svg"
+    },
+    {
+      "name": "Passho Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/passho-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/passho-berry.svg"
+    },
+    {
+      "name": "Payapa Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/payapa-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/payapa-berry.svg"
+    },
+    {
+      "name": "Pecha Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/pecha-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/pecha-berry.svg"
+    },
+    {
+      "name": "Persim Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/persim-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/persim-berry.svg"
+    },
+    {
+      "name": "Poison Barb",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/poison-barb.png",
+      "offline_fallback": "assets/item-icons-fallback/poison-barb.svg"
+    },
+    {
+      "name": "Psychic Seed",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/psychic-seed.png",
+      "offline_fallback": "assets/item-icons-fallback/psychic-seed.svg"
+    },
+    {
+      "name": "Quick Claw",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/quick-claw.png",
+      "offline_fallback": "assets/item-icons-fallback/quick-claw.svg"
+    },
+    {
+      "name": "Rawst Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/rawst-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/rawst-berry.svg"
+    },
+    {
+      "name": "Red Card",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/red-card.png",
+      "offline_fallback": "assets/item-icons-fallback/red-card.svg"
+    },
+    {
+      "name": "Rindo Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/rindo-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/rindo-berry.svg"
+    },
+    {
+      "name": "Rocky Helmet",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/rocky-helmet.png",
+      "offline_fallback": "assets/item-icons-fallback/rocky-helmet.svg"
+    },
+    {
+      "name": "Roseli Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/roseli-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/roseli-berry.svg"
+    },
+    {
+      "name": "Scope Lens",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/scope-lens.png",
+      "offline_fallback": "assets/item-icons-fallback/scope-lens.svg"
+    },
+    {
+      "name": "Sharp Beak",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/sharp-beak.png",
+      "offline_fallback": "assets/item-icons-fallback/sharp-beak.svg"
+    },
+    {
+      "name": "Shed Shell",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/shed-shell.png",
+      "offline_fallback": "assets/item-icons-fallback/shed-shell.svg"
+    },
+    {
+      "name": "Shell Bell",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/shell-bell.png",
+      "offline_fallback": "assets/item-icons-fallback/shell-bell.svg"
+    },
+    {
+      "name": "Shuca Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/shuca-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/shuca-berry.svg"
+    },
+    {
+      "name": "Silk Scarf",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/silk-scarf.png",
+      "offline_fallback": "assets/item-icons-fallback/silk-scarf.svg"
+    },
+    {
+      "name": "Silver Powder",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/silver-powder.png",
+      "offline_fallback": "assets/item-icons-fallback/silver-powder.svg"
+    },
+    {
+      "name": "Sitrus Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/sitrus-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/sitrus-berry.svg"
+    },
+    {
+      "name": "Smooth Rock",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/smooth-rock.png",
+      "offline_fallback": "assets/item-icons-fallback/smooth-rock.svg"
+    },
+    {
+      "name": "Soft Sand",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/soft-sand.png",
+      "offline_fallback": "assets/item-icons-fallback/soft-sand.svg"
+    },
+    {
+      "name": "Spell Tag",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/spell-tag.png",
+      "offline_fallback": "assets/item-icons-fallback/spell-tag.svg"
+    },
+    {
+      "name": "Tanga Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/tanga-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/tanga-berry.svg"
+    },
+    {
+      "name": "Terrain Extender",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/terrain-extender.png",
+      "offline_fallback": "assets/item-icons-fallback/terrain-extender.svg"
+    },
+    {
+      "name": "Twisted Spoon",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/twisted-spoon.png",
+      "offline_fallback": "assets/item-icons-fallback/twisted-spoon.svg"
+    },
+    {
+      "name": "Wacan Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/wacan-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/wacan-berry.svg"
+    },
+    {
+      "name": "White Herb",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/white-herb.png",
+      "offline_fallback": "assets/item-icons-fallback/white-herb.svg"
+    },
+    {
+      "name": "Wide Lens",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/wide-lens.png",
+      "offline_fallback": "assets/item-icons-fallback/wide-lens.svg"
+    },
+    {
+      "name": "Wise Glasses",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/wise-glasses.png",
+      "offline_fallback": "assets/item-icons-fallback/wise-glasses.svg"
+    },
+    {
+      "name": "Yache Berry",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/yache-berry.png",
+      "offline_fallback": "assets/item-icons-fallback/yache-berry.svg"
+    },
+    {
+      "name": "Zoom Lens",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/zoom-lens.png",
+      "offline_fallback": "assets/item-icons-fallback/zoom-lens.svg"
+    },
+    {
+      "name": "Abomasite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/abomasite.png",
+      "offline_fallback": "assets/item-icons-fallback/abomasite.svg"
+    },
+    {
+      "name": "Absolite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/absolite.png",
+      "offline_fallback": "assets/item-icons-fallback/absolite.svg"
+    },
+    {
+      "name": "Absolite Z",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/absolite-z.png",
+      "offline_fallback": "assets/item-icons-fallback/absolite-z.svg"
+    },
+    {
+      "name": "Aerodactylite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/aerodactylite.png",
+      "offline_fallback": "assets/item-icons-fallback/aerodactylite.svg"
+    },
+    {
+      "name": "Aggronite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/aggronite.png",
+      "offline_fallback": "assets/item-icons-fallback/aggronite.svg"
+    },
+    {
+      "name": "Alakazite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/alakazite.png",
+      "offline_fallback": "assets/item-icons-fallback/alakazite.svg"
+    },
+    {
+      "name": "Altarianite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/altarianite.png",
+      "offline_fallback": "assets/item-icons-fallback/altarianite.svg"
+    },
+    {
+      "name": "Ampharosite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/ampharosite.png",
+      "offline_fallback": "assets/item-icons-fallback/ampharosite.svg"
+    },
+    {
+      "name": "Audinite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/audinite.png",
+      "offline_fallback": "assets/item-icons-fallback/audinite.svg"
+    },
+    {
+      "name": "Banettite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/banettite.png",
+      "offline_fallback": "assets/item-icons-fallback/banettite.svg"
+    },
+    {
+      "name": "Barbaracite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/barbaracite.png",
+      "offline_fallback": "assets/item-icons-fallback/barbaracite.svg"
+    },
+    {
+      "name": "Baxcalibrite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/baxcalibrite.png",
+      "offline_fallback": "assets/item-icons-fallback/baxcalibrite.svg"
+    },
+    {
+      "name": "Beedrillite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/beedrillite.png",
+      "offline_fallback": "assets/item-icons-fallback/beedrillite.svg"
+    },
+    {
+      "name": "Blastoisinite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/blastoisinite.png",
+      "offline_fallback": "assets/item-icons-fallback/blastoisinite.svg"
+    },
+    {
+      "name": "Blazikenite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/blazikenite.png",
+      "offline_fallback": "assets/item-icons-fallback/blazikenite.svg"
+    },
+    {
+      "name": "Cameruptite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/cameruptite.png",
+      "offline_fallback": "assets/item-icons-fallback/cameruptite.svg"
+    },
+    {
+      "name": "Chandelurite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/chandelurite.png",
+      "offline_fallback": "assets/item-icons-fallback/chandelurite.svg"
+    },
+    {
+      "name": "Charizardite X",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/charizardite-x.png",
+      "offline_fallback": "assets/item-icons-fallback/charizardite-x.svg"
+    },
+    {
+      "name": "Charizardite Y",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/charizardite-y.png",
+      "offline_fallback": "assets/item-icons-fallback/charizardite-y.svg"
+    },
+    {
+      "name": "Chesnaughtite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/chesnaughtite.png",
+      "offline_fallback": "assets/item-icons-fallback/chesnaughtite.svg"
+    },
+    {
+      "name": "Chimechite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/chimechite.png",
+      "offline_fallback": "assets/item-icons-fallback/chimechite.svg"
+    },
+    {
+      "name": "Clefablite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/clefablite.png",
+      "offline_fallback": "assets/item-icons-fallback/clefablite.svg"
+    },
+    {
+      "name": "Crabominite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/crabominite.png",
+      "offline_fallback": "assets/item-icons-fallback/crabominite.svg"
+    },
+    {
+      "name": "Delphoxite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/delphoxite.png",
+      "offline_fallback": "assets/item-icons-fallback/delphoxite.svg"
+    },
+    {
+      "name": "Dragalgite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/dragalgite.png",
+      "offline_fallback": "assets/item-icons-fallback/dragalgite.svg"
+    },
+    {
+      "name": "Dragoninite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/dragoninite.png",
+      "offline_fallback": "assets/item-icons-fallback/dragoninite.svg"
+    },
+    {
+      "name": "Drampanite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/drampanite.png",
+      "offline_fallback": "assets/item-icons-fallback/drampanite.svg"
+    },
+    {
+      "name": "Eelektrossite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/eelektrossite.png",
+      "offline_fallback": "assets/item-icons-fallback/eelektrossite.svg"
+    },
+    {
+      "name": "Emboarite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/emboarite.png",
+      "offline_fallback": "assets/item-icons-fallback/emboarite.svg"
+    },
+    {
+      "name": "Excadrite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/excadrite.png",
+      "offline_fallback": "assets/item-icons-fallback/excadrite.svg"
+    },
+    {
+      "name": "Falinksite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/falinksite.png",
+      "offline_fallback": "assets/item-icons-fallback/falinksite.svg"
+    },
+    {
+      "name": "Feraligite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/feraligite.png",
+      "offline_fallback": "assets/item-icons-fallback/feraligite.svg"
+    },
+    {
+      "name": "Floettite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/floettite.png",
+      "offline_fallback": "assets/item-icons-fallback/floettite.svg"
+    },
+    {
+      "name": "Froslassite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/froslassite.png",
+      "offline_fallback": "assets/item-icons-fallback/froslassite.svg"
+    },
+    {
+      "name": "Galladite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/galladite.png",
+      "offline_fallback": "assets/item-icons-fallback/galladite.svg"
+    },
+    {
+      "name": "Garchompite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/garchompite.png",
+      "offline_fallback": "assets/item-icons-fallback/garchompite.svg"
+    },
+    {
+      "name": "Garchompite Z",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/garchompite-z.png",
+      "offline_fallback": "assets/item-icons-fallback/garchompite-z.svg"
+    },
+    {
+      "name": "Gardevoirite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/gardevoirite.png",
+      "offline_fallback": "assets/item-icons-fallback/gardevoirite.svg"
+    },
+    {
+      "name": "Gengarite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/gengarite.png",
+      "offline_fallback": "assets/item-icons-fallback/gengarite.svg"
+    },
+    {
+      "name": "Glalitite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/glalitite.png",
+      "offline_fallback": "assets/item-icons-fallback/glalitite.svg"
+    },
+    {
+      "name": "Glimmoranite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/glimmoranite.png",
+      "offline_fallback": "assets/item-icons-fallback/glimmoranite.svg"
+    },
+    {
+      "name": "Golisopite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/golisopite.png",
+      "offline_fallback": "assets/item-icons-fallback/golisopite.svg"
+    },
+    {
+      "name": "Golurkite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/golurkite.png",
+      "offline_fallback": "assets/item-icons-fallback/golurkite.svg"
+    },
+    {
+      "name": "Greninjite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/greninjite.png",
+      "offline_fallback": "assets/item-icons-fallback/greninjite.svg"
+    },
+    {
+      "name": "Gyaradosite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/gyaradosite.png",
+      "offline_fallback": "assets/item-icons-fallback/gyaradosite.svg"
+    },
+    {
+      "name": "Hawluchanite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/hawluchanite.png",
+      "offline_fallback": "assets/item-icons-fallback/hawluchanite.svg"
+    },
+    {
+      "name": "Heracronite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/heracronite.png",
+      "offline_fallback": "assets/item-icons-fallback/heracronite.svg"
+    },
+    {
+      "name": "Houndoominite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/houndoominite.png",
+      "offline_fallback": "assets/item-icons-fallback/houndoominite.svg"
+    },
+    {
+      "name": "Kangaskhanite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/kangaskhanite.png",
+      "offline_fallback": "assets/item-icons-fallback/kangaskhanite.svg"
+    },
+    {
+      "name": "Lopunnite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/lopunnite.png",
+      "offline_fallback": "assets/item-icons-fallback/lopunnite.svg"
+    },
+    {
+      "name": "Lucarionite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/lucarionite.png",
+      "offline_fallback": "assets/item-icons-fallback/lucarionite.svg"
+    },
+    {
+      "name": "Lucarionite Z",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/lucarionite-z.png",
+      "offline_fallback": "assets/item-icons-fallback/lucarionite-z.svg"
+    },
+    {
+      "name": "Malamarite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/malamarite.png",
+      "offline_fallback": "assets/item-icons-fallback/malamarite.svg"
+    },
+    {
+      "name": "Manectite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/manectite.png",
+      "offline_fallback": "assets/item-icons-fallback/manectite.svg"
+    },
+    {
+      "name": "Mawilite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/mawilite.png",
+      "offline_fallback": "assets/item-icons-fallback/mawilite.svg"
+    },
+    {
+      "name": "Medichamite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/medichamite.png",
+      "offline_fallback": "assets/item-icons-fallback/medichamite.svg"
+    },
+    {
+      "name": "Meganiumite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/meganiumite.png",
+      "offline_fallback": "assets/item-icons-fallback/meganiumite.svg"
+    },
+    {
+      "name": "Meowsticite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/meowsticite.png",
+      "offline_fallback": "assets/item-icons-fallback/meowsticite.svg"
+    },
+    {
+      "name": "Metagrossite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/metagrossite.png",
+      "offline_fallback": "assets/item-icons-fallback/metagrossite.svg"
+    },
+    {
+      "name": "Pidgeotite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/pidgeotite.png",
+      "offline_fallback": "assets/item-icons-fallback/pidgeotite.svg"
+    },
+    {
+      "name": "Pinsirite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/pinsirite.png",
+      "offline_fallback": "assets/item-icons-fallback/pinsirite.svg"
+    },
+    {
+      "name": "Pyroarite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/pyroarite.png",
+      "offline_fallback": "assets/item-icons-fallback/pyroarite.svg"
+    },
+    {
+      "name": "Raichunite X",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/raichunite-x.png",
+      "offline_fallback": "assets/item-icons-fallback/raichunite-x.svg"
+    },
+    {
+      "name": "Raichunite Y",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/raichunite-y.png",
+      "offline_fallback": "assets/item-icons-fallback/raichunite-y.svg"
+    },
+    {
+      "name": "Sablenite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/sablenite.png",
+      "offline_fallback": "assets/item-icons-fallback/sablenite.svg"
+    },
+    {
+      "name": "Salamencite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/salamencite.png",
+      "offline_fallback": "assets/item-icons-fallback/salamencite.svg"
+    },
+    {
+      "name": "Sceptilite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/sceptilite.png",
+      "offline_fallback": "assets/item-icons-fallback/sceptilite.svg"
+    },
+    {
+      "name": "Scizorite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/scizorite.png",
+      "offline_fallback": "assets/item-icons-fallback/scizorite.svg"
+    },
+    {
+      "name": "Scolipite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/scolipite.png",
+      "offline_fallback": "assets/item-icons-fallback/scolipite.svg"
+    },
+    {
+      "name": "Scovillainite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/scovillainite.png",
+      "offline_fallback": "assets/item-icons-fallback/scovillainite.svg"
+    },
+    {
+      "name": "Scraftinite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/scraftinite.png",
+      "offline_fallback": "assets/item-icons-fallback/scraftinite.svg"
+    },
+    {
+      "name": "Sharpedonite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/sharpedonite.png",
+      "offline_fallback": "assets/item-icons-fallback/sharpedonite.svg"
+    },
+    {
+      "name": "Skarmorite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/skarmorite.png",
+      "offline_fallback": "assets/item-icons-fallback/skarmorite.svg"
+    },
+    {
+      "name": "Slowbronite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/slowbronite.png",
+      "offline_fallback": "assets/item-icons-fallback/slowbronite.svg"
+    },
+    {
+      "name": "Staraptite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/staraptite.png",
+      "offline_fallback": "assets/item-icons-fallback/staraptite.svg"
+    },
+    {
+      "name": "Starminite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/starminite.png",
+      "offline_fallback": "assets/item-icons-fallback/starminite.svg"
+    },
+    {
+      "name": "Steelixite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/steelixite.png",
+      "offline_fallback": "assets/item-icons-fallback/steelixite.svg"
+    },
+    {
+      "name": "Swampertite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/swampertite.png",
+      "offline_fallback": "assets/item-icons-fallback/swampertite.svg"
+    },
+    {
+      "name": "Tyranitarite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/tyranitarite.png",
+      "offline_fallback": "assets/item-icons-fallback/tyranitarite.svg"
+    },
+    {
+      "name": "Venusaurite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/venusaurite.png",
+      "offline_fallback": "assets/item-icons-fallback/venusaurite.svg"
+    },
+    {
+      "name": "Victreebelite",
+      "primary": "https://raw.githubusercontent.com/KevinToodlepoot/pokemon-champions-sprites/main/items/victreebelite.png",
+      "offline_fallback": "assets/item-icons-fallback/victreebelite.svg"
+    }
+  ]
+}

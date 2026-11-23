@@ -287,3 +287,6 @@ html.light .item-picker-group-label { color: #61758f; background: #fff; }
 html.light .item-picker-option.is-selected { background: #e4f3ff; color: #0369a1; }
 html.light .item-picker-option:hover, html.light .item-picker-option:focus-visible { background: #eaf3fd; }
 @media (prefers-reduced-motion: reduce) { html,body,.item-picker-trigger { transition: none !important; } }
+
+/* Keep touch and pen dragging inside the SP slider instead of scrolling the page. */
+input[type="range"].builder-sp-drag-slider { touch-action: none; cursor: ew-resize; }
