@@ -759,6 +759,26 @@ const POKEDEX_MC = {
     },
     defaultMegaStone: "Galladite"
   },
+  // Eternal Flower Floette is the only Floette form that can use Floettite.
+  "Floette-Eternal": {
+    dex: 670,
+    sprite: "floette-eternal",
+    types: ["Fairy"],
+    base: { hp: 74, atk: 65, def: 67, spa: 125, spd: 128, spe: 92 },
+    abilities: ["Flower Veil", "Symbiosis"],
+    defaultMoves: ["Moonblast", "Protect", "Dazzling Gleam", "Light of Ruin"],
+    megas: {
+      "Floettite": {
+        name: "Floette-Mega",
+        sprite: "floette-mega",
+        fallbackSprite: "floette-eternal",
+        types: ["Fairy"],
+        base: { hp: 74, atk: 85, def: 87, spa: 155, spd: 148, spe: 102 },
+        ability: "Fairy Aura"
+      }
+    },
+    defaultMegaStone: "Floettite"
+  },
   "Garchomp": {
     dex: 445,
     sprite: "garchomp",
@@ -1089,7 +1109,7 @@ const POKEDEX_MC = {
         fallbackSprite: "raichu",
         types: ["Electric"],
         base: { hp: 60, atk: 100, def: 55, spa: 160, spd: 85, spe: 130 },
-        ability: "Lightning Rod"
+        ability: "No Guard"
       },
       "Raichunite X": {
         name: "Raichu-Mega-X",
@@ -1514,11 +1534,15 @@ const MOVES_DB = {
   "Icy Wind":         { bp: 55,  type: "Ice",      cat: "Special",  spread: true },
   "Electro Shot":     { bp: 130, type: "Electric", cat: "Special",  spread: false },
   "Thunderbolt":      { bp: 90,  type: "Electric", cat: "Special",  spread: false },
+  "Zap Cannon":      { bp: 120, type: "Electric", cat: "Special",  spread: false },
+  "Focus Blast":     { bp: 120, type: "Fighting", cat: "Special",  spread: false },
   "Volt Switch":      { bp: 70,  type: "Electric", cat: "Special",  spread: false },
   "Zing Zap":         { bp: 80,  type: "Electric", cat: "Physical", spread: false, contact: true },
   "Nuzzle":           { bp: 20,  type: "Electric", cat: "Physical", spread: false, contact: true },
   "Dazzling Gleam":   { bp: 80,  type: "Fairy",    cat: "Special",  spread: true },
   "Moonblast":        { bp: 95,  type: "Fairy",    cat: "Special",  spread: false },
+  "Light of Ruin":   { bp: 140, type: "Fairy",    cat: "Special",  spread: false, recoil: 0.5 },
+  "Calm Mind":       { bp: 0,   type: "Psychic",  cat: "Status",   spread: false },
   "Play Rough":       { bp: 90,  type: "Fairy",    cat: "Physical", spread: false, contact: true },
   "Ancient Power": { bp: 60, type: "Rock", cat: "Special", spread: false },
   "Darkest Lariat": { bp: 85, type: "Dark", cat: "Physical", spread: false },
@@ -1540,6 +1564,14 @@ const MOVES_DB = {
 // Regulation M-C Doubles, 1760 weighting. The top choices are statistical marginals:
 // they are NOT guaranteed to form one exact tournament team set.
 // https://www.smogon.com/stats/2026-10/moveset/gen9championsvgc2026regmc-1760.txt
+const CALC_RECOMMENDED_SETS_MC = {
+  "Floette-Eternal::Floettite": {
+    "item": "Floettite", "ability": "Fairy Aura", "nature": "Timid",
+    "sp": {"hp": 2, "atk": 0, "def": 0, "spa": 32, "spd": 0, "spe": 32},
+    "moves": ["Protect", "Dazzling Gleam", "Moonblast", "Light of Ruin"]
+  },
+};
+
 const CALC_POPULAR_SETS_MC = {
   "Sneasler": {"item": "White Herb", "ability": "Unburden", "nature": "Adamant", "sp": {"hp": 2, "atk": 32, "def": 0, "spa": 0, "spd": 0, "spe": 32}, "moves": ["Close Combat", "Dire Claw", "Fake Out", "Protect"]},
   "Kingambit": {"item": "Chople Berry", "ability": "Defiant", "nature": "Brave", "sp": {"hp": 32, "atk": 32, "def": 0, "spa": 0, "spd": 2, "spe": 0}, "moves": ["Kowtow Cleave", "Sucker Punch", "Iron Head", "Low Kick"]},

@@ -1,0 +1,684 @@
+{
+  "title": "Pokémon Champions — Regulation M-C",
+  "verifiedAt": "2026-11-23",
+  "eligibleSpeciesReported": 231,
+  "selectableBaseAndRegionalForms": 264,
+  "megaForms": 81,
+  "names": [
+    "Venusaur",
+    "Charizard",
+    "Blastoise",
+    "Beedrill",
+    "Pidgeot",
+    "Arbok",
+    "Pikachu",
+    "Raichu",
+    "Raichu-Alola",
+    "Clefable",
+    "Ninetales",
+    "Ninetales-Alola",
+    "Wigglytuff",
+    "Vileplume",
+    "Persian",
+    "Persian-Alola",
+    "Arcanine",
+    "Arcanine-Hisui",
+    "Alakazam",
+    "Machamp",
+    "Victreebel",
+    "Slowbro",
+    "Slowbro-Galar",
+    "Farfetch'd",
+    "Gengar",
+    "Kangaskhan",
+    "Starmie",
+    "Mr. Mime",
+    "Pinsir",
+    "Tauros",
+    "Tauros-Paldea-Combat",
+    "Tauros-Paldea-Blaze",
+    "Tauros-Paldea-Aqua",
+    "Gyarados",
+    "Ditto",
+    "Vaporeon",
+    "Jolteon",
+    "Flareon",
+    "Aerodactyl",
+    "Snorlax",
+    "Dragonite",
+    "Meganium",
+    "Typhlosion",
+    "Typhlosion-Hisui",
+    "Feraligatr",
+    "Ariados",
+    "Ampharos",
+    "Azumarill",
+    "Politoed",
+    "Espeon",
+    "Umbreon",
+    "Slowking",
+    "Slowking-Galar",
+    "Forretress",
+    "Steelix",
+    "Qwilfish",
+    "Scizor",
+    "Heracross",
+    "Skarmory",
+    "Houndoom",
+    "Tyranitar",
+    "Sceptile",
+    "Blaziken",
+    "Swampert",
+    "Pelipper",
+    "Gardevoir",
+    "Sableye",
+    "Mawile",
+    "Aggron",
+    "Medicham",
+    "Manectric",
+    "Swalot",
+    "Sharpedo",
+    "Camerupt",
+    "Torkoal",
+    "Altaria",
+    "Milotic",
+    "Castform",
+    "Banette",
+    "Chimecho",
+    "Absol",
+    "Glalie",
+    "Salamence",
+    "Metagross",
+    "Torterra",
+    "Infernape",
+    "Empoleon",
+    "Staraptor",
+    "Luxray",
+    "Roserade",
+    "Rampardos",
+    "Bastiodon",
+    "Lopunny",
+    "Spiritomb",
+    "Garchomp",
+    "Lucario",
+    "Hippowdon",
+    "Toxicroak",
+    "Abomasnow",
+    "Weavile",
+    "Rhyperior",
+    "Leafeon",
+    "Glaceon",
+    "Gliscor",
+    "Mamoswine",
+    "Gallade",
+    "Froslass",
+    "Rotom",
+    "Rotom-Heat",
+    "Rotom-Wash",
+    "Rotom-Frost",
+    "Rotom-Fan",
+    "Rotom-Mow",
+    "Serperior",
+    "Emboar",
+    "Samurott",
+    "Samurott-Hisui",
+    "Watchog",
+    "Liepard",
+    "Simisage",
+    "Simisear",
+    "Simipour",
+    "Musharna",
+    "Excadrill",
+    "Audino",
+    "Conkeldurr",
+    "Scolipede",
+    "Whimsicott",
+    "Krookodile",
+    "Scrafty",
+    "Cofagrigus",
+    "Garbodor",
+    "Zoroark",
+    "Zoroark-Hisui",
+    "Reuniclus",
+    "Vanilluxe",
+    "Emolga",
+    "Eelektross",
+    "Chandelure",
+    "Beartic",
+    "Stunfisk",
+    "Stunfisk-Galar",
+    "Golurk",
+    "Hydreigon",
+    "Volcarona",
+    "Chesnaught",
+    "Delphox",
+    "Greninja",
+    "Diggersby",
+    "Talonflame",
+    "Vivillon",
+    "Pyroar",
+    "Floette-Eternal",
+    "Florges",
+    "Gogoat",
+    "Pangoro",
+    "Furfrou",
+    "Meowstic",
+    "Meowstic-F",
+    "Aegislash",
+    "Aromatisse",
+    "Slurpuff",
+    "Malamar",
+    "Barbaracle",
+    "Dragalge",
+    "Clawitzer",
+    "Heliolisk",
+    "Tyrantrum",
+    "Aurorus",
+    "Sylveon",
+    "Hawlucha",
+    "Dedenne",
+    "Goodra",
+    "Goodra-Hisui",
+    "Klefki",
+    "Trevenant",
+    "Gourgeist",
+    "Gourgeist-Small",
+    "Gourgeist-Large",
+    "Gourgeist-Super",
+    "Avalugg",
+    "Avalugg-Hisui",
+    "Noivern",
+    "Decidueye",
+    "Decidueye-Hisui",
+    "Incineroar",
+    "Primarina",
+    "Toucannon",
+    "Crabominable",
+    "Lycanroc",
+    "Lycanroc-Midnight",
+    "Lycanroc-Dusk",
+    "Toxapex",
+    "Mudsdale",
+    "Araquanid",
+    "Salazzle",
+    "Tsareena",
+    "Oranguru",
+    "Passimian",
+    "Golisopod",
+    "Mimikyu",
+    "Drampa",
+    "Kommo-o",
+    "Rillaboom",
+    "Cinderace",
+    "Inteleon",
+    "Corviknight",
+    "Thievul",
+    "Flapple",
+    "Appletun",
+    "Sandaconda",
+    "Toxtricity",
+    "Toxtricity-Low-Key",
+    "Grapploct",
+    "Polteageist",
+    "Hatterene",
+    "Grimmsnarl",
+    "Perrserker",
+    "Sirfetch'd",
+    "Mr. Rime",
+    "Runerigus",
+    "Alcremie",
+    "Falinks",
+    "Pincurchin",
+    "Indeedee",
+    "Indeedee-F",
+    "Morpeko",
+    "Dragapult",
+    "Wyrdeer",
+    "Kleavor",
+    "Basculegion",
+    "Basculegion-F",
+    "Sneasler",
+    "Overqwil",
+    "Meowscarada",
+    "Skeledirge",
+    "Quaquaval",
+    "Pawmot",
+    "Maushold",
+    "Arboliva",
+    "Squawkabilly",
+    "Squawkabilly-Blue",
+    "Squawkabilly-Yellow",
+    "Squawkabilly-White",
+    "Garganacl",
+    "Armarouge",
+    "Ceruledge",
+    "Bellibolt",
+    "Mabosstiff",
+    "Scovillain",
+    "Espathra",
+    "Tinkaton",
+    "Palafin",
+    "Orthworm",
+    "Glimmora",
+    "Houndstone",
+    "Annihilape",
+    "Farigiraf",
+    "Kingambit",
+    "Baxcalibur",
+    "Gholdengo",
+    "Sinistcha",
+    "Archaludon",
+    "Hydrapple"
+  ],
+  "megaStoneMappings": [
+    {
+      "base": "Venusaur",
+      "stone": "Venusaurite",
+      "form": "Venusaur-Mega"
+    },
+    {
+      "base": "Charizard",
+      "stone": "Charizardite X",
+      "form": "Charizard-Mega-X"
+    },
+    {
+      "base": "Charizard",
+      "stone": "Charizardite Y",
+      "form": "Charizard-Mega-Y"
+    },
+    {
+      "base": "Blastoise",
+      "stone": "Blastoisinite",
+      "form": "Blastoise-Mega"
+    },
+    {
+      "base": "Beedrill",
+      "stone": "Beedrillite",
+      "form": "Beedrill-Mega"
+    },
+    {
+      "base": "Pidgeot",
+      "stone": "Pidgeotite",
+      "form": "Pidgeot-Mega"
+    },
+    {
+      "base": "Raichu",
+      "stone": "Raichunite X",
+      "form": "Raichu-Mega-X"
+    },
+    {
+      "base": "Raichu",
+      "stone": "Raichunite Y",
+      "form": "Raichu-Mega-Y"
+    },
+    {
+      "base": "Clefable",
+      "stone": "Clefablite",
+      "form": "Clefable-Mega"
+    },
+    {
+      "base": "Alakazam",
+      "stone": "Alakazite",
+      "form": "Alakazam-Mega"
+    },
+    {
+      "base": "Victreebel",
+      "stone": "Victreebelite",
+      "form": "Victreebel-Mega"
+    },
+    {
+      "base": "Slowbro",
+      "stone": "Slowbronite",
+      "form": "Slowbro-Mega"
+    },
+    {
+      "base": "Gengar",
+      "stone": "Gengarite",
+      "form": "Gengar-Mega"
+    },
+    {
+      "base": "Kangaskhan",
+      "stone": "Kangaskhanite",
+      "form": "Kangaskhan-Mega"
+    },
+    {
+      "base": "Starmie",
+      "stone": "Starminite",
+      "form": "Starmie-Mega"
+    },
+    {
+      "base": "Pinsir",
+      "stone": "Pinsirite",
+      "form": "Pinsir-Mega"
+    },
+    {
+      "base": "Gyarados",
+      "stone": "Gyaradosite",
+      "form": "Gyarados-Mega"
+    },
+    {
+      "base": "Aerodactyl",
+      "stone": "Aerodactylite",
+      "form": "Aerodactyl-Mega"
+    },
+    {
+      "base": "Dragonite",
+      "stone": "Dragoninite",
+      "form": "Dragonite-Mega"
+    },
+    {
+      "base": "Meganium",
+      "stone": "Meganiumite",
+      "form": "Meganium-Mega"
+    },
+    {
+      "base": "Feraligatr",
+      "stone": "Feraligite",
+      "form": "Feraligatr-Mega"
+    },
+    {
+      "base": "Ampharos",
+      "stone": "Ampharosite",
+      "form": "Ampharos-Mega"
+    },
+    {
+      "base": "Steelix",
+      "stone": "Steelixite",
+      "form": "Steelix-Mega"
+    },
+    {
+      "base": "Scizor",
+      "stone": "Scizorite",
+      "form": "Scizor-Mega"
+    },
+    {
+      "base": "Heracross",
+      "stone": "Heracronite",
+      "form": "Heracross-Mega"
+    },
+    {
+      "base": "Skarmory",
+      "stone": "Skarmorite",
+      "form": "Skarmory-Mega"
+    },
+    {
+      "base": "Houndoom",
+      "stone": "Houndoominite",
+      "form": "Houndoom-Mega"
+    },
+    {
+      "base": "Tyranitar",
+      "stone": "Tyranitarite",
+      "form": "Tyranitar-Mega"
+    },
+    {
+      "base": "Sceptile",
+      "stone": "Sceptilite",
+      "form": "Sceptile-Mega"
+    },
+    {
+      "base": "Blaziken",
+      "stone": "Blazikenite",
+      "form": "Blaziken-Mega"
+    },
+    {
+      "base": "Swampert",
+      "stone": "Swampertite",
+      "form": "Swampert-Mega"
+    },
+    {
+      "base": "Gardevoir",
+      "stone": "Gardevoirite",
+      "form": "Gardevoir-Mega"
+    },
+    {
+      "base": "Sableye",
+      "stone": "Sablenite",
+      "form": "Sableye-Mega"
+    },
+    {
+      "base": "Mawile",
+      "stone": "Mawilite",
+      "form": "Mawile-Mega"
+    },
+    {
+      "base": "Aggron",
+      "stone": "Aggronite",
+      "form": "Aggron-Mega"
+    },
+    {
+      "base": "Medicham",
+      "stone": "Medichamite",
+      "form": "Medicham-Mega"
+    },
+    {
+      "base": "Manectric",
+      "stone": "Manectite",
+      "form": "Manectric-Mega"
+    },
+    {
+      "base": "Sharpedo",
+      "stone": "Sharpedonite",
+      "form": "Sharpedo-Mega"
+    },
+    {
+      "base": "Camerupt",
+      "stone": "Cameruptite",
+      "form": "Camerupt-Mega"
+    },
+    {
+      "base": "Altaria",
+      "stone": "Altarianite",
+      "form": "Altaria-Mega"
+    },
+    {
+      "base": "Banette",
+      "stone": "Banettite",
+      "form": "Banette-Mega"
+    },
+    {
+      "base": "Chimecho",
+      "stone": "Chimechite",
+      "form": "Chimecho-Mega"
+    },
+    {
+      "base": "Absol",
+      "stone": "Absolite",
+      "form": "Absol-Mega"
+    },
+    {
+      "base": "Absol",
+      "stone": "Absolite Z",
+      "form": "Absol-Mega-Z"
+    },
+    {
+      "base": "Glalie",
+      "stone": "Glalitite",
+      "form": "Glalie-Mega"
+    },
+    {
+      "base": "Salamence",
+      "stone": "Salamencite",
+      "form": "Salamence-Mega"
+    },
+    {
+      "base": "Metagross",
+      "stone": "Metagrossite",
+      "form": "Metagross-Mega"
+    },
+    {
+      "base": "Staraptor",
+      "stone": "Staraptite",
+      "form": "Staraptor-Mega"
+    },
+    {
+      "base": "Lopunny",
+      "stone": "Lopunnite",
+      "form": "Lopunny-Mega"
+    },
+    {
+      "base": "Garchomp",
+      "stone": "Garchompite",
+      "form": "Garchomp-Mega"
+    },
+    {
+      "base": "Garchomp",
+      "stone": "Garchompite Z",
+      "form": "Garchomp-Mega-Z"
+    },
+    {
+      "base": "Lucario",
+      "stone": "Lucarionite",
+      "form": "Lucario-Mega"
+    },
+    {
+      "base": "Lucario",
+      "stone": "Lucarionite Z",
+      "form": "Lucario-Mega-Z"
+    },
+    {
+      "base": "Abomasnow",
+      "stone": "Abomasite",
+      "form": "Abomasnow-Mega"
+    },
+    {
+      "base": "Gallade",
+      "stone": "Galladite",
+      "form": "Gallade-Mega"
+    },
+    {
+      "base": "Froslass",
+      "stone": "Froslassite",
+      "form": "Froslass-Mega"
+    },
+    {
+      "base": "Emboar",
+      "stone": "Emboarite",
+      "form": "Emboar-Mega"
+    },
+    {
+      "base": "Excadrill",
+      "stone": "Excadrite",
+      "form": "Excadrill-Mega"
+    },
+    {
+      "base": "Audino",
+      "stone": "Audinite",
+      "form": "Audino-Mega"
+    },
+    {
+      "base": "Scolipede",
+      "stone": "Scolipite",
+      "form": "Scolipede-Mega"
+    },
+    {
+      "base": "Scrafty",
+      "stone": "Scraftinite",
+      "form": "Scrafty-Mega"
+    },
+    {
+      "base": "Eelektross",
+      "stone": "Eelektrossite",
+      "form": "Eelektross-Mega"
+    },
+    {
+      "base": "Chandelure",
+      "stone": "Chandelurite",
+      "form": "Chandelure-Mega"
+    },
+    {
+      "base": "Golurk",
+      "stone": "Golurkite",
+      "form": "Golurk-Mega"
+    },
+    {
+      "base": "Chesnaught",
+      "stone": "Chesnaughtite",
+      "form": "Chesnaught-Mega"
+    },
+    {
+      "base": "Delphox",
+      "stone": "Delphoxite",
+      "form": "Delphox-Mega"
+    },
+    {
+      "base": "Greninja",
+      "stone": "Greninjite",
+      "form": "Greninja-Mega"
+    },
+    {
+      "base": "Pyroar",
+      "stone": "Pyroarite",
+      "form": "Pyroar-Mega"
+    },
+    {
+      "base": "Floette-Eternal",
+      "stone": "Floettite",
+      "form": "Floette-Mega"
+    },
+    {
+      "base": "Meowstic",
+      "stone": "Meowsticite",
+      "form": "Meowstic-Mega"
+    },
+    {
+      "base": "Malamar",
+      "stone": "Malamarite",
+      "form": "Malamar-Mega"
+    },
+    {
+      "base": "Barbaracle",
+      "stone": "Barbaracite",
+      "form": "Barbaracle-Mega"
+    },
+    {
+      "base": "Dragalge",
+      "stone": "Dragalgite",
+      "form": "Dragalge-Mega"
+    },
+    {
+      "base": "Hawlucha",
+      "stone": "Hawluchanite",
+      "form": "Hawlucha-Mega"
+    },
+    {
+      "base": "Crabominable",
+      "stone": "Crabominite",
+      "form": "Crabominable-Mega"
+    },
+    {
+      "base": "Golisopod",
+      "stone": "Golisopite",
+      "form": "Golisopod-Mega"
+    },
+    {
+      "base": "Drampa",
+      "stone": "Drampanite",
+      "form": "Drampa-Mega"
+    },
+    {
+      "base": "Falinks",
+      "stone": "Falinksite",
+      "form": "Falinks-Mega"
+    },
+    {
+      "base": "Scovillain",
+      "stone": "Scovillainite",
+      "form": "Scovillain-Mega"
+    },
+    {
+      "base": "Glimmora",
+      "stone": "Glimmoranite",
+      "form": "Glimmora-Mega"
+    },
+    {
+      "base": "Baxcalibur",
+      "stone": "Baxcalibrite",
+      "form": "Baxcalibur-Mega"
+    }
+  ],
+  "sources": [
+    "https://champions-news.pokemon-home.com/en/page/816.html",
+    "https://pokemaps.net/games/champions/all-pokemon-and-items"
+  ]
+}

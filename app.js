@@ -473,6 +473,12 @@ function setupWorkspaceAutosave() {
 
 document.addEventListener("DOMContentLoaded", () => {
   applyAppTheme(document.documentElement.classList.contains("light") ? "light" : "dark");
+  // Notify if the external dex is unreachable; never show fake base stats.
+  const rosterReport = globalThis.CHAMPIONS_MC_ROSTER_REPORT;
+  if (rosterReport && (rosterReport.missingSpecies.length || rosterReport.missingMegaStones.length)) {
+    console.warn("Pokédex M-C loaded partially:", rosterReport);
+    setTimeout(() => showToast(`Pokédex: ${rosterReport.selectableFormsLoaded}/${rosterReport.selectableFormsExpected} dạng có dữ liệu. Kiểm tra kết nối Showdown.`, "warn"), 1200);
+  }
   loadTeamsFromStorage();
   const restoredWorkspace = restoreWorkspaceState();
   populateStaticDropdowns();
@@ -692,7 +698,7 @@ function openPokemonPicker(target) {
   if (showMegaChk) showMegaChk.checked = false;
 
   const countAllEl = document.getElementById("picker-count-all");
-  if (countAllEl) countAllEl.textContent = Object.keys(POKEDEX_MC).length;
+  if (countAllEl) countAllEl.textContent = Object.keys(POKEDEX_MC).filter(n => n !== 'Aegislash-Blade').length;
 
   renderPokemonPickerGrid();
   modal.classList.remove("hidden");
@@ -735,6 +741,7 @@ function renderPokemonPickerGrid() {
   Object.keys(POKEDEX_MC)
     .sort()
     .forEach((species) => {
+      if (species === 'Aegislash-Blade') return; // in-battle transformation, not a selectable team species
       const data = POKEDEX_MC[species];
       if (pickerFilterTab === "mega" && !data.megas) return;
       if (pickerFilterTab === "team" && !teamSpeciesSet.has(species)) return;
@@ -1430,6 +1437,35 @@ function formatTeamToShowdown(team, mode = "ranked") {
     .join("\n\n");
 }
 
+// Normalize OCR/AI output to the base species represented in Team Builder.
+// Battle forms ("Mega Floette") are not separate species in the team sheet.
+function resolveImportedSpecies(rawName, heldItem, knownSpecies) {
+  const raw = String(rawName || "").trim();
+  const compact = raw.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]/g, "");
+
+  // Only the Eternal Flower form can Mega Evolve using Floettite.
+  if (["floette", "floetteeternal", "floetteeternalflower", "floettemega", "megafloette", "megaeternalfloette", "floetteeternalmega"].includes(compact)) {
+    return { species: "Floette-Eternal", forcedMega: compact.includes("mega") || heldItem === "Floettite" };
+  }
+
+  const exact = knownSpecies.find(s => s.toLowerCase() === raw.toLowerCase());
+  if (exact) return { species: exact, forcedMega: false };
+
+  // Some image scanners write "Mega Raichu" or "Garchomp-Mega-Z" instead
+  // of the base species. Determine the actual Mega form from the stone.
+  const megaRemoved = raw.replace(/^mega[ -]+/i, "")
+    .replace(/[- ]mega(?:[- ]?[xy]|[- ]?z)?$/i, "")
+    .replace(/[- ]mega[- ]?[xy]$/i, "");
+  const canonical = knownSpecies.find(s => s.toLowerCase() === megaRemoved.toLowerCase());
+  if (canonical) return { species: canonical, forcedMega: megaRemoved !== raw };
+
+  const prefix = knownSpecies.find(s => raw.toLowerCase().startsWith(s.toLowerCase() + "-mega"));
+  if (prefix) return { species: prefix, forcedMega: true };
+
+  // Never silently replace an unrecognized Pokémon with Garchomp.
+  return null;
+}
+
 function parseShowdownPasteToSlots(pasteText) {
   const blocks = pasteText
     .trim()
@@ -1474,25 +1510,21 @@ function parseShowdownPasteToSlots(pasteText) {
     const parenMatch = header.match(/^(.*?)\(([^)]+)\)$/);
     let rawSpecies = header;
     if (parenMatch) {
-      rawSpecies = parenMatch[2].trim();
+      const baseName = parenMatch[1].trim();
+      const annotation = parenMatch[2].trim();
+      // "Floette (Eternal Flower)" is a form label, not a nickname.
+      rawSpecies = /^floette$/i.test(baseName) && /^eternal(?: flower)?$/i.test(annotation)
+        ? "Floette-Eternal" : annotation;
     }
 
-    let matchedSpecies = knownSpecies.find(
-      (s) => s.toLowerCase() === rawSpecies.toLowerCase()
-    );
-    if (!matchedSpecies) {
-      matchedSpecies = knownSpecies.find((s) =>
-        rawSpecies.toLowerCase().startsWith(s.toLowerCase())
-      );
-    }
-    slot.species = matchedSpecies || "Garchomp";
+    const recognized = resolveImportedSpecies(rawSpecies, slot.item, knownSpecies);
+    if (!recognized) return null;
+    slot.species = recognized.species;
     const dexData = POKEDEX_MC[slot.species];
 
-    if (dexData && dexData.megas && (dexData.megas[slot.item] || rawSpecies.toLowerCase().includes("mega"))) {
+    if (dexData.megas && (dexData.megas[slot.item] || recognized.forcedMega)) {
       slot.isMega = true;
-      if (!dexData.megas[slot.item]) {
-        slot.item = dexData.defaultMegaStone;
-      }
+      if (!dexData.megas[slot.item]) slot.item = dexData.defaultMegaStone;
     } else {
       slot.isMega = false;
     }
@@ -1501,7 +1533,9 @@ function parseShowdownPasteToSlots(pasteText) {
       const line = lines[i];
       if (line.startsWith("Ability:")) {
         const ab = line.replace("Ability:", "").trim();
-        slot.ability = dexData.abilities.includes(ab) ? ab : dexData.abilities[0];
+        slot.ability = (slot.species === "Floette-Eternal" && ab === "Fairy Aura")
+          ? "Flower Veil"
+          : (dexData.abilities.includes(ab) ? ab : dexData.abilities[0]);
       } else if (line.endsWith("Nature")) {
         const natName = line.replace("Nature", "").trim();
         if (NATURES[natName]) slot.nature = natName;
@@ -1537,6 +1571,7 @@ function parseShowdownPasteToSlots(pasteText) {
     return slot;
   });
 
+  if (parsedSlots.some(slot => slot === null)) return null;
   while (parsedSlots.length < 6) {
     parsedSlots.push(createEmptySlot());
   }
@@ -1714,6 +1749,13 @@ function getCalcSuggestedSet(species, isMega, megaStone) {
   const form = stone ? dex.megas[stone] : null;
   const key = stone ? `${species}::${stone}` : species;
   const popular = CALC_POPULAR_SETS_MC[key];
+  const curated = typeof CALC_RECOMMENDED_SETS_MC !== "undefined" ? CALC_RECOMMENDED_SETS_MC[key] : null;
+  if (curated && !popular) {
+    return {
+      ...curated, sp: { ...curated.sp }, moves: [...curated.moves],
+      isMega: Boolean(stone), source: "suggested", formKey: key
+    };
+  }
   if (popular) {
     return {
       ...popular, sp: { ...popular.sp }, moves: [...popular.moves],
@@ -2115,6 +2157,11 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   if (atk.ability === "Tough Claws" && moveMeta.contact) bpModifiers.push(1.3);
   if (atk.ability === "Sharpness" && moveMeta.slicing) bpModifiers.push(1.5);
   if (atk.ability === "Water Bubble" && effType === "Water") bpModifiers.push(2);
+  // Fairy Aura affects Fairy moves from both sides while the Mega form is active.
+  if (effType === "Fairy" && [
+    atkForm.isMegaActive ? atkForm.ability : atk.ability,
+    defForm.isMegaActive ? defForm.ability : def.ability
+  ].includes("Fairy Aura")) bpModifiers.push(1.33);
   if (atk.ability === "Technician" && bp <= 60) bpModifiers.push(1.5);
   if (atk.ability === "Mega Launcher" && ["Aura Sphere", "Water Pulse", "Dark Pulse", "Dragon Pulse"].includes(moveObj.name)) {
     bpModifiers.push(1.5);
@@ -2858,7 +2905,11 @@ Level: 50
 - Move 2
 - Move 3
 - Move 4
-- If Nature or EVs are not visible in the screenshot, infer the standard competitive VGC Regulation M-C Nature (e.g., Timid, Jolly, Adamant, Modest, Careful).
+- Identify the base/alternate species form, not just its Mega battle form.
+- CRITICAL FLOETTE RULE: If the image says "Mega Floette", output "Floette-Eternal @ Floettite", NEVER "Mega Floette" or plain "Floette". Its pre-Mega ability is Flower Veil; Fairy Aura is the ability after Mega Evolution.
+- For all Mega Pokémon, output base species @ correct Mega Stone (e.g., Raichu @ Raichunite Y), never "Mega Raichu" as a separate species.
+- Preserve clearly shown items, abilities, natures and moves exactly. Do not invent a different set when those details are visible.
+- If Nature is not visible in the screenshot, infer a reasonable competitive Regulation M-C Nature and do not label that choice as verified.
 - Do NOT include markdown code fences or extra commentary, only the Showdown paste text.`;
 
   try {
@@ -2899,7 +2950,7 @@ Level: 50
     if (!cleaned) {
       throw new Error("Gemini phản hồi thành công nhưng không trả văn bản. Kiểm tra nội dung ảnh và thử lại.");
     }
-    document.getElementById("ai-output-textarea").value = cleaned;
+    document.getElementById("ai-output-textarea").value = normalizeAiShowdownText(cleaned);
     setAiScanStatus("Đã quét ảnh thành công.", "success");
     showToast("Quét ảnh đội hình thành công!", "success");
   } catch (err) {
@@ -2914,6 +2965,33 @@ Level: 50
     btn.disabled = false;
     btnText.textContent = "✨ Quét ảnh nhận diện đội hình";
   }
+}
+
+// Normalize the text shown to the user, not only the hidden import step.
+// This prevents a successful scan from displaying "Mega Floette" as the team species.
+function normalizeAiShowdownText(text) {
+  const knownSpecies = Object.keys(POKEDEX_MC);
+  return text.split(/\n\s*\n/).map(block => {
+    const lines = block.split("\n");
+    if (!lines.length || !lines[0].trim()) return block;
+    const header = lines[0].trim();
+    const at = header.indexOf("@");
+    let rawSpecies = (at < 0 ? header : header.slice(0, at)).trim();
+    let item = at < 0 ? "" : header.slice(at + 1).trim();
+    if (/^floette\s*\(eternal(?: flower)?\)$/i.test(rawSpecies)) rawSpecies = "Floette-Eternal";
+    const resolved = resolveImportedSpecies(rawSpecies, item, knownSpecies);
+    if (!resolved) return block;
+    const dex = POKEDEX_MC[resolved.species];
+    if (resolved.forcedMega && dex?.megas && !dex.megas[item]) item = dex.defaultMegaStone;
+    if (resolved.species === "Floette-Eternal" && item === "Floettite") {
+      // An OTS/Showdown paste lists the original form's Ability, not its post-Mega one.
+      for (let i = 1; i < lines.length; i++) {
+        if (/^\s*Ability:\s*Fairy Aura\s*$/i.test(lines[i])) lines[i] = "Ability: Flower Veil";
+      }
+    }
+    lines[0] = resolved.species + (item ? " @ " + item : "");
+    return lines.join("\n");
+  }).join("\n\n");
 }
 
 function loadAiOutputToBuilder() {
