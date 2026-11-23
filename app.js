@@ -2838,8 +2838,7 @@ Level: 50
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-        "Api-Revision": "2026-05-20"
+        "x-goog-api-key": apiKey
       },
       body: JSON.stringify({
         model: GEMINI_AI_MODEL,
@@ -2867,7 +2866,10 @@ Level: 50
   } catch (err) {
     // Do not log the API key or the input image data.
     console.error("Gemini AI scanner:", err.message);
-    setAiScanStatus(err.message, "error");
+    const errorMessage = err instanceof TypeError && /failed to fetch|networkerror/i.test(err.message)
+      ? "Không kết nối được tới Gemini. Kiểm tra mạng và Console → Network. Nếu báo CORS, xác nhận app.js mới đã được tải (không còn header Api-Revision)."
+      : err.message;
+    setAiScanStatus(errorMessage, "error");
     showToast("Quét AI thất bại. Xem thông báo dưới nút Quét ảnh.", "error");
   } finally {
     btn.disabled = false;
