@@ -544,6 +544,7 @@ function sanitizeCalcSide(saved, fallback) {
       ? saved.status : "Healthy",
     sp: {}, stages: {}, moves: [],
     selectedMoveIdx: clampWorkspaceNumber(saved.selectedMoveIdx, 0, 3),
+    metronomeCount: clampWorkspaceNumber(saved.metronomeCount ?? 1, 1, 6, 1),
     presetSource: ["live", "smogon", "suggested"].includes(saved.presetSource) ? saved.presetSource : "suggested",
     presetEdited: Boolean(saved.presetEdited)
   };
@@ -2503,6 +2504,13 @@ function updateCalcSide(side, key, value) {
       value ? (POKEDEX_MC[st.species].megas?.[st.item] ? st.item : null) : null);
     return;
   }
+  if (key === 'metronomeCount') {
+    st.metronomeCount = Math.max(1, Math.min(6, Number(value) || 1));
+    renderCalcSideUI(side);
+    runDamageCalculation();
+    scheduleWorkspaceSave();
+    return;
+  }
   if (key === 'item') {
     const dex = POKEDEX_MC[st.species];
     const stone = Boolean(dex?.megas?.[value]);
@@ -2515,6 +2523,7 @@ function updateCalcSide(side, key, value) {
       applyPopularCalcSet(side, st.species, false, null);
     }
     st.item = value;
+    st.metronomeCount = 1;
   } else {
     st[key] = value;
   }
@@ -2602,6 +2611,12 @@ function renderCalcSideUI(side) {
   document.getElementById(`calc-${side}-types`).innerHTML = renderTypeBadgesHtml(form.types);
   document.getElementById(`calc-${side}-item`).value = st.item;
   syncItemPicker(`calc-${side}-item`);
+  const metronomeBox = document.getElementById(`calc-${side}-metronome-control`);
+  if (metronomeBox) {
+    metronomeBox.classList.toggle("hidden", st.item !== "Metronome");
+    const sel = metronomeBox.querySelector("select");
+    if (sel) sel.value = String(Math.max(1, Math.min(6, st.metronomeCount || 1)));
+  }
   document.getElementById(`calc-${side}-nature`).value = st.nature;
   document.getElementById(`calc-${side}-status`).value = st.status;
 
@@ -2772,11 +2787,140 @@ function chainFinalModifiers(modifiers) {
   }, 4096);
 }
 
+// Champions M-C item effects that can change damage or multi-turn KO odds.
+// Type items are +20%; resist berries activate only on the first qualifying hit.
+const CALC_TYPE_ITEMS = Object.freeze({
+  "Black Belt": "Fighting", "Black Glasses": "Dark", Charcoal: "Fire",
+  "Dragon Fang": "Dragon", "Fairy Feather": "Fairy", "Hard Stone": "Rock",
+  Magnet: "Electric", "Metal Coat": "Steel", "Miracle Seed": "Grass",
+  "Mystic Water": "Water", "Never-Melt Ice": "Ice", "Poison Barb": "Poison",
+  "Sharp Beak": "Flying", "Silk Scarf": "Normal", "Silver Powder": "Bug",
+  "Soft Sand": "Ground", "Spell Tag": "Ghost", "Twisted Spoon": "Psychic"
+});
+const CALC_RESIST_BERRIES = Object.freeze({
+  "Occa Berry": "Fire", "Passho Berry": "Water", "Wacan Berry": "Electric",
+  "Rindo Berry": "Grass", "Yache Berry": "Ice", "Chople Berry": "Fighting",
+  "Kebia Berry": "Poison", "Shuca Berry": "Ground", "Coba Berry": "Flying",
+  "Payapa Berry": "Psychic", "Tanga Berry": "Bug", "Charti Berry": "Rock",
+  "Kasib Berry": "Ghost", "Haban Berry": "Dragon", "Colbur Berry": "Dark",
+  "Babiri Berry": "Steel", "Roseli Berry": "Fairy", "Chilan Berry": "Normal"
+});
+const CALC_TERRAIN_SEEDS = Object.freeze({
+  "Electric Seed": { terrain: "Electric", stat: "def" },
+  "Grassy Seed": { terrain: "Grassy", stat: "def" },
+  "Misty Seed": { terrain: "Misty", stat: "spd" },
+  "Psychic Seed": { terrain: "Psychic", stat: "spd" }
+});
+function isCalcItemWorking(pokemon) {
+  return pokemon?.ability !== "Klutz";
+}
+function getCalcSeedBoost(pokemon, stat, terrain, grounded) {
+  const seed = CALC_TERRAIN_SEEDS[pokemon.item];
+  return isCalcItemWorking(pokemon) && grounded && seed && seed.terrain === terrain && seed.stat === stat ? 1 : 0;
+}
+function calcItemRecovery(item, maxHp, hp, used) {
+  if (hp <= 0 || used) return { hp, used };
+  if (item === "Sitrus Berry" && hp * 2 <= maxHp) {
+    return { hp: Math.min(maxHp, hp + Math.floor(maxHp / 4)), used: true };
+  }
+  if (item === "Oran Berry" && hp * 2 <= maxHp) {
+    return { hp: Math.min(maxHp, hp + 10), used: true };
+  }
+  return { hp, used };
+}
+// Exact 16×16 (and if needed 16×16×16) roll enumeration for the supplied
+// deterministic battle settings. Each simulated hit uses its own first-use
+// consumable state, not the first hit's damage for every subsequent hit.
+function calcItemKoProbabilities(firstRolls, laterRolls, defPokemon, hpMax, extra = {}) {
+  const item = isCalcItemWorking(defPokemon) ? defPokemon.item : "None";
+  const thirdRolls = extra.thirdRolls || laterRolls;
+  const applyHit = (hp, damage, hitNum, berryUsed) => {
+    if (hp <= 0) return [{ hp: 0, used: berryUsed, weight: 1 }];
+    // Focus Band is a 10% random survival check every time a lethal hit lands.
+    // Focus Sash is a deterministic one-time survival from full HP only.
+    if (item === "Focus Band" && damage >= hp) {
+      return [
+        { hp: 0, used: berryUsed, weight: 0.9 },
+        { hp: 1, used: berryUsed, weight: 0.1 }
+      ];
+    }
+    let remaining = item === "Focus Sash" && hitNum === 1 && hp === hpMax && damage >= hp
+      ? 1 : Math.max(0, hp - damage);
+    const recovered = calcItemRecovery(item, hpMax, remaining, berryUsed);
+    return [{ ...recovered, weight: 1 }];
+  };
+  const afterTurn = (hp) => item === "Leftovers" && hp > 0
+    ? Math.min(hpMax, hp + Math.max(1, Math.floor(hpMax / 16))) : hp;
+  let ko1 = 0, ko2 = 0, ko3 = 0;
+  const total2 = firstRolls.length * laterRolls.length;
+  const total3 = total2 * thirdRolls.length;
+  for (const d1 of firstRolls) {
+    for (const first of applyHit(hpMax, d1, 1, false)) {
+      if (first.hp <= 0) {
+        ko1 += first.weight;
+        ko2 += first.weight * laterRolls.length;
+        ko3 += first.weight * laterRolls.length * thirdRolls.length;
+        continue;
+      }
+      const firstEnd = afterTurn(first.hp);
+      for (const d2 of laterRolls) {
+        for (const second of applyHit(firstEnd, d2, 2, first.used)) {
+          const weight2 = first.weight * second.weight;
+          if (second.hp <= 0) {
+            ko2 += weight2;
+            ko3 += weight2 * thirdRolls.length;
+            continue;
+          }
+          const secondEnd = afterTurn(second.hp);
+          for (const d3 of thirdRolls) {
+            for (const third of applyHit(secondEnd, d3, 3, second.used)) {
+              if (third.hp <= 0) ko3 += weight2 * third.weight;
+            }
+          }
+        }
+      }
+    }
+  }
+  const limit = n => Math.max(0, Math.min(1, n));
+  return { ohko: limit(ko1 / firstRolls.length), two: limit(ko2 / total2), three: limit(ko3 / total3) };
+}
+function formatCalcKoProbability(p) {
+  return (Math.round(p * 1000) / 10).toFixed(1).replace(/\.0$/, "") + "%";
+}
+function describeCalcItemEffect(item, role, result, pokemon, move) {
+  if (!item || item === "None") return "";
+  if (pokemon.ability === "Klutz") return `${item}: chưa phát huy hiệu ứng vì Pokémon có Klutz`;
+  if (REG_MC_MEGA_STONES.includes(item)) return `${item}: dùng để Mega Evolution (thay đổi chỉ số/dạng), không cộng damage trực tiếp`;
+  if (role === "atk") {
+    if (item === "Choice Scarf") return "Choice Scarf: tăng Speed 50%, không tăng damage";
+    if (item === "Normal Gem" && move && MOVES_DB[move.name]?.type !== "Normal") return "Normal Gem: chỉ kích hoạt với chiêu Normal";
+    if (item === "Metronome") return `Metronome: đang tính lần dùng liên tiếp thứ ${Math.max(1, Math.min(6, pokemon.metronomeCount || 1))}`;
+    if (item === "Life Orb") return "Life Orb: +30% damage, sau đòn đánh mất 10% HP tối đa (chưa tính HP người tấn công)";
+    if (item === "Leek" || item === "Scope Lens") return `${item}: tăng tỉ lệ chí mạng; chỉ tính Crit khi bạn đánh dấu Crit`;
+    if (["Wide Lens", "Zoom Lens", "Bright Powder"].includes(item)) return `${item}: ảnh hưởng độ chính xác/né tránh, không tăng damage khi đòn trúng`;
+    if (item === "Shell Bell") return "Shell Bell: hồi 1/8 sát thương gây ra cho người tấn công, không cộng damage";
+    if (item === "Big Root") return "Big Root: tăng HP hồi từ chiêu hút máu, không tăng damage";
+  }
+  if (role === "def") {
+    if (item === "Focus Sash") return "Focus Sash: khi đầy HP, sống sót với 1 HP sau đòn chí tử; đã xét trong kết luận KO";
+    if (item === "Focus Band") return "Focus Band: mỗi đòn chí tử có 10% cơ hội sống sót với 1 HP; đã tính xác suất ngẫu nhiên khi kết luận KO";
+    if (item === "Leftovers") return "Leftovers: hồi 1/16 HP tối đa cuối lượt; đã xét khi tính xác suất 2HKO/3HKO";
+    if (item === "Sitrus Berry" || item === "Oran Berry") return `${item}: hồi máu khi HP còn ≤50%; đã xét khi tính xác suất 2HKO/3HKO`;
+    if (item === "Rocky Helmet") return "Rocky Helmet: người tấn công chịu sát thương phản đòn khi tiếp xúc, không giảm damage nhận";
+    if (item === "Air Balloon") return "Air Balloon: miễn nhiễm Ground khi chưa bị phá, không giảm các hệ khác";
+    if (item === "Iron Ball") return "Iron Ball: Pokémon bị kéo xuống đất, có thể bị chiêu Ground đánh trúng";
+    if (CALC_RESIST_BERRIES[item]) return `${item}: chỉ giảm nửa damage của chiêu ${CALC_RESIST_BERRIES[item]} khi đủ điều kiện (một lần)`;
+    if (CALC_TERRAIN_SEEDS[item]) return `${item}: cần ${CALC_TERRAIN_SEEDS[item].terrain} Terrain và Pokémon chạm đất để tăng chỉ số`;
+  }
+  return "";
+}
 function isGroundedForCalc(pokemon, form) {
-  return !form.types.includes("Flying") && pokemon.ability !== "Levitate" && pokemon.item !== "Air Balloon";
+  if (pokemon.item === "Iron Ball" && isCalcItemWorking(pokemon)) return true;
+  return !form.types.includes("Flying") && pokemon.ability !== "Levitate" &&
+    !(pokemon.item === "Air Balloon" && isCalcItemWorking(pokemon));
 }
 
-function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
+function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, options = {}) {
   const atk = calcState[atkSideKey];
   const def = calcState[defSideKey];
   const atkForm = getEffectiveForm(atk.species, atk.isMega, atk.item);
@@ -2786,7 +2930,7 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
 
   const noDamage = (message) => ({
     rolls: Array(16).fill(0), min: 0, max: 0, minPct: 0, maxPct: 0,
-    defMaxHp, koText: message
+    defMaxHp, koText: message, itemNotes: []
   });
   if (moveMeta.cat === "Status" || !moveMeta.bp || moveMeta.bp <= 0) {
     return noDamage("Status Move (0%)");
@@ -2805,8 +2949,20 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   const defensiveAbility = ignoresDefAbility ? "" : def.ability;
   const isPhys = moveMeta.cat === "Physical";
   const isBodyPress = moveObj.name === "Body Press";
+  const itemNotes = [];
+  const atkItem = isCalcItemWorking(atk) ? atk.item : "None";
+  const defItem = isCalcItemWorking(def) ? def.item : "None";
 
   const bpModifiers = [];
+  if (atkItem === "Normal Gem" && moveMeta.type === "Normal" && !options.skipAtkConsumables) {
+    bpModifiers.push(1.3);
+    itemNotes.push("Normal Gem: +30% Base Power (chỉ lần dùng đầu, sau đó tiêu thụ)");
+  }
+  if (moveObj.name === "Knock Off" && defItem !== "None" &&
+      !REG_MC_MEGA_STONES.includes(defItem) && !options.skipDefConsumables) {
+    bpModifiers.push(1.5);
+    itemNotes.push("Knock Off: +50% sức mạnh khi mục tiêu vẫn đang giữ Item có thể bị đánh rơi");
+  }
   if (effType === "Normal" && ["Pixilate", "Aerilate", "Refrigerate"].includes(atk.ability)) {
     effType = { Pixilate: "Fairy", Aerilate: "Flying", Refrigerate: "Ice" }[atk.ability];
     bpModifiers.push(1.2);
@@ -2849,7 +3005,8 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   if (bpModifiers.length) bp = Math.max(1, roundHalfDown(bp * chainFinalModifiers(bpModifiers) / 4096));
 
   // Ground/ability immunities (unless the attacker's ability suppresses them).
-  if (effType === "Ground" && (def.item === "Air Balloon" || defensiveAbility === "Levitate")) {
+  if (effType === "Ground" && (defItem === "Air Balloon" ||
+      (defensiveAbility === "Levitate" && defItem !== "Iron Ball"))) {
     return noDamage("Immune (Air Balloon / Levitate)");
   }
   const immunities = {
@@ -2861,7 +3018,9 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   };
   if ((immunities[effType] || []).includes(defensiveAbility)) return noDamage("Immune (Ability)");
 
-  let typeMult = getTypeEffectiveness(effType, defForm.types);
+  const defendingTypes = effType === "Ground" && defItem === "Iron Ball"
+    ? defForm.types.filter(type => type !== "Flying") : defForm.types;
+  let typeMult = getTypeEffectiveness(effType, defendingTypes);
   if (atk.ability === "Scrappy" && ["Normal", "Fighting"].includes(effType) && defForm.types.includes("Ghost")) {
     typeMult = getTypeEffectiveness(effType, defForm.types.filter((type) => type !== "Ghost"));
   }
@@ -2871,8 +3030,16 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   const defStatKey = isPhys ? "def" : "spd";
   const rawA = calculateLv50Stat(atkStatKey, atkForm.base[atkStatKey], atk.sp[atkStatKey], atk.nature);
   const rawD = calculateLv50Stat(defStatKey, defForm.base[defStatKey], def.sp[defStatKey], def.nature);
-  let atkStage = atk.stages[atkStatKey] || 0;
-  let defStage = def.stages[defStatKey] || 0;
+  let atkStage = (atk.stages[atkStatKey] || 0) +
+    (isBodyPress ? getCalcSeedBoost(atk, "def", terrain, attackerGrounded) : 0);
+  if (isBodyPress && getCalcSeedBoost(atk, "def", terrain, attackerGrounded)) {
+    itemNotes.push(`${atkItem}: +1 Defense → tăng sức mạnh Body Press`);
+  }
+  let defStage = (def.stages[defStatKey] || 0) +
+    getCalcSeedBoost(def, defStatKey, terrain, defenderGrounded);
+  if (getCalcSeedBoost(def, defStatKey, terrain, defenderGrounded)) {
+    itemNotes.push(`${defItem}: kích hoạt trên ${terrain} Terrain → +1 ${STAT_LABELS[defStatKey]}`);
+  }
   if (moveObj.crit) {
     atkStage = Math.max(0, atkStage);
     defStage = Math.min(0, defStage);
@@ -2880,16 +3047,18 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   let A = Math.floor(rawA * getStageMultiplier(atkStage));
   let D = Math.floor(rawD * getStageMultiplier(defStage));
 
-  if (isPhys && atk.item === "Choice Band") A = Math.floor(A * 1.5);
-  if (!isPhys && atk.item === "Choice Specs") A = Math.floor(A * 1.5);
+  if (isPhys && atkItem === "Choice Band") A = Math.floor(A * 1.5);
+  if (!isPhys && atkItem === "Choice Specs") A = Math.floor(A * 1.5);
+  if (atkItem === "Light Ball" && atk.species === "Pikachu" && !isBodyPress) {
+    A = A * 2;
+    itemNotes.push("Light Ball: chỉ số tấn công của Pikachu ×2");
+  }
   if (isPhys && ["Huge Power", "Pure Power"].includes(atk.ability)) A *= 2;
   if (isPhys && atk.ability === "Hustle") A = Math.floor(A * 1.5);
   if (isPhys && atk.ability === "Guts" && atk.status !== "Healthy") A = Math.floor(A * 1.5);
   if (!isPhys && atk.ability === "Solar Power" && weather === "Sun") A = Math.floor(A * 1.5);
   if (["Fire", "Ice"].includes(effType) && defensiveAbility === "Thick Fat") A = Math.floor(A * 0.5);
 
-  if (!isPhys && def.item === "Assault Vest") D = Math.floor(D * 1.5);
-  if (def.item === "Eviolite") D = Math.floor(D * 1.5); // assumes eligible holder
   if (weather === "Sand" && defForm.types.includes("Rock") && !isPhys) D = Math.floor(D * 1.5);
   if (weather === "Snow" && defForm.types.includes("Ice") && isPhys) D = Math.floor(D * 1.5);
   if (isPhys && defensiveAbility === "Fur Coat") D *= 2;
@@ -2923,16 +3092,34 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
     finalMods.push(calcState.field.isDoubles ? 2732 / 4096 : 0.5);
   }
   if (document.getElementById(`side-${defSideKey}-friendguard`)?.checked) finalMods.push(0.75);
-  if (atk.item === "Life Orb") finalMods.push(1.3);
-  if (atk.item === "Expert Belt" && typeMult > 1) finalMods.push(1.2);
-
-  const typeItems = {
-    "Black Glasses": "Dark", Charcoal: "Fire", "Mystic Water": "Water",
-    "Miracle Seed": "Grass", "Fairy Feather": "Fairy", "Spell Tag": "Ghost",
-    "Sharp Beak": "Flying", "Dragon Fang": "Dragon", Magnet: "Electric",
-    "Never-Melt Ice": "Ice", "Silk Scarf": "Normal"
-  };
-  if (typeItems[atk.item] === effType) finalMods.push(1.2);
+  if (atkItem === "Life Orb") finalMods.push(1.3);
+  if (atkItem === "Expert Belt" && typeMult > 1) finalMods.push(1.2);
+  if (atkItem === "Muscle Band" && isPhys) {
+    finalMods.push(1.1);
+    itemNotes.push("Muscle Band: ×1.1 sát thương Physical");
+  }
+  if (atkItem === "Wise Glasses" && !isPhys) {
+    finalMods.push(1.1);
+    itemNotes.push("Wise Glasses: ×1.1 sát thương Special");
+  }
+  if (CALC_TYPE_ITEMS[atkItem] === effType) {
+    finalMods.push(1.2);
+    itemNotes.push(`${atkItem}: ×1.2 chiêu hệ ${effType}`);
+  }
+  if (atkItem === "Metronome") {
+    const uses = Math.max(1, Math.min(6, Number(atk.metronomeCount) || 1)) +
+      (options.metronomeCountOffset || 0);
+    const mult = Math.min(2, 1 + Math.max(0, uses - 1) * 0.1);
+    finalMods.push(mult);
+    itemNotes.push(`Metronome: lượt dùng liên tiếp thứ ${uses}, ×${mult.toFixed(1)} damage`);
+  }
+  const berryType = CALC_RESIST_BERRIES[defItem];
+  const attackerStopsBerries = ["Unnerve", "As One"].includes(atk.ability);
+  if (!options.skipDefConsumables && !attackerStopsBerries && berryType === effType &&
+    (typeMult > 1 || defItem === "Chilan Berry")) {
+    finalMods.push(0.5);
+    itemNotes.push(`${defItem}: giảm 50% damage hệ ${effType} ở lần kích hoạt đầu`);
+  }
   if (defensiveAbility === "Filter" && typeMult > 1) finalMods.push(0.75);
   if (defensiveAbility === "Solid Rock" && typeMult > 1) finalMods.push(0.75);
   if (defensiveAbility === "Multiscale" || defensiveAbility === "Shadow Shield") {
@@ -2953,19 +3140,41 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj) {
   }
 
   const min = rolls[0], max = rolls[15];
-  const minPct = Number((min / defMaxHp * 100).toFixed(1));
-  const maxPct = Number((max / defMaxHp * 100).toFixed(1));
-  let koText = "possible 5HKO+";
-  if (min >= defMaxHp) koText = "guaranteed OHKO";
-  else if (max >= defMaxHp) {
-    const pct = (rolls.filter((v) => v >= defMaxHp).length / 16 * 100).toFixed(1);
-    koText = `${pct}% chance to OHKO`;
-  } else if (min * 2 >= defMaxHp) koText = "guaranteed 2HKO";
-  else if (max * 2 >= defMaxHp) koText = "possible 2HKO";
-  else if (min * 3 >= defMaxHp) koText = "guaranteed 3HKO";
-  else if (max * 3 >= defMaxHp) koText = "possible 3HKO";
-  else if (max * 4 >= defMaxHp) koText = "possible 4HKO";
-  return { rolls, min, max, minPct, maxPct, defMaxHp, koText };
+  const minPct = Math.floor(min / defMaxHp * 1000) / 10;
+  const maxPct = Math.floor(max / defMaxHp * 1000) / 10;
+  if (options.skipKoCalculation) return { rolls, min, max, minPct, maxPct, defMaxHp, koText: "", itemNotes };
+  // A type-resist Berry or Normal Gem is consumed on the first qualifying hit;
+  // computing a multi-hit KO from the same 16 rolls would be incorrect.
+  const laterRolls = computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, {
+    skipKoCalculation: true, skipDefConsumables: true, skipAtkConsumables: true,
+    metronomeCountOffset: 1
+  }).rolls;
+  const thirdRolls = atkItem === "Metronome"
+    ? computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, {
+        skipKoCalculation: true, skipDefConsumables: true,
+        skipAtkConsumables: true, metronomeCountOffset: 2
+      }).rolls
+    : laterRolls;
+  const chances = calcItemKoProbabilities(rolls, laterRolls, def, defMaxHp, { thirdRolls });
+  let koText = "possible 4HKO+ (other effects not simulated)";
+  if (chances.ohko >= 1) koText = "guaranteed OHKO";
+  else if (chances.ohko > 0) koText = `${formatCalcKoProbability(chances.ohko)} chance to OHKO`;
+  else if (chances.two >= 1) koText = "guaranteed 2HKO";
+  else if (chances.two > 0) koText = `${formatCalcKoProbability(chances.two)} chance to 2HKO`;
+  else if (chances.three >= 1) koText = "guaranteed 3HKO";
+  else if (chances.three > 0) koText = `${formatCalcKoProbability(chances.three)} chance to 3HKO`;
+  const itemDescriptions = [
+    describeCalcItemEffect(atk.item, "atk", null, atk, moveObj),
+    describeCalcItemEffect(def.item, "def", null, def, moveObj)
+  ].filter(Boolean);
+  // Keep only one explanation per item when the triggered modifier already
+  // provides a more specific description.
+  const notes = [...new Set([
+    ...itemNotes,
+    ...itemDescriptions.filter(note => !itemNotes.some(applied =>
+      note.split(":")[0] === applied.split(":")[0]))
+  ])];
+  return { rolls, min, max, minPct, maxPct, defMaxHp, koText, itemNotes: notes };
 }
 
 function runDamageCalculation() {
@@ -2983,6 +3192,8 @@ function runDamageCalculation() {
     }
     document.getElementById("calc-headline").textContent = "Chọn Pokémon cho cả hai bên để tính sát thương";
     document.getElementById("calc-subline").textContent = "";
+    const notesEl = document.getElementById("calc-item-effects");
+    if (notesEl) { notesEl.textContent = ""; notesEl.classList.add("hidden"); }
     document.getElementById("calc-hp-range-text").textContent = "—";
     document.getElementById("calc-hp-bar-max").style.width = "0%";
     document.getElementById("calc-hp-bar-min").style.width = "0%";
@@ -3054,6 +3265,11 @@ function runDamageCalculation() {
 
   document.getElementById("calc-headline").textContent = headline;
   document.getElementById("calc-subline").textContent = `Possible damage amounts: (${res.rolls.join(", ")})`;
+  const notesEl = document.getElementById("calc-item-effects");
+  if (notesEl) {
+    notesEl.textContent = res.itemNotes?.length ? "Item: " + res.itemNotes.join("  •  ") : "";
+    notesEl.classList.toggle("hidden", !res.itemNotes?.length);
+  }
 
   const remMinPct = Math.max(0, Number((100 - res.maxPct).toFixed(1)));
   const remMaxPct = Math.max(0, Number((100 - res.minPct).toFixed(1)));

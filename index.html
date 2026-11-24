@@ -318,6 +318,7 @@
           <div class="space-y-1 flex-1">
             <div id="calc-headline" class="text-sm sm:text-base font-extrabold text-white leading-snug">Chọn Pokémon cho cả hai bên để tính sát thương</div>
             <div id="calc-subline" class="text-xs font-mono text-sky-300 break-all"></div>
+            <div id="calc-item-effects" class="hidden text-[11px] text-amber-300/95 leading-relaxed mt-1" aria-live="polite"></div>
           </div>
 
           <!-- Remaining HP Visual Bar -->
@@ -396,6 +397,14 @@
                 <option value="Poisoned">Poisoned</option>
               </select>
             </div>
+          </div>
+
+          <div id="calc-p1-metronome-control" class="hidden flex items-center justify-between gap-2 text-[11px] text-amber-300 bg-slate-900/70 border border-amber-500/20 rounded-lg p-2">
+            <label for="calc-p1-metronome-count">Metronome · lần dùng chiêu liên tiếp</label>
+            <select id="calc-p1-metronome-count" onchange="updateCalcSide('p1', 'metronomeCount', this.value)" class="rounded-md bg-slate-950 border border-slate-700 px-2 py-1 text-white">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+              <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+            </select>
           </div>
 
           <!-- 6-Stat SP & Boost Table -->
@@ -556,6 +565,14 @@
                 <option value="Poisoned">Poisoned</option>
               </select>
             </div>
+          </div>
+
+          <div id="calc-p2-metronome-control" class="hidden flex items-center justify-between gap-2 text-[11px] text-amber-300 bg-slate-900/70 border border-amber-500/20 rounded-lg p-2">
+            <label for="calc-p2-metronome-count">Metronome · lần dùng chiêu liên tiếp</label>
+            <select id="calc-p2-metronome-count" onchange="updateCalcSide('p2', 'metronomeCount', this.value)" class="rounded-md bg-slate-950 border border-slate-700 px-2 py-1 text-white">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+              <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+            </select>
           </div>
 
           <!-- 6-Stat SP & Boost Table -->
@@ -769,6 +786,6 @@
   <script src="data.js?v=29"></script>
   <script src="champions-roster.js?v=18"></script>
   <script src="champions-bulbapedia.js?v=18"></script>
-  <script src="app.js?v=29"></script>
+  <script src="app.js?v=30"></script>
 </body>
 </html>
