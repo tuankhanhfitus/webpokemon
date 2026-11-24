@@ -38,7 +38,7 @@
       }
     };
   </script>
-  <link rel="stylesheet" href="style.css?v=12" />
+  <link rel="stylesheet" href="style.css?v=31" />
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-sky-500/30 selection:text-sky-200">
 
@@ -407,8 +407,13 @@
             </select>
           </div>
 
-          <!-- 6-Stat SP & Boost Table -->
+          <!-- 6-Stat SP & Boost Table (66 SP total, 32 per stat) -->
           <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-1">
+            <div class="calc-sp-budget-line" aria-live="polite">
+              <span>Phân bổ SP <span class="calc-sp-limit">(tối đa 32/chỉ số)</span></span>
+              <strong id="calc-p1-sp-budget">0/66 SP · Còn 66</strong>
+            </div>
+            <div class="calc-sp-track" aria-hidden="true"><div id="calc-p1-sp-progress" class="calc-sp-progress" style="width:0%"></div></div>
             <div class="grid grid-cols-12 gap-1 text-[10px] font-bold uppercase text-slate-500 pb-1 border-b border-slate-800">
               <div class="col-span-3">Stat</div>
               <div class="col-span-2 text-center">Base</div>
@@ -575,8 +580,13 @@
             </select>
           </div>
 
-          <!-- 6-Stat SP & Boost Table -->
+          <!-- 6-Stat SP & Boost Table (66 SP total, 32 per stat) -->
           <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-1">
+            <div class="calc-sp-budget-line" aria-live="polite">
+              <span>Phân bổ SP <span class="calc-sp-limit">(tối đa 32/chỉ số)</span></span>
+              <strong id="calc-p2-sp-budget">0/66 SP · Còn 66</strong>
+            </div>
+            <div class="calc-sp-track" aria-hidden="true"><div id="calc-p2-sp-progress" class="calc-sp-progress" style="width:0%"></div></div>
             <div class="grid grid-cols-12 gap-1 text-[10px] font-bold uppercase text-slate-500 pb-1 border-b border-slate-800">
               <div class="col-span-3">Stat</div>
               <div class="col-span-2 text-center">Base</div>
@@ -786,6 +796,6 @@
   <script src="data.js?v=29"></script>
   <script src="champions-roster.js?v=18"></script>
   <script src="champions-bulbapedia.js?v=18"></script>
-  <script src="app.js?v=30"></script>
+  <script src="app.js?v=31"></script>
 </body>
 </html>

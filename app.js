@@ -9,8 +9,6 @@ const GEMINI_AI_MODEL = "gemini-3.5-flash-lite";
 const GEMINI_FALLBACK_MODELS = [GEMINI_AI_MODEL, "gemini-3.8-flash"];
 const STORAGE_KEY_WORKSPACE = "vgc_studio_workspace_v1";
 let activeMainTab = "builder";
-let hasRestoredCalcState = false;
-let hasRestoredSpeedState = false;
 let isRestoringWorkspace = false;
 let workspaceSaveTimer = null;
 
@@ -528,94 +526,28 @@ function clampWorkspaceNumber(value, min, max, fallback = 0) {
   return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : fallback;
 }
 
-function sanitizeCalcSide(saved, fallback) {
-  if (!saved || typeof saved !== "object" || !POKEDEX_MC[saved.species]) return null;
-  const dex = POKEDEX_MC[saved.species];
-  const isMega = Boolean(saved.isMega && dex.megas);
-  const stone = isMega && dex.megas?.[saved.item] ? saved.item : dex.defaultMegaStone;
-  let item = typeof saved.item === "string" && ITEMS_MC.includes(saved.item) ? saved.item : "None";
-  if (isMega) item = stone || "None";
-  const suggested = getCalcSuggestedSet(saved.species, isMega, item);
-  const out = {
-    ...fallback, species: saved.species, isMega: Boolean(isMega && stone), item,
-    ability: typeof saved.ability === "string" ? saved.ability : suggested.ability,
-    nature: NATURES[saved.nature] ? saved.nature : suggested.nature,
-    status: ["Healthy", "Burned", "Paralyzed", "Poisoned", "Badly Poisoned", "Asleep", "Frozen"].includes(saved.status)
-      ? saved.status : "Healthy",
-    sp: {}, stages: {}, moves: [],
-    selectedMoveIdx: clampWorkspaceNumber(saved.selectedMoveIdx, 0, 3),
-    metronomeCount: clampWorkspaceNumber(saved.metronomeCount ?? 1, 1, 6, 1),
-    presetSource: ["live", "smogon", "suggested"].includes(saved.presetSource) ? saved.presetSource : "suggested",
-    presetEdited: Boolean(saved.presetEdited)
-  };
-  for (const key of STAT_KEYS) {
-    out.sp[key] = clampWorkspaceNumber(saved.sp?.[key], 0, 32);
-    if (key !== "hp") out.stages[key] = clampWorkspaceNumber(saved.stages?.[key], -6, 6);
-  }
-  // An invalid or out-of-budget imported state is reset to a legal sample set.
-  if (Object.values(out.sp).reduce((a, b) => a + b, 0) > 66) out.sp = { ...suggested.sp };
-  for (let i = 0; i < 4; ++i) {
-    const raw = saved.moves?.[i];
-    const name = raw && MOVES_DB[raw.name] ? raw.name : suggested.moves[i];
-    out.moves.push({ name: MOVES_DB[name] ? name : "Protect", crit: Boolean(raw?.crit) });
-  }
-  return out;
-}
-
+// Reload deliberately restores only the chosen tab and Builder's active slot.
+// Damage Calculator and Speed Calc are temporary workspaces: both start blank
+// after F5, even if older versions stored Pokémon / field conditions here.
 function restoreWorkspaceState() {
   const saved = getSavedWorkspace();
   if (!saved) return null;
   isRestoringWorkspace = true;
   activeSlotIndex = clampWorkspaceNumber(saved.activeSlotIndex, 0, 5);
-  activeMainTab = ["builder", "calc", "speed", "scanner"].includes(saved.tab) ? saved.tab : "builder";
-  if (saved.calc && typeof saved.calc === "object") {
-    // Migration: old versions auto-populated Garchomp / Incineroar and persisted
-    // those examples even when the user had not selected anything. Reset those
-    // old calculator slots once; subsequent reloads preserve explicit picks.
-    if (saved.calcSelectionSchema === 2) {
-      calcState.p1 = sanitizeCalcSide(saved.calc.p1, null);
-      calcState.p2 = sanitizeCalcSide(saved.calc.p2, null);
-    }
-    calcState.activeSide = ["p1", "p2"].includes(saved.calc.activeSide) ? saved.calc.activeSide : "p1";
-    const f = saved.calc.field || {};
-    calcState.field = {
-      isDoubles: f.isDoubles !== false,
-      weather: ["None", "Sun", "Rain", "Sand", "Snow"].includes(f.weather) ? f.weather : "None",
-      terrain: ["None", "Electric", "Grassy", "Psychic", "Misty"].includes(f.terrain) ? f.terrain : "None"
-    };
-    hasRestoredCalcState = true;
-  }
-  if (Array.isArray(saved.speedSlots) && saved.speedSlots.length === 3) {
-    speedSlots = saved.speedSlots.map((card) => {
-      if (!card || !POKEDEX_MC[card.species]) return null;
-      const cleaned = createSpeedCardObj(card.species, card);
-      cleaned.sp = clampWorkspaceNumber(card.sp, 0, 32);
-      cleaned.stage = clampWorkspaceNumber(card.stage, -6, 6);
-      cleaned.natureMode = ["minus", "neutral", "plus"].includes(card.natureMode) ? card.natureMode : "neutral";
-      cleaned.megaStone = POKEDEX_MC[card.species].megas?.[card.megaStone] ? card.megaStone : POKEDEX_MC[card.species].defaultMegaStone || null;
-      return cleaned;
-    });
-    hasRestoredSpeedState = true;
-  }
+  activeMainTab = ["builder", "calc", "speed", "scanner"].includes(saved.tab)
+    ? saved.tab : "builder";
   return saved;
 }
 
 function getWorkspaceState() {
-  const flags = {};
-  document.querySelectorAll('#view-calc input[type="checkbox"][id^="side-"]').forEach(el => {
-    flags[el.id] = el.checked;
-  });
   return {
     version: 1,
     tab: activeMainTab,
     activeSlotIndex,
     language: currentLang,
-    scrollY: Math.max(0, Math.round(window.scrollY || 0)),
-    calc: calcState,
-    calcSelectionSchema: 2,
-    sideFlags: flags,
-    speedSlots,
-    speedTrickRoom: Boolean(document.getElementById("speed-trick-room")?.checked)
+    scrollY: Math.max(0, Math.round(window.scrollY || 0))
+    // Intentionally do not store calcState, sideFlags, speedSlots or Trick Room.
+    // Team Builder has its own separate manual-save localStorage keys.
   };
 }
 
@@ -634,29 +566,30 @@ function scheduleWorkspaceSave() {
 }
 
 function finishWorkspaceRestore(saved) {
-  if (saved) {
-    // Field buttons also need active styling when restored, not only data values.
-    setCalcFormat(calcState.field.isDoubles);
-    setFieldOption("weather", calcState.field.weather);
-    setFieldOption("terrain", calcState.field.terrain);
-    if (saved.sideFlags && typeof saved.sideFlags === "object") {
-      Object.entries(saved.sideFlags).forEach(([id, checked]) => {
-        if (!id.startsWith("side-")) return;
-        const el = document.getElementById(id);
-        if (el && el.type === "checkbox") el.checked = Boolean(checked);
-      });
-    }
-    const trick = document.getElementById("speed-trick-room");
-    if (trick) trick.checked = Boolean(saved.speedTrickRoom);
-    if (saved.language === "en") setAppLanguage("en");
-  }
+  // Always reset both temporary calculators when the document loads.
+  // Keeping their pages selected does not mean restoring their old Pokémon.
+  calcState.activeSide = "p1";
+  calcState.p1 = null;
+  calcState.p2 = null;
+  calcState.field = { isDoubles: true, weather: "None", terrain: "None" };
+  speedSlots = [null, null, null];
+  setCalcFormat(true);
+  setFieldOption("weather", "None");
+  setFieldOption("terrain", "None");
+  document.querySelectorAll('#view-calc input[type="checkbox"][id^="side-"]')
+    .forEach(el => { el.checked = false; });
+  const trick = document.getElementById("speed-trick-room");
+  if (trick) trick.checked = false;
+  if (saved?.language === "en") setAppLanguage("en");
+
+  renderCalcSideUI("p1");
+  renderCalcSideUI("p2");
   switchMainTab(activeMainTab);
   runDamageCalculation();
   renderSpeedComparisonCards();
   isRestoringWorkspace = false;
 
-  // Native browser restoration happens before some hidden tabs become visible;
-  // restore after the correct tab's layout has been rendered.
+  // The visible tab is restored before scrolling to its prior position.
   if (saved && Number.isFinite(Number(saved.scrollY))) {
     const y = Math.max(0, Number(saved.scrollY));
     try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
@@ -2534,11 +2467,22 @@ function updateCalcSide(side, key, value) {
 }
 
 function updateCalcStatSP(side, statKey, rawVal) {
-  const val = Math.max(0, Math.min(32, parseInt(rawVal, 10) || 0));
-  calcState[side].sp[statKey] = val;
+  const st = calcState[side];
+  if (!st || !STAT_KEYS.includes(statKey)) return;
+
+  // Champions: max 32 SP per stat AND max 66 SP across all six stats.
+  // Clamp only the edited stat, preserving the other five allocations.
+  const otherUsed = STAT_KEYS.reduce(
+    (sum, key) => sum + (key === statKey ? 0 : (Number(st.sp[key]) || 0)), 0
+  );
+  const requested = Math.max(0, Math.min(32, parseInt(rawVal, 10) || 0));
+  const available = Math.max(0, 66 - otherUsed);
+  st.sp[statKey] = Math.min(requested, available);
+
   markCalcPresetEdited(side);
-  renderCalcSideUI(side);
+  renderCalcSideUI(side); // Refresh spent/remaining SP and computed stats.
   runDamageCalculation();
+  scheduleWorkspaceSave();
 }
 
 function updateCalcStage(side, statKey, rawStage) {
@@ -2629,6 +2573,16 @@ function renderCalcSideUI(side) {
   abSel.innerHTML = abilitiesPool
     .map((ab) => `<option value="${ab}" ${st.ability === ab ? "selected" : ""}>${ab}</option>`)
     .join("");
+
+  const usedSp = STAT_KEYS.reduce((sum, key) => sum + (Number(st.sp[key]) || 0), 0);
+  const remainingSp = Math.max(0, 66 - usedSp);
+  const budget = document.getElementById(`calc-${side}-sp-budget`);
+  if (budget) {
+    budget.textContent = `${usedSp}/66 SP · Còn ${remainingSp}`;
+    budget.classList.toggle("calc-sp-complete", usedSp === 66);
+  }
+  const progress = document.getElementById(`calc-${side}-sp-progress`);
+  if (progress) progress.style.width = `${Math.min(100, (usedSp / 66) * 100)}%`;
 
   const nat = NATURES[st.nature] || NATURES.Serious;
   const statsContainer = document.getElementById(`calc-${side}-stats-table`);
@@ -3298,7 +3252,7 @@ function createSpeedCardObj(species = "Arcanine", overrides = {}) {
 }
 
 function initSpeedWorkspace() {
-  if (!hasRestoredSpeedState) speedSlots = [null, null, null];
+  speedSlots = [null, null, null];
   renderSpeedComparisonCards();
 }
 

@@ -352,3 +352,24 @@ html.light .empty-slot-select-btn:hover { background: #eff8ff; color: #0369a1; }
 html.light .calc-side-empty-prompt { background: #f8fafc; color: #334155; border-color: #cbd5e1; }
 html.light .calc-side-empty-prompt:hover { background: #eff6ff; border-color: #0284c7; color: #0369a1; }
 html.light .calc-pending-picker, html.light .calc-pending-move { color: #475569; border-color: #cbd5e1; }
+
+
+/* Damage Calculator: Champions 66 SP budget (per Pokémon). */
+.calc-sp-budget-line {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 4px 10px; margin-bottom: 6px;
+  font-size: 11px; font-weight: 600; color: #cbd5e1;
+}
+.calc-sp-limit { font-size: 10px; font-weight: 400; color: #94a3b8; }
+.calc-sp-budget-line strong {
+  color: #fbbf24; font-family: 'JetBrains Mono', monospace;
+  font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.calc-sp-budget-line strong.calc-sp-complete { color: #34d399; }
+.calc-sp-track { width: 100%; height: 5px; border-radius: 999px; background: #1e293b; overflow: hidden; margin-bottom: 8px; }
+.calc-sp-progress { height: 100%; border-radius: inherit; background: #38bdf8; transition: width .12s ease-out; }
+html.light .calc-sp-budget-line { color: #334155; }
+html.light .calc-sp-limit { color: #64748b; }
+html.light .calc-sp-budget-line strong { color: #b45309; }
+html.light .calc-sp-budget-line strong.calc-sp-complete { color: #047857; }
+html.light .calc-sp-track { background: #e2e8f0; }
