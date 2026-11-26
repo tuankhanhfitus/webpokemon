@@ -1009,6 +1009,7 @@ function renderPokemonPickerGrid() {
           <div class="w-16 h-16 flex items-center justify-center mb-1">
             ${buildSpriteImgHtml(item, "w-14 h-14", "group-hover:scale-110 transition-transform")}
           </div>
+          ${POKEDEX_MC[item.species]?.outOfRegMC ? '<span class="text-[9px] text-amber-400">Ngoài M-C · tham khảo</span>' : ''}
           <div class="text-xs font-bold text-slate-100 group-hover:text-white truncate w-full" title="${escapeHtml(item.displayName)}">
             ${escapeHtml(item.displayName)}
           </div>
@@ -2395,6 +2396,10 @@ function applyPopularCalcSet(side, species, isMega, megaStone) {
   if (st.selectedMoveIdx < 0) st.selectedMoveIdx = 0;
   st.stages = { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
   st.status = 'Healthy';
+  st.alliesFainted = 0;
+  st.commanderActive = false;
+  st.commanderForm = 'Curly';
+  st.flashFireBoost = false;
   st.presetSource = preset.source;
   st.presetEdited = false;
   activeMoveDropdownId = null;
@@ -2435,6 +2440,24 @@ function updateCalcSide(side, key, value) {
   if (key === 'isMega') {
     applyPopularCalcSet(side, st.species, Boolean(value),
       value ? (POKEDEX_MC[st.species].megas?.[st.item] ? st.item : null) : null);
+    return;
+  }
+  if (key === 'alliesFainted') {
+    st.alliesFainted = Math.max(0, Math.min(5, Math.trunc(Number(value) || 0)));
+    renderCalcSideUI(side);
+    runDamageCalculation();
+    return;
+  }
+  if (key === 'commanderActive' || key === 'flashFireBoost') {
+    st[key] = Boolean(value);
+    renderCalcSideUI(side);
+    runDamageCalculation();
+    return;
+  }
+  if (key === 'commanderForm') {
+    st.commanderForm = ['Curly', 'Droopy', 'Stretchy'].includes(value) ? value : 'Curly';
+    renderCalcSideUI(side);
+    runDamageCalculation();
     return;
   }
   if (key === 'metronomeCount') {
@@ -2561,6 +2584,28 @@ function renderCalcSideUI(side) {
     const sel = metronomeBox.querySelector("select");
     if (sel) sel.value = String(Math.max(1, Math.min(6, st.metronomeCount || 1)));
   }
+  const respectsBox = document.getElementById(`calc-${side}-last-respects-control`);
+  if (respectsBox) {
+    const hasLastRespects = st.moves.some(m => m.name === 'Last Respects');
+    respectsBox.classList.toggle('hidden', !hasLastRespects);
+    const input = respectsBox.querySelector('select');
+    if (input) input.value = String(Math.max(0, Math.min(5, st.alliesFainted || 0)));
+    const power = respectsBox.querySelector('[data-respects-bp]');
+    if (power) power.textContent = `${50 + 50 * Math.max(0, Math.min(5, st.alliesFainted || 0))} BP`;
+  }
+  const commanderBox = document.getElementById(`calc-${side}-commander-control`);
+  if (commanderBox) {
+    commanderBox.classList.toggle('hidden', st.species !== 'Dondozo');
+    commanderBox.querySelector('input').checked = Boolean(st.commanderActive);
+    commanderBox.querySelector('select').value = st.commanderForm || 'Curly';
+  }
+  const flashBox = document.getElementById(`calc-${side}-flash-fire-control`);
+  if (flashBox) {
+    flashBox.classList.toggle('hidden', st.ability !== 'Flash Fire' && form.ability !== 'Flash Fire');
+    flashBox.querySelector('input').checked = Boolean(st.flashFireBoost);
+  }
+  const legalNote = document.getElementById(`calc-${side}-legality-note`);
+  if (legalNote) legalNote.classList.toggle('hidden', !dexData.outOfRegMC);
   document.getElementById(`calc-${side}-nature`).value = st.nature;
   document.getElementById(`calc-${side}-status`).value = st.status;
 
@@ -2631,7 +2676,7 @@ function renderCalcSideUI(side) {
             <span class="truncate">${escapeHtml(mObj.name)}</span>
             <span class="text-slate-400 text-[10px] shrink-0">▾</span>
           </button>
-          <span class="font-mono text-[11px] text-slate-400 w-7 text-right">${meta.bp || "-"}</span>
+          <span class="font-mono text-[11px] text-slate-400 w-7 text-right">${mObj.name === 'Last Respects' ? 50 + 50 * Math.max(0, Math.min(5, st.alliesFainted || 0)) : (meta.bp || "-")}</span>
           <span class="type-badge type-${meta.type} w-14 text-center">${meta.type}</span>
           <label class="flex items-center gap-0.5 text-[10px] text-amber-300 cursor-pointer shrink-0" title="Critical Hit">
             <input type="checkbox" ${mObj.crit ? "checked" : ""} onchange="toggleCalcMoveCrit('${side}', ${mIdx}, this.checked)" /> Crit
@@ -2896,11 +2941,15 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, options = {}) 
   const weather = calcState.field.weather;
   const terrain = calcState.field.terrain;
   let effType = moveMeta.type;
-  let bp = moveMeta.bp;
+  let bp = moveObj.name === 'Last Respects'
+    ? 50 + 50 * Math.max(0, Math.min(5, Math.trunc(Number(atk.alliesFainted) || 0)))
+    : moveMeta.bp;
+  const attackAbility = (atkForm.isMegaActive && atkForm.ability) || atk.ability;
+  const defendAbility = (defForm.isMegaActive && defForm.ability) || def.ability;
   const attackerGrounded = isGroundedForCalc(atk, atkForm);
   const defenderGrounded = isGroundedForCalc(def, defForm);
-  const ignoresDefAbility = ["Mold Breaker", "Teravolt", "Turboblaze"].includes(atk.ability);
-  const defensiveAbility = ignoresDefAbility ? "" : def.ability;
+  const ignoresDefAbility = ["Mold Breaker", "Teravolt", "Turboblaze"].includes(attackAbility);
+  const defensiveAbility = ignoresDefAbility ? "" : defendAbility;
   const isPhys = moveMeta.cat === "Physical";
   const isBodyPress = moveObj.name === "Body Press";
   const itemNotes = [];
@@ -2908,6 +2957,17 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, options = {}) 
   const defItem = isCalcItemWorking(def) ? def.item : "None";
 
   const bpModifiers = [];
+  if (moveObj.name === 'Last Respects') {
+    itemNotes.push(`Last Respects: ${Math.max(0, Math.min(5, atk.alliesFainted || 0))} đồng đội bị hạ → ${bp} BP`);
+  }
+  if (moveObj.name === 'Order Up' && atk.species === 'Dondozo' && atk.commanderActive) {
+    const orderBonus = { Curly: 'Attack', Droopy: 'Defense', Stretchy: 'Speed' }[atk.commanderForm || 'Curly'];
+    itemNotes.push(`Order Up: sau khi trúng, Dondozo +1 ${orderBonus}; lượt hiện tại chưa cộng thêm +1 này`);
+  }
+  if (attackAbility === 'Flash Fire' && atk.flashFireBoost && effType === 'Fire') {
+    bpModifiers.push(1.5);
+    itemNotes.push('Flash Fire đã kích hoạt: chiêu Fire ×1.5 BP');
+  }
   if (atkItem === "Normal Gem" && moveMeta.type === "Normal" && !options.skipAtkConsumables) {
     bpModifiers.push(1.3);
     itemNotes.push("Normal Gem: +30% Base Power (chỉ lần dùng đầu, sau đó tiêu thụ)");
@@ -2917,8 +2977,8 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, options = {}) 
     bpModifiers.push(1.5);
     itemNotes.push("Knock Off: +50% sức mạnh khi mục tiêu vẫn đang giữ Item có thể bị đánh rơi");
   }
-  if (effType === "Normal" && ["Pixilate", "Aerilate", "Refrigerate"].includes(atk.ability)) {
-    effType = { Pixilate: "Fairy", Aerilate: "Flying", Refrigerate: "Ice" }[atk.ability];
+  if (effType === "Normal" && ["Pixilate", "Aerilate", "Refrigerate"].includes(attackAbility)) {
+    effType = { Pixilate: "Fairy", Aerilate: "Flying", Refrigerate: "Ice" }[attackAbility];
     bpModifiers.push(1.2);
   }
   if (moveObj.name === "Weather Ball" && weather !== "None") {
@@ -2930,16 +2990,16 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, options = {}) 
   if (moveObj.name === "Expanding Force" && terrain === "Psychic" && attackerGrounded) {
     bpModifiers.push(1.5);
   }
-  if (atk.ability === "Tough Claws" && moveMeta.contact) bpModifiers.push(1.3);
-  if (atk.ability === "Sharpness" && moveMeta.slicing) bpModifiers.push(1.5);
-  if (atk.ability === "Water Bubble" && effType === "Water") bpModifiers.push(2);
+  if (attackAbility === "Tough Claws" && moveMeta.contact) bpModifiers.push(1.3);
+  if (attackAbility === "Sharpness" && moveMeta.slicing) bpModifiers.push(1.5);
+  if (attackAbility === "Water Bubble" && effType === "Water") bpModifiers.push(2);
   // Fairy Aura affects Fairy moves from both sides while the Mega form is active.
   if (effType === "Fairy" && [
-    atkForm.isMegaActive ? atkForm.ability : atk.ability,
+    atkForm.isMegaActive ? atkForm.ability : attackAbility,
     defForm.isMegaActive ? defForm.ability : def.ability
   ].includes("Fairy Aura")) bpModifiers.push(1.33);
-  if (atk.ability === "Technician" && bp <= 60) bpModifiers.push(1.5);
-  if (atk.ability === "Mega Launcher" && ["Aura Sphere", "Water Pulse", "Dark Pulse", "Dragon Pulse"].includes(moveObj.name)) {
+  if (attackAbility === "Technician" && bp <= 60) bpModifiers.push(1.5);
+  if (attackAbility === "Mega Launcher" && ["Aura Sphere", "Water Pulse", "Dark Pulse", "Dragon Pulse"].includes(moveObj.name)) {
     bpModifiers.push(1.5);
   }
   if (attackerGrounded && (
@@ -2975,7 +3035,7 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, options = {}) 
   const defendingTypes = effType === "Ground" && defItem === "Iron Ball"
     ? defForm.types.filter(type => type !== "Flying") : defForm.types;
   let typeMult = getTypeEffectiveness(effType, defendingTypes);
-  if (atk.ability === "Scrappy" && ["Normal", "Fighting"].includes(effType) && defForm.types.includes("Ghost")) {
+  if (attackAbility === "Scrappy" && ["Normal", "Fighting"].includes(effType) && defForm.types.includes("Ghost")) {
     typeMult = getTypeEffectiveness(effType, defForm.types.filter((type) => type !== "Ghost"));
   }
   if (typeMult === 0) return noDamage("Immune (0x)");
@@ -2984,12 +3044,14 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, options = {}) 
   const defStatKey = isPhys ? "def" : "spd";
   const rawA = calculateLv50Stat(atkStatKey, atkForm.base[atkStatKey], atk.sp[atkStatKey], atk.nature);
   const rawD = calculateLv50Stat(defStatKey, defForm.base[defStatKey], def.sp[defStatKey], def.nature);
-  let atkStage = (atk.stages[atkStatKey] || 0) +
+  let atkStage = (defensiveAbility === 'Unaware' ? 0 : (atk.stages[atkStatKey] || 0) +
+    (atk.species === 'Dondozo' && atk.commanderActive ? 2 : 0)) +
     (isBodyPress ? getCalcSeedBoost(atk, "def", terrain, attackerGrounded) : 0);
   if (isBodyPress && getCalcSeedBoost(atk, "def", terrain, attackerGrounded)) {
     itemNotes.push(`${atkItem}: +1 Defense → tăng sức mạnh Body Press`);
   }
-  let defStage = (def.stages[defStatKey] || 0) +
+  let defStage = (attackAbility === 'Unaware' ? 0 : (def.stages[defStatKey] || 0) +
+    (def.species === 'Dondozo' && def.commanderActive ? 2 : 0)) +
     getCalcSeedBoost(def, defStatKey, terrain, defenderGrounded);
   if (getCalcSeedBoost(def, defStatKey, terrain, defenderGrounded)) {
     itemNotes.push(`${defItem}: kích hoạt trên ${terrain} Terrain → +1 ${STAT_LABELS[defStatKey]}`);
@@ -3007,10 +3069,10 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, options = {}) 
     A = A * 2;
     itemNotes.push("Light Ball: chỉ số tấn công của Pikachu ×2");
   }
-  if (isPhys && ["Huge Power", "Pure Power"].includes(atk.ability)) A *= 2;
-  if (isPhys && atk.ability === "Hustle") A = Math.floor(A * 1.5);
-  if (isPhys && atk.ability === "Guts" && atk.status !== "Healthy") A = Math.floor(A * 1.5);
-  if (!isPhys && atk.ability === "Solar Power" && weather === "Sun") A = Math.floor(A * 1.5);
+  if (isPhys && ["Huge Power", "Pure Power"].includes(attackAbility)) A *= 2;
+  if (isPhys && attackAbility === "Hustle") A = Math.floor(A * 1.5);
+  if (isPhys && attackAbility === "Guts" && atk.status !== "Healthy") A = Math.floor(A * 1.5);
+  if (!isPhys && attackAbility === "Solar Power" && weather === "Sun") A = Math.floor(A * 1.5);
   if (["Fire", "Ice"].includes(effType) && defensiveAbility === "Thick Fat") A = Math.floor(A * 0.5);
 
   if (weather === "Sand" && defForm.types.includes("Rock") && !isPhys) D = Math.floor(D * 1.5);
@@ -3033,15 +3095,24 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, options = {}) 
   if (moveObj.crit) baseDamage = roundHalfDown(baseDamage * 1.5);
 
   const stabMult = atkForm.types.includes(effType)
-    ? (atk.ability === "Adaptability" ? 2 : 1.5) : 1;
+    ? (attackAbility === "Adaptability" ? 2 : 1.5) : 1;
+  if (attackAbility === 'Adaptability' && stabMult === 2) {
+    itemNotes.push(`Adaptability: STAB chiêu ${effType} ×2 thay vì ×1.5`);
+  }
+  if (atk.species === 'Dondozo' && atk.commanderActive) {
+    itemNotes.push('Commander: Dondozo +2 bậc Attack / Defense / SpA / SpD / Speed');
+  }
+  if (def.species === 'Dondozo' && def.commanderActive) {
+    itemNotes.push('Commander: Dondozo phòng thủ +2 bậc các chỉ số (trừ HP)');
+  }
   const isBurnedWeakened = isPhys && atk.status === "Burned" &&
-    atk.ability !== "Guts" && moveObj.name !== "Facade";
+    attackAbility !== "Guts" && moveObj.name !== "Facade";
 
   const finalMods = [];
   const reflectOn = document.getElementById(`side-${defSideKey}-reflect`)?.checked;
   const lsOn = document.getElementById(`side-${defSideKey}-lightscreen`)?.checked;
   const veilOn = document.getElementById(`side-${defSideKey}-auroraveil`)?.checked;
-  if (!moveObj.crit && atk.ability !== "Infiltrator" &&
+  if (!moveObj.crit && attackAbility !== "Infiltrator" &&
       ((isPhys && (reflectOn || veilOn)) || (!isPhys && (lsOn || veilOn)))) {
     finalMods.push(calcState.field.isDoubles ? 2732 / 4096 : 0.5);
   }
@@ -3068,7 +3139,7 @@ function computeSingleMoveDamage(atkSideKey, defSideKey, moveObj, options = {}) 
     itemNotes.push(`Metronome: lượt dùng liên tiếp thứ ${uses}, ×${mult.toFixed(1)} damage`);
   }
   const berryType = CALC_RESIST_BERRIES[defItem];
-  const attackerStopsBerries = ["Unnerve", "As One"].includes(atk.ability);
+  const attackerStopsBerries = ["Unnerve", "As One"].includes(attackAbility);
   if (!options.skipDefConsumables && !attackerStopsBerries && berryType === effType &&
     (typeMult > 1 || defItem === "Chilan Berry")) {
     finalMods.push(0.5);
@@ -3221,7 +3292,7 @@ function runDamageCalculation() {
   document.getElementById("calc-subline").textContent = `Possible damage amounts: (${res.rolls.join(", ")})`;
   const notesEl = document.getElementById("calc-item-effects");
   if (notesEl) {
-    notesEl.textContent = res.itemNotes?.length ? "Item: " + res.itemNotes.join("  •  ") : "";
+    notesEl.textContent = res.itemNotes?.length ? "Hiệu ứng: " + res.itemNotes.join("  •  ") : "";
     notesEl.classList.toggle("hidden", !res.itemNotes?.length);
   }
 

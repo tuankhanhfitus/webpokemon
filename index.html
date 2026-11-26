@@ -399,6 +399,30 @@
             </div>
           </div>
 
+          <!-- Dynamic move BP / conditional Ability controls (per side) -->
+          <div id="calc-p1-last-respects-control" class="hidden calc-context-control">
+            <label for="calc-p1-allies-fainted">Last Respects · đồng đội đã bị hạ</label>
+            <div class="flex items-center gap-2">
+              <select id="calc-p1-allies-fainted" onchange="updateCalcSide('p1', 'alliesFainted', this.value)" aria-label="Số đồng đội bị hạ (Last Respects)">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+                <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+              </select>
+              <strong data-respects-bp>50 BP</strong>
+            </div>
+          </div>
+          <div id="calc-p1-commander-control" class="hidden calc-context-control">
+            <label class="flex items-center gap-2"><input type="checkbox" onchange="updateCalcSide('p1', 'commanderActive', this.checked)" /> Commander đã kích hoạt (+2 bậc các chỉ số trừ HP)</label>
+            <label for="calc-p1-commander-form">Dạng Tatsugiri (hiệu ứng Order Up ở lượt tiếp theo)</label>
+            <select id="calc-p1-commander-form" onchange="updateCalcSide('p1', 'commanderForm', this.value)">
+              <option value="Curly">Curly · +1 Attack</option>
+              <option value="Droopy">Droopy · +1 Defense</option>
+              <option value="Stretchy">Stretchy · +1 Speed</option>
+            </select>
+          </div>
+          <div id="calc-p1-flash-fire-control" class="hidden calc-context-control">
+            <label class="flex items-center gap-2"><input type="checkbox" onchange="updateCalcSide('p1', 'flashFireBoost', this.checked)" /> Flash Fire đã kích hoạt (+50% sức mạnh chiêu Fire)</label>
+          </div>
+          <p id="calc-p1-legality-note" class="hidden text-[11px] text-amber-400">Heatran: dữ liệu để tham khảo, chưa xác nhận hợp lệ Regulation M-C.</p>
           <div id="calc-p1-metronome-control" class="hidden flex items-center justify-between gap-2 text-[11px] text-amber-300 bg-slate-900/70 border border-amber-500/20 rounded-lg p-2">
             <label for="calc-p1-metronome-count">Metronome · lần dùng chiêu liên tiếp</label>
             <select id="calc-p1-metronome-count" onchange="updateCalcSide('p1', 'metronomeCount', this.value)" class="rounded-md bg-slate-950 border border-slate-700 px-2 py-1 text-white">
@@ -572,6 +596,30 @@
             </div>
           </div>
 
+          <!-- Dynamic move BP / conditional Ability controls (per side) -->
+          <div id="calc-p2-last-respects-control" class="hidden calc-context-control">
+            <label for="calc-p2-allies-fainted">Last Respects · đồng đội đã bị hạ</label>
+            <div class="flex items-center gap-2">
+              <select id="calc-p2-allies-fainted" onchange="updateCalcSide('p2', 'alliesFainted', this.value)" aria-label="Số đồng đội bị hạ (Last Respects)">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+                <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+              </select>
+              <strong data-respects-bp>50 BP</strong>
+            </div>
+          </div>
+          <div id="calc-p2-commander-control" class="hidden calc-context-control">
+            <label class="flex items-center gap-2"><input type="checkbox" onchange="updateCalcSide('p2', 'commanderActive', this.checked)" /> Commander đã kích hoạt (+2 bậc các chỉ số trừ HP)</label>
+            <label for="calc-p2-commander-form">Dạng Tatsugiri (hiệu ứng Order Up ở lượt tiếp theo)</label>
+            <select id="calc-p2-commander-form" onchange="updateCalcSide('p2', 'commanderForm', this.value)">
+              <option value="Curly">Curly · +1 Attack</option>
+              <option value="Droopy">Droopy · +1 Defense</option>
+              <option value="Stretchy">Stretchy · +1 Speed</option>
+            </select>
+          </div>
+          <div id="calc-p2-flash-fire-control" class="hidden calc-context-control">
+            <label class="flex items-center gap-2"><input type="checkbox" onchange="updateCalcSide('p2', 'flashFireBoost', this.checked)" /> Flash Fire đã kích hoạt (+50% sức mạnh chiêu Fire)</label>
+          </div>
+          <p id="calc-p2-legality-note" class="hidden text-[11px] text-amber-400">Heatran: dữ liệu để tham khảo, chưa xác nhận hợp lệ Regulation M-C.</p>
           <div id="calc-p2-metronome-control" class="hidden flex items-center justify-between gap-2 text-[11px] text-amber-300 bg-slate-900/70 border border-amber-500/20 rounded-lg p-2">
             <label for="calc-p2-metronome-count">Metronome · lần dùng chiêu liên tiếp</label>
             <select id="calc-p2-metronome-count" onchange="updateCalcSide('p2', 'metronomeCount', this.value)" class="rounded-md bg-slate-950 border border-slate-700 px-2 py-1 text-white">
@@ -793,9 +841,9 @@
   <script src="https://play.pokemonshowdown.com/data/pokedex.js"></script>
   <script>window.BattlePokedex = window.BattlePokedex || window.exports.BattlePokedex || {};</script>
   <script src="https://play.pokemonshowdown.com/data/moves.js"></script>
-  <script src="data.js?v=29"></script>
+  <script src="data.js?v=32"></script>
   <script src="champions-roster.js?v=18"></script>
   <script src="champions-bulbapedia.js?v=18"></script>
-  <script src="app.js?v=31"></script>
+  <script src="app.js?v=32"></script>
 </body>
 </html>

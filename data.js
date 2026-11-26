@@ -1258,6 +1258,45 @@ const POKEDEX_MC = {
 // Sources: https://champforge.app/en/regulations/m-c (85 regular items + 81 Mega Stones, Meowsticite cross-checked with Pokémon Zone)
 //          https://www.pokemon-zone.com/champions/items/
 // "None" is a UI choice, not a battle item.
+// Optional research entries: Heatran is NOT confirmed legal for current Regulation M-C.
+// Tatsugiri has three in-battle forms; Curly is the default species entry.
+Object.assign(POKEDEX_MC, {
+  "Tatsugiri": {
+    dex: 978, sprite: "tatsugiri", formLabel: "Tatsugiri (Curly Form)",
+    types: ["Dragon", "Water"],
+    base: { hp: 68, atk: 50, def: 60, spa: 120, spd: 95, spe: 82 },
+    abilities: ["Commander", "Storm Drain"],
+    defaultMoves: ["Muddy Water", "Draco Meteor", "Icy Wind", "Protect"]
+  },
+  "Tatsugiri-Droopy": {
+    dex: 978, sprite: "tatsugiri-droopy", formLabel: "Tatsugiri (Droopy Form)",
+    types: ["Dragon", "Water"],
+    base: { hp: 68, atk: 50, def: 60, spa: 120, spd: 95, spe: 82 },
+    abilities: ["Commander", "Storm Drain"],
+    defaultMoves: ["Muddy Water", "Draco Meteor", "Icy Wind", "Protect"]
+  },
+  "Tatsugiri-Stretchy": {
+    dex: 978, sprite: "tatsugiri-stretchy", formLabel: "Tatsugiri (Stretchy Form)",
+    types: ["Dragon", "Water"],
+    base: { hp: 68, atk: 50, def: 60, spa: 120, spd: 95, spe: 82 },
+    abilities: ["Commander", "Storm Drain"],
+    defaultMoves: ["Muddy Water", "Draco Meteor", "Icy Wind", "Protect"]
+  },
+  "Dondozo": {
+    dex: 977, sprite: "dondozo", types: ["Water"],
+    base: { hp: 150, atk: 100, def: 115, spa: 65, spd: 65, spe: 35 },
+    abilities: ["Unaware", "Oblivious", "Water Veil"],
+    defaultMoves: ["Wave Crash", "Order Up", "Heavy Slam", "Protect"]
+  },
+  "Heatran": {
+    dex: 485, sprite: "heatran", types: ["Fire", "Steel"],
+    base: { hp: 91, atk: 90, def: 106, spa: 130, spd: 106, spe: 77 },
+    abilities: ["Flash Fire", "Flame Body"],
+    defaultMoves: ["Heat Wave", "Flash Cannon", "Earth Power", "Protect"],
+    outOfRegMC: true
+  }
+});
+
 const REG_MC_HELD_ITEMS = [
   "Air Balloon",
   "Aspear Berry",
@@ -1520,7 +1559,7 @@ const MOVES_DB = {
   "Shadow Ball":      { bp: 80,  type: "Ghost",    cat: "Special",  spread: false },
   "Shadow Claw":      { bp: 70,  type: "Ghost",    cat: "Physical", spread: false, contact: true, slicing: true },
   "Shadow Sneak":     { bp: 40,  type: "Ghost",    cat: "Physical", spread: false, contact: true },
-  "Last Respects":    { bp: 100, type: "Ghost",    cat: "Physical", spread: false },
+  "Last Respects":    { bp: 50, type: "Ghost",    cat: "Physical", spread: false },
   "Rage Fist":        { bp: 100, type: "Ghost",    cat: "Physical", spread: false, contact: true },
   "Wave Crash":       { bp: 120, type: "Water",    cat: "Physical", spread: false, contact: true },
   "Liquidation":      { bp: 85,  type: "Water",    cat: "Physical", spread: false, contact: true },
@@ -1575,6 +1614,12 @@ const MOVES_DB = {
   "Spirit Break":     { bp: 75,  type: "Fairy",    cat: "Physical", spread: false, contact: true }
 };
 
+
+// Move definitions required for Dondozo and Heatran calculation.
+Object.assign(MOVES_DB, {
+  "Order Up": { bp: 80, type: "Dragon", cat: "Physical", spread: false },
+  "Heat Wave": { bp: 95, type: "Fire", cat: "Special", spread: true }
+});
 
 // Most-used individual item / ability / spread / moves, Pokemon Showdown October 2026
 // Regulation M-C Doubles, 1760 weighting. The top choices are statistical marginals:

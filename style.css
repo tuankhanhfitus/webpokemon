@@ -373,3 +373,18 @@ html.light .calc-sp-limit { color: #64748b; }
 html.light .calc-sp-budget-line strong { color: #b45309; }
 html.light .calc-sp-budget-line strong.calc-sp-complete { color: #047857; }
 html.light .calc-sp-track { background: #e2e8f0; }
+
+/* Dynamic Damage Calc fields (v32) */
+.calc-context-control {
+  padding: 0.65rem 0.75rem; border-radius: 0.75rem;
+  border: 1px solid rgba(56,189,248,.26);
+  background: rgba(14,165,233,.07); display: flex; flex-direction: column; gap: .45rem;
+  font-size: 11px; color: #cbd5e1;
+}
+.calc-context-control.hidden { display: none; }
+.calc-context-control label { font-weight: 600; }
+.calc-context-control select { border-radius: .45rem; padding: .3rem .55rem; background: #0f172a; color: #f8fafc; border:1px solid #475569; }
+.calc-context-control strong { color: #7dd3fc; }
+html.light .calc-context-control { background: #eff6ff; color: #1e293b; border-color: #bfdbfe; }
+html.light .calc-context-control select { background: #fff; color: #0f172a; border-color: #cbd5e1; }
+html.light .calc-context-control strong { color: #0369a1; }
